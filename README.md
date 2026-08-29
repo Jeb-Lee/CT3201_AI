@@ -1,50 +1,71 @@
 # Pyro Pete: Emergency Evacuation
 
 A 2D top-down (Zelda-style, "early-days"/chibi art direction) evacuation game
-built for the CT3201 AI course. Pyro Pete arrives at a burning building,
-navigates a maze-like floor plan, and leads trapped occupants to safety.
+built for the CT3201 AI course. You drive Pyro Pete through a burning,
+collapsing maze, pick up trapped occupants and lead them to the exit -- while
+an autonomous **AI rescue agent** runs the same maze at the same time, under
+the same rules. The run ends when Pete reaches the exit or dies, and a
+results panel compares the two rescuers.
 
-The maze/routing setup deliberately mirrors the course's Emergency Evacuation
-Routing exercise (floor plan modeled as a graph, exits as goal nodes) so the
-same level data can eventually drive both human play and an AI-controlled
-pathfinding agent.
+The floor-plan-as-graph setup mirrors the course's Emergency Evacuation
+Routing exercise, and the hazards deliberately make routing non-trivial so
+BFS is no longer automatically optimal -- see `docs/ai_critique.md` for the
+BFS / Dijkstra / A* / Greedy comparison this enables.
 
 ## Status
 
-- [x] 4-directional character controller (idle + walk animation, Down/Up/Left/Right)
-- [x] Tile-based maze generation (guaranteed-solvable via recursive backtracker) with camera + wall collision
-- [ ] Victim NPCs / rescue mechanic
-- [ ] Fire & smoke hazards
+- [x] 4-directional character controller (idle + walk, Down/Up/Left/Right)
+- [x] Tile-based maze generation (guaranteed-solvable recursive backtracker) + camera + collision
+- [x] Victim NPCs / rescue + escort mechanic (animated sprites, circle fallback)
+- [x] Hazards: spreading fire, functional smoke (slow + vision), sparking panels, collapsing debris, locked door + key
+- [x] Hazard-weighted A* AI agent: partial observability (no victim map), takes damage, re-plans as the map changes, fetches the key, draws its route
+- [x] Fog of war with memory (seen tiles stay dim)
+- [x] Human-vs-AI results screen + per-rescuer stats
+- [x] Search-strategy comparison harness (`tools/search_comparison.py`) + unit tests (`tests/test_core.py`)
 - [ ] Multiple levels / difficulty progression
-- [ ] AI-play mode (pathfinding agent)
+- [ ] Toggle to hand control to the AI ("AI-play mode")
 
 ## Running it
 
+Your system Python already has the deps (`pygame`, `numpy`, `pillow`):
+
 ```bash
-python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
 cd pyro_pete_game
-..\.venv\Scripts\python main.py
+python main.py
 ```
 
-Controls: WASD or arrow keys to move, `R` to restart, `Esc` to quit.
+or in a venv: `python -m venv .venv && .venv\Scripts\pip install -r requirements.txt`.
+
+Controls: WASD / arrows move, `R` restart, `Esc` quit.
+Tests: `python -m pytest` (or `python tests/test_core.py`) from `pyro_pete_game/`.
 
 ## Project layout
 
 ```
 pyro_pete_game/
-  main.py              # game loop / entry point
+  main.py              # pygame shell + GameSession (all per-run state)
   settings.py          # shared constants
-  mazegen.py           # maze generation (recursive backtracker)
-  tilemap.py           # tile grid: collision, rendering, exit detection
+  mazegen.py           # perfect-maze generation (recursive backtracker)
+  tilemap.py           # tile grid: collision, dynamic blocks (debris/doors), rendering
+  pathfinding.py       # BFS, Dijkstra, A*, Greedy -- all take a per-tile cost_fn
   camera.py            # follow-camera with map-bounds clamping
-  tools_make_transparent.py  # one-off asset processor (bakes real alpha
-                              # into sprites -- see its docstring)
+  visibility.py        # fog of war with explored-tile memory
+  stats.py             # per-rescuer run metrics
+  results.py           # end-of-run You-vs-AI panel
+  hazard_field.py      # aggregates every hazard; answers damage / cost / slow / vision
+  hazards.py           #   spreading fire + functional smoke field
+  panels.py            #   stationary sparking electrical panels
+  debris.py            #   timed ceiling collapse (connectivity-checked)
+  doors.py             #   one locked door + its key
+  tools_make_transparent.py  # one-off sprite alpha baker (see its docstring)
   entities/
-    player.py          # Pyro Pete: animation state machine, movement, collision
-  levels/
-    level_01.py         # first map (size + seed; more levels follow the same shape)
-  assets/pete/          # sprite frames (idle + walk, 4 directions)
+    player.py          # Pyro Pete: animation, movement, smoke slowdown
+    victim.py          # trapped occupants: 4-dir sprites + circle fallback, escort
+    rescue_agent.py    # autonomous hazard-weighted A* agent (re-plans, takes damage)
+  levels/level_01.py   # first map (size + seed)
+  assets/pete/, assets/victims/<name>/   # sprite frames
+  docs/ai_critique.md  # "what AI got wrong" write-up for the report
+  tests/test_core.py   # maze / search / hazard-placement checks
 ```
 
 ## Asset notes
@@ -55,3 +76,12 @@ extracted from short generated video clips (auto-cropped to the character's
 bounding box, aligned to a shared canvas so idle/walk don't jitter), and
 `tools_make_transparent.py` bakes real per-pixel alpha into every sprite to
 remove anti-aliasing halos that a simple colorkey couldn't catch.
+
+Victim NPCs are the exception: the video model would only produce stable
+**side-view** clips and never a usable "toward / away from camera" walk.
+Their 4-direction sets were instead assembled from mixed sources — front
+pose (down), character-sheet back view (up), one LR-clip side frame
+(left), mirror of that (right) — with a procedural bob for the walk
+frames rather than extracted footwork. Working around that video-model
+limitation is the project's "what AI got wrong" example — see
+`docs/ai_critique.md`.

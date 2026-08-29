@@ -8,7 +8,10 @@ grid of tile types, not how each tile is drawn.
 
 import pygame
 
-from settings import TILE_SIZE, WALL_COLOR, FLOOR_COLOR, EXIT_COLOR, GRID_LINE_COLOR
+from settings import (
+    TILE_SIZE, WALL_COLOR, FLOOR_COLOR, EXIT_COLOR, GRID_LINE_COLOR,
+    DEBRIS_COLOR, LOCKED_DOOR_COLOR,
+)
 
 WALL = "#"
 FLOOR = "."
@@ -30,6 +33,22 @@ class TileMap:
 
         self.spawn_cell = spawn_cell
         self.exit_cell = exit_cell
+
+        # Cells that are floor in `grid` but currently impassable because a
+        # hazard system put something there -- fallen debris, a locked
+        # door. Kept separate from `grid` so it can be cleared on restart
+        # without regenerating the maze, and so systems can own their own
+        # cells. Maps cell -> render tag ("debris" / "door") for draw().
+        self.dynamic_blocked = {}
+
+    def block_cell(self, cell, tag):
+        self.dynamic_blocked[cell] = tag
+
+    def unblock_cell(self, cell):
+        self.dynamic_blocked.pop(cell, None)
+
+    def clear_dynamic_blocks(self):
+        self.dynamic_blocked.clear()
 
     @property
     def pixel_width(self):
@@ -53,30 +72,26 @@ class TileMap:
         return WALL
 
     def is_walkable(self, col, row):
-        return self.tile_at(col, row) != WALL
+        """Static walls AND anything a hazard system has dropped in
+        (debris, a locked door) block movement."""
+        if self.tile_at(col, row) == WALL:
+            return False
+        return (col, row) not in self.dynamic_blocked
+
+    def tiles_overlapping(self, rect):
+        """Yield every (col, row) a pixel rect touches. One place for the
+        rect->tile-range math the walkable / exit / hazard checks share."""
+        ts = self.tile_size
+        for row in range(rect.top // ts, (rect.bottom - 1) // ts + 1):
+            for col in range(rect.left // ts, (rect.right - 1) // ts + 1):
+                yield col, row
 
     def rect_walkable(self, rect):
-        """True if a pixel rect doesn't overlap any wall tile."""
-        min_col = rect.left // self.tile_size
-        max_col = (rect.right - 1) // self.tile_size
-        min_row = rect.top // self.tile_size
-        max_row = (rect.bottom - 1) // self.tile_size
-        for row in range(min_row, max_row + 1):
-            for col in range(min_col, max_col + 1):
-                if not self.is_walkable(col, row):
-                    return False
-        return True
+        """True if a pixel rect doesn't overlap any wall/blocked tile."""
+        return all(self.is_walkable(c, r) for c, r in self.tiles_overlapping(rect))
 
     def is_exit_rect(self, rect):
-        min_col = rect.left // self.tile_size
-        max_col = (rect.right - 1) // self.tile_size
-        min_row = rect.top // self.tile_size
-        max_row = (rect.bottom - 1) // self.tile_size
-        for row in range(min_row, max_row + 1):
-            for col in range(min_col, max_col + 1):
-                if self.tile_at(col, row) == EXIT:
-                    return True
-        return False
+        return any(self.tile_at(c, r) == EXIT for c, r in self.tiles_overlapping(rect))
 
     def draw(self, surface, camera_offset):
         ox, oy = camera_offset
@@ -92,6 +107,11 @@ class TileMap:
                 tile = self.grid[row][col]
                 color = WALL_COLOR if tile == WALL else (
                     EXIT_COLOR if tile == EXIT else FLOOR_COLOR)
+                block = self.dynamic_blocked.get((col, row))
+                if block == "debris":
+                    color = DEBRIS_COLOR
+                elif block == "door":
+                    color = LOCKED_DOOR_COLOR
                 x = col * self.tile_size - ox
                 y = row * self.tile_size - oy
                 rect = pygame.Rect(x, y, self.tile_size, self.tile_size)

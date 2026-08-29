@@ -3,7 +3,7 @@
 import os
 import pygame
 
-from settings import PLAYER_SPEED, WALK_ANIM_FPS, PLAYER_SPRITE_HEIGHT
+from settings import PLAYER_SPEED, WALK_ANIM_FPS, PLAYER_SPRITE_HEIGHT, HEALTH_MAX
 
 ASSET_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "pete")
 
@@ -48,6 +48,10 @@ class Player:
         self.anim_timer = 0.0
         self.anim_index = 0
 
+        # Drains while standing in fire (see hazards.FireSystem); a quick
+        # dash through a burning tile is survivable, lingering isn't.
+        self.health = HEALTH_MAX
+
         self.idle_frames = {}
         self.walk_frames = {}
         for d in DIRECTIONS:
@@ -91,6 +95,13 @@ class Player:
 
         return dx, dy
 
+    def take_damage(self, amount):
+        self.health = max(0.0, self.health - amount)
+
+    @property
+    def is_dead(self):
+        return self.health <= 0
+
     def get_collision_rect(self, x=None, y=None):
         """Small hitbox anchored at the feet point, independent of
         whichever sprite frame happens to be showing."""
@@ -100,11 +111,17 @@ class Player:
         rect.midbottom = (round(x), round(y))
         return rect
 
-    def update(self, dt, keys, tilemap=None):
+    def update(self, dt, keys, tilemap=None, hazards=None, stats=None):
         dx, dy = self.handle_input(keys)
-        move_x = dx * PLAYER_SPEED * dt
-        move_y = dy * PLAYER_SPEED * dt
 
+        # smoke drags on you the same way it costs the AI (hazards.entry_cost)
+        speed = PLAYER_SPEED
+        if hazards is not None:
+            speed *= hazards.move_multiplier(self.x, self.y)
+        move_x = dx * speed * dt
+        move_y = dy * speed * dt
+
+        start_x, start_y = self.x, self.y
         if tilemap is None:
             self.x += move_x
             self.y += move_y
@@ -119,6 +136,9 @@ class Player:
             new_y = self.y + move_y
             if tilemap.rect_walkable(self.get_collision_rect(y=new_y)):
                 self.y = new_y
+
+        if stats is not None:
+            stats.add_distance(((self.x - start_x) ** 2 + (self.y - start_y) ** 2) ** 0.5)
 
         if self.moving:
             self.anim_timer += dt
