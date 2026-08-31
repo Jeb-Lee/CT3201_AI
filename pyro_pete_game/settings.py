@@ -71,7 +71,10 @@ SMOKE_HAZE_MAX_ALPHA = 150
 SPARK_PANEL_COUNT = 3
 SPARK_PANEL_MIN_SPAWN_DISTANCE = 3   # cells from spawn
 SPARK_PANEL_DAMAGE_PER_SECOND = 34
-SPARK_PANEL_TILE_COST = 6.0
+SPARK_PANEL_TILE_COST = 7.5  # was 6.0 -- raised after playtesting: panels do more
+                              # dmg/sec (34) than fire (20) and the AI wasn't
+                              # weighting that danger heavily enough (see
+                              # playtesting/Playtest_Feedback_and_Run_Notes.md)
 SPARK_PANEL_BOX_COLOR = (58, 54, 40)      # the dead panel housing
 SPARK_PANEL_COLOR = (250, 226, 120)       # arc glow
 SPARK_PANEL_CORE_COLOR = (150, 200, 255)  # arc bolt
@@ -114,7 +117,9 @@ HEALTH_BAR_WIDTH = 200
 HEALTH_BAR_HEIGHT = 18
 HEALTH_BAR_MARGIN = 16
 HEALTH_BAR_BG_COLOR = (40, 40, 44)
-HEALTH_BAR_FILL_COLOR = (196, 64, 56)
+HEALTH_BAR_FILL_COLOR = (196, 64, 56)     # low-health red (gradient endpoint)
+HEALTH_BAR_COLOR_FULL = (86, 184, 108)    # full-health green (gradient endpoint)
+HEALTH_BAR_COLOR_MID = (232, 181, 65)     # mid-health yellow/orange (gradient midpoint)
 HEALTH_BAR_BORDER_COLOR = (230, 230, 230)
 
 # --- Visibility (fog of war) ---

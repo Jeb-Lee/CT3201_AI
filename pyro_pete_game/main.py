@@ -30,6 +30,7 @@ from settings import (
     HEALTH_MAX,
     HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT, HEALTH_BAR_MARGIN,
     HEALTH_BAR_BG_COLOR, HEALTH_BAR_FILL_COLOR, HEALTH_BAR_BORDER_COLOR,
+    HEALTH_BAR_COLOR_FULL, HEALTH_BAR_COLOR_MID,
     VICTIM_COUNT, VICTIM_RESCUE_RADIUS,
     PLAYER_TRAIL_MAXLEN, AGENT_TRAIL_MAXLEN,
     VICTIM_FOLLOW_LAG_FRAMES, VICTIM_FOLLOW_SPACING_FRAMES,
@@ -49,6 +50,20 @@ FONT_COLOR = (230, 230, 230)
 
 
 # ---------------------------------------------------------------- rescue logic
+def _health_bar_color(frac):
+    """Green at full health, through yellow/orange, to red as it drops --
+    added after playtesting feedback that a static red bar gave no sense
+    of urgency (see playtesting/Playtest_Feedback_and_Run_Notes.md)."""
+    frac = max(0.0, min(1.0, frac))
+    if frac >= 0.5:
+        t = (1.0 - frac) / 0.5
+        start, end = HEALTH_BAR_COLOR_FULL, HEALTH_BAR_COLOR_MID
+    else:
+        t = (0.5 - frac) / 0.5
+        start, end = HEALTH_BAR_COLOR_MID, HEALTH_BAR_FILL_COLOR
+    return tuple(round(a + (b - a) * t) for a, b in zip(start, end))
+
+
 def _try_rescue(victims, rescuer_rect, follow_order):
     """Any idle victim touched by rescuer_rect starts following. Shared by
     Pete and the AI agent -- whichever's rect gets here first claims the
@@ -251,7 +266,7 @@ class GameSession:
         bg = pygame.Rect(x, y, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
         pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, bg)
         frac = max(0.0, min(1.0, self.player.health / HEALTH_MAX))
-        pygame.draw.rect(surface, HEALTH_BAR_FILL_COLOR,
+        pygame.draw.rect(surface, _health_bar_color(frac),
                          pygame.Rect(x, y, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
         pygame.draw.rect(surface, HEALTH_BAR_BORDER_COLOR, bg, 2)
         surface.blit(self.hud_font.render("HEALTH", True, FONT_COLOR),
