@@ -259,9 +259,37 @@ class GameSession:
                                  (x + pad, y + pad, ts - 2 * pad, ts - 2 * pad))
         surface.blit(layer, (0, 0))
 
+    def _panel(self, surface, rect):
+        """Translucent backing so HUD text stays readable over sprites /
+        fire when the camera is pinned in a corner."""
+        p = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        p.fill((12, 14, 20, 165))
+        surface.blit(p, rect.topleft)
+
     def _draw_hud(self, surface):
-        # health bar
+        f = self.hud_font
+
+        # ---- left panel: rescue count / AI health / key ----
+        self._panel(surface, pygame.Rect(8, 8, 340, 78))
+        total = len(self.victims)
+        total_saved = sum(1 for v in self.victims if v.state == STATE_SAVED)
+        surface.blit(f.render(
+            f"Rescued {total_saved}/{total}   You {self.player_stats.victims_saved}"
+            f"   AI {self.agent_stats.victims_saved}", True, FONT_COLOR), (16, 14))
+
+        ah = max(0.0, min(1.0, self.agent.health / HEALTH_MAX))
+        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, pygame.Rect(16, 40, 120, 10))
+        pygame.draw.rect(surface, (120, 150, 210), pygame.Rect(16, 40, round(120 * ah), 10))
+        surface.blit(f.render("AI drone", True, (150, 170, 210)), (144, 36))
+
+        if self.hazards.doors.enabled and not self.hazards.doors.key_collected:
+            surface.blit(f.render("Door locked - find the key", True, KEY_COLOR), (16, 60))
+        elif self.hazards.doors.enabled:
+            surface.blit(f.render("Key collected", True, (140, 200, 140)), (16, 60))
+
+        # ---- right panel: health / run time / fire countdown ----
         x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
+        self._panel(surface, pygame.Rect(x - 10, 8, HEALTH_BAR_WIDTH + 20, 92))
         y = HEALTH_BAR_MARGIN
         bg = pygame.Rect(x, y, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
         pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, bg)
@@ -269,46 +297,34 @@ class GameSession:
         pygame.draw.rect(surface, _health_bar_color(frac),
                          pygame.Rect(x, y, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
         pygame.draw.rect(surface, HEALTH_BAR_BORDER_COLOR, bg, 2)
-        surface.blit(self.hud_font.render("HEALTH", True, FONT_COLOR),
-                     (x, y + HEALTH_BAR_HEIGHT + 4))
+        surface.blit(f.render("HEALTH", True, FONT_COLOR), (x, y + HEALTH_BAR_HEIGHT + 3))
 
-        total = len(self.victims)
-        total_saved = sum(1 for v in self.victims if v.state == STATE_SAVED)
-        surface.blit(self.hud_font.render(
-            f"Rescued: {total_saved}/{total}   "
-            f"(You: {self.player_stats.victims_saved}  "
-            f"Agent: {self.agent_stats.victims_saved})",
-            True, FONT_COLOR), (16, 16))
-
-        # AI agent health (smaller, under the scoreboard)
-        ah = max(0.0, min(1.0, self.agent.health / HEALTH_MAX))
-        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, pygame.Rect(16, 44, 120, 10))
-        pygame.draw.rect(surface, (120, 150, 210), pygame.Rect(16, 44, round(120 * ah), 10))
-        surface.blit(self.hud_font.render("AI", True, (150, 170, 210)), (142, 40))
-
-        if self.hazards.doors.enabled and not self.hazards.doors.key_collected:
-            surface.blit(self.hud_font.render("Door locked - find the key",
-                                              True, KEY_COLOR), (16, 64))
-        elif self.hazards.doors.enabled:
-            surface.blit(self.hud_font.render("Key collected", True, (140, 200, 140)),
-                         (16, 64))
-
-        # --- run timer + fire-reaches-exit countdown ---
         elapsed = self.player_stats.elapsed
-        surface.blit(self.hud_font.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
-                                          True, FONT_COLOR), (16, 88))
+        surface.blit(f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
+                              True, FONT_COLOR), (x + 96, y + HEALTH_BAR_HEIGHT + 3))
         if self.hazards.fire.exit_on_fire:
             label, colour = "EXIT ON FIRE", (240, 90, 60)
         else:
             left = self.hazards.fire.seconds_to_exit_fire
             colour = (240, 90, 60) if left < 15 else (
-                (235, 175, 70) if left < 35 else (200, 200, 205))
-            label = f"Fire reaches exit  {int(left // 60)}:{int(left % 60):02d}"
-        surface.blit(self.hud_font.render(label, True, colour), (16, 110))
+                (235, 175, 70) if left < 35 else (205, 205, 210))
+            label = f"Fire -> exit  {int(left // 60)}:{int(left % 60):02d}"
+        surface.blit(f.render(label, True, colour), (x, y + HEALTH_BAR_HEIGHT + 24))
 
 
 # ---------------------------------------------------------------- entry point
+def _disable_windows_dpi_scaling():
+    """Without this, Windows stretches the 960x640 window to fit the
+    display's scaling factor and everything looks blurry. No-op elsewhere."""
+    try:
+        import ctypes
+        ctypes.windll.user32.SetProcessDPIAware()
+    except (ImportError, AttributeError, OSError):
+        pass
+
+
 def main():
+    _disable_windows_dpi_scaling()
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Pyro Pete - Emergency Evacuation")
