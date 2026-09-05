@@ -68,6 +68,10 @@ class FireSystem:
         self.spread_interval = max(
             MIN_SPREAD_INTERVAL, FIRE_TARGET_SECONDS_TO_EXIT / distance_to_exit
         )
+        # rough estimate of when the flame front reaches the exit tile,
+        # for the HUD countdown. Braiding / debris can shift it a little.
+        self._time_to_exit = distance_to_exit * self.spread_interval
+        self.elapsed = 0.0
 
         self.burning = {self.ignition_cell}
         self._frontier = {self.ignition_cell}
@@ -93,8 +97,21 @@ class FireSystem:
         self._smoke = []  # list of dicts: x, y, age, lifetime, radius, sway_phase
 
     # ------------------------------------------------------------------ spread
+    @property
+    def exit_on_fire(self):
+        return self.tilemap.exit_cell in self.burning
+
+    @property
+    def seconds_to_exit_fire(self):
+        """Estimated seconds until the flame front reaches the exit tile
+        (0 once it has). For the HUD countdown."""
+        if self.exit_on_fire:
+            return 0.0
+        return max(0.0, self._time_to_exit - self.elapsed)
+
     def update(self, dt):
         self._anim_t += dt
+        self.elapsed += dt
         if self._frontier:
             self._timer += dt
             changed = False

@@ -293,6 +293,19 @@ class GameSession:
             surface.blit(self.hud_font.render("Key collected", True, (140, 200, 140)),
                          (16, 64))
 
+        # --- run timer + fire-reaches-exit countdown ---
+        elapsed = self.player_stats.elapsed
+        surface.blit(self.hud_font.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
+                                          True, FONT_COLOR), (16, 88))
+        if self.hazards.fire.exit_on_fire:
+            label, colour = "EXIT ON FIRE", (240, 90, 60)
+        else:
+            left = self.hazards.fire.seconds_to_exit_fire
+            colour = (240, 90, 60) if left < 15 else (
+                (235, 175, 70) if left < 35 else (200, 200, 205))
+            label = f"Fire reaches exit  {int(left // 60)}:{int(left % 60):02d}"
+        surface.blit(self.hud_font.render(label, True, colour), (16, 110))
+
 
 # ---------------------------------------------------------------- entry point
 def main():
