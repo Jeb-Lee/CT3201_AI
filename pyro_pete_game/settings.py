@@ -189,10 +189,21 @@ AGENT_REPLAN_MIN_INTERVAL = 0.25   # seconds -- don't re-run A* more often than 
 # re-plans when it finds out) rather than beelining omnisciently.
 AGENT_VISION_TILES = 3.5
 
-# --- Run stats / results ---
+# --- Run stats / score / results ---
 # Both rescuers are instrumented (see stats.py) so the end screen can show
 # a real human-vs-AI comparison, which is the point of running an
 # autonomous agent next to the player.
+#
+# Scoring: leading occupants out is the objective, so that's the bulk of
+# the score; getting yourself out is a smaller bonus; a speed bonus and a
+# damage penalty separate a fast/reckless run from a slow/careful one
+# (which is exactly the human-vs-AI trade-off worth showing).
+SCORE_PER_SURVIVOR = 100      # each occupant led to the exit
+SCORE_REACH_EXIT = 50        # you (or the drone) got out too
+SCORE_TIME_BONUS_PAR = 90.0  # beat this many seconds for a speed bonus
+SCORE_TIME_BONUS_MAX = 60    # points for an instant finish, scaling to 0 at PAR
+SCORE_DAMAGE_PENALTY = 0.4   # points lost per point of health burned off
+
 RESULTS_PANEL_COLOR = (24, 26, 32)
 RESULTS_TEXT_COLOR = (232, 232, 232)
 RESULTS_ACCENT_COLOR = (235, 196, 60)

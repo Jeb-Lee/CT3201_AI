@@ -9,6 +9,12 @@ damage taken, and (agent only) how much re-planning the changing map
 forced.
 """
 
+from settings import (
+    SCORE_PER_SURVIVOR, SCORE_REACH_EXIT, SCORE_TIME_BONUS_PAR,
+    SCORE_TIME_BONUS_MAX, SCORE_DAMAGE_PENALTY,
+)
+
+
 class RunStats:
     def __init__(self, label):
         self.label = label
@@ -56,10 +62,38 @@ class RunStats:
             self.finished_reason = reason
 
     # -- readback -----------------------------------------------------
+    @property
+    def time_bonus(self):
+        if self.finished_reason != "exit" or self.elapsed >= SCORE_TIME_BONUS_PAR:
+            return 0
+        return round(SCORE_TIME_BONUS_MAX * (1 - self.elapsed / SCORE_TIME_BONUS_PAR))
+
+    @property
+    def score(self):
+        """Occupants led out are the objective (bulk of the score); getting
+        yourself out is a bonus; speed adds, damage subtracts. Never < 0."""
+        s = self.victims_saved * SCORE_PER_SURVIVOR
+        if self.finished_reason == "exit":
+            s += SCORE_REACH_EXIT + self.time_bonus
+        s -= round(self.damage_taken * SCORE_DAMAGE_PENALTY)
+        return max(0, s)
+
+    def score_breakdown(self):
+        """(label, points) rows explaining the score on the results panel."""
+        rows = [(f"Occupants led out  x{self.victims_saved}",
+                 self.victims_saved * SCORE_PER_SURVIVOR)]
+        if self.finished_reason == "exit":
+            rows.append(("Reached the exit", SCORE_REACH_EXIT))
+            if self.time_bonus:
+                rows.append(("Speed bonus", self.time_bonus))
+        dmg = round(self.damage_taken * SCORE_DAMAGE_PENALTY)
+        if dmg:
+            rows.append(("Damage taken", -dmg))
+        return rows
+
     def summary_rows(self):
         """(label, value-string) pairs for the results panel."""
         rows = [
-            ("Victims saved", str(self.victims_saved)),
             ("Time", f"{self.elapsed:5.1f}s"),
             ("Distance", f"{self.distance / 64:5.1f} tiles"),
             ("Damage taken", f"{self.damage_taken:5.0f}"),

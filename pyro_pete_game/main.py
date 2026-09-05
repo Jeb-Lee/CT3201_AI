@@ -34,7 +34,7 @@ from settings import (
     VICTIM_COUNT, VICTIM_RESCUE_RADIUS,
     PLAYER_TRAIL_MAXLEN, AGENT_TRAIL_MAXLEN,
     VICTIM_FOLLOW_LAG_FRAMES, VICTIM_FOLLOW_SPACING_FRAMES,
-    KEY_COLOR, PLAYER_TRAIL_COLOR, PLAYER_TRAIL_ALPHA,
+    KEY_COLOR, PLAYER_TRAIL_COLOR, PLAYER_TRAIL_ALPHA, RESULTS_ACCENT_COLOR,
 )
 from entities.player import Player
 from entities.victim import place_victims, STATE_IDLE, STATE_FOLLOWING, STATE_SAVED
@@ -121,7 +121,7 @@ class GameSession:
         spawn_x, spawn_y = tm.spawn_pos()
         self.player = Player(spawn_x, spawn_y)
         self.player_stats = RunStats("You (Pete)")
-        self.agent_stats = RunStats("AI agent")
+        self.agent_stats = RunStats("AI drone")
 
         self.hazards = HazardField(
             tm, seed=level_01.SEED,
@@ -269,23 +269,25 @@ class GameSession:
     def _draw_hud(self, surface):
         f = self.hud_font
 
-        # ---- left panel: rescue count / AI health / key ----
-        self._panel(surface, pygame.Rect(8, 8, 340, 78))
+        # ---- left panel: occupants + score / AI health / key ----
+        self._panel(surface, pygame.Rect(8, 8, 372, 104))
         total = len(self.victims)
-        total_saved = sum(1 for v in self.victims if v.state == STATE_SAVED)
         surface.blit(f.render(
-            f"Rescued {total_saved}/{total}   You {self.player_stats.victims_saved}"
-            f"   AI {self.agent_stats.victims_saved}", True, FONT_COLOR), (16, 14))
+            f"Occupants out   You {self.player_stats.victims_saved}/{total}"
+            f"    AI {self.agent_stats.victims_saved}/{total}", True, FONT_COLOR), (16, 13))
+        surface.blit(f.render(
+            f"Score   You {self.player_stats.score}    AI {self.agent_stats.score}",
+            True, RESULTS_ACCENT_COLOR), (16, 34))
 
         ah = max(0.0, min(1.0, self.agent.health / HEALTH_MAX))
-        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, pygame.Rect(16, 40, 120, 10))
-        pygame.draw.rect(surface, (120, 150, 210), pygame.Rect(16, 40, round(120 * ah), 10))
-        surface.blit(f.render("AI drone", True, (150, 170, 210)), (144, 36))
+        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, pygame.Rect(16, 60, 120, 9))
+        pygame.draw.rect(surface, (120, 150, 210), pygame.Rect(16, 60, round(120 * ah), 9))
+        surface.blit(f.render("AI drone", True, (150, 170, 210)), (144, 56))
 
         if self.hazards.doors.enabled and not self.hazards.doors.key_collected:
-            surface.blit(f.render("Door locked - find the key", True, KEY_COLOR), (16, 60))
+            surface.blit(f.render("Door locked - find the key", True, KEY_COLOR), (16, 82))
         elif self.hazards.doors.enabled:
-            surface.blit(f.render("Key collected", True, (140, 200, 140)), (16, 60))
+            surface.blit(f.render("Key collected", True, (140, 200, 140)), (16, 82))
 
         # ---- right panel: health / run time / fire countdown ----
         x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
