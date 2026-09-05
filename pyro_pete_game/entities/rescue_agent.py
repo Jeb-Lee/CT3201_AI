@@ -32,6 +32,8 @@ proximity-based path in main.py's _try_rescue, so whoever reaches a
 victim first claims it.
 """
 
+import math
+
 import pygame
 
 from settings import (
@@ -44,6 +46,15 @@ from pathfinding import astar_path, weighted_distances
 
 OUTLINE_COLOR = (255, 255, 255)
 CORE_COLOR = (20, 20, 24)
+
+# the agent is a little search-and-rescue drone -- geometric, so it's drawn
+# from primitives (no sprite file): a dark body, four spinning rotors, and a
+# pulsing scanner eye. Reads instantly as "this one is the AI".
+_DRONE_BODY = (44, 52, 66)
+_DRONE_ARM = (30, 34, 42)
+_DRONE_ROTOR = (150, 190, 235)
+_DRONE_EYE = (120, 235, 255)
+_DRONE_DEAD = (86, 86, 92)
 
 
 class RescueAgent:
@@ -61,6 +72,8 @@ class RescueAgent:
         self._replan_timer = 0.0
         self._finished = False
         self._route_surface = None  # lazily made once, reused every frame
+        self._anim_t = 0.0
+        self._heading = (0.0, 1.0)  # unit-ish vector, for the drone's nose
 
         # partial observability: the agent only knows a victim once it's
         # seen one, and only "knows" the map it has walked near
@@ -146,6 +159,7 @@ class RescueAgent:
 
     # ------------------------------------------------------------------ tick
     def update(self, dt, victims):
+        self._anim_t += dt  # rotors keep spinning even when it's parked
         if self._finished or self.is_dead:
             return
 
@@ -211,6 +225,8 @@ class RescueAgent:
         tx, ty = self._waypoints[0]
         dx, dy = tx - self.x, ty - self.y
         dist = (dx * dx + dy * dy) ** 0.5
+        if dist > 0.01:
+            self._heading = (dx / dist, dy / dist)
 
         speed = AGENT_SPEED
         if self.hazards is not None:
@@ -260,8 +276,53 @@ class RescueAgent:
 
     def draw(self, surface, camera_offset):
         ox, oy = camera_offset
-        center = (round(self.x - ox), round(self.y - oy))
-        color = AGENT_COLOR if not self.is_dead else (90, 90, 96)
-        pygame.draw.circle(surface, color, center, AGENT_RADIUS)
-        pygame.draw.circle(surface, OUTLINE_COLOR, center, AGENT_RADIUS, 2)
-        pygame.draw.circle(surface, CORE_COLOR, center, 2)
+        cx, cy = self.x - ox, self.y - oy
+        S = 52  # drone canvas
+        d = pygame.Surface((S, S), pygame.SRCALPHA)
+        mid = S / 2
+        t = self._anim_t
+
+        if self.is_dead:
+            # crashed: tilted body, dead rotors, no eye
+            pygame.draw.circle(d, (0, 0, 0, 60), (mid, mid + 4), 14)
+            body = pygame.Surface((26, 18), pygame.SRCALPHA)
+            body.fill(_DRONE_DEAD)
+            body = pygame.transform.rotate(body, 24)
+            d.blit(body, body.get_rect(center=(mid, mid)))
+            for ax, ay in ((-14, -10), (14, -10), (-14, 10), (14, 10)):
+                pygame.draw.line(d, _DRONE_ARM, (mid, mid), (mid + ax, mid + ay), 3)
+                pygame.draw.circle(d, _DRONE_DEAD, (mid + ax, mid + ay), 4)
+            surface.blit(d, d.get_rect(center=(round(cx), round(cy))))
+            return
+
+        bob = math.sin(t * 4.0) * 2.0
+        sh = pygame.Surface((34, 15), pygame.SRCALPHA)
+        pygame.draw.ellipse(sh, (0, 0, 0, 70), sh.get_rect())
+        surface.blit(sh, sh.get_rect(center=(round(cx), round(cy) + 12)))
+
+        cy_d = mid + bob
+        spin = t * 40.0
+        for i, (ax, ay) in enumerate(((-15, -12), (15, -12), (-15, 12), (15, 12))):
+            rx, ry = mid + ax, cy_d + ay
+            pygame.draw.line(d, _DRONE_ARM, (mid, cy_d), (rx, ry), 4)
+            pygame.draw.circle(d, (*_DRONE_ROTOR, 55), (rx, ry), 9)
+            a = spin + i * 1.7
+            for k in range(2):
+                bl = a + k * math.pi
+                pygame.draw.line(d, (*_DRONE_ROTOR, 190),
+                                 (rx - math.cos(bl) * 8, ry - math.sin(bl) * 8),
+                                 (rx + math.cos(bl) * 8, ry + math.sin(bl) * 8), 2)
+
+        # body
+        pygame.draw.circle(d, _DRONE_BODY, (mid, cy_d), 10)
+        pygame.draw.circle(d, OUTLINE_COLOR, (mid, cy_d), 10, 1)
+        # nose: points where it's heading
+        hx, hy = self._heading
+        pygame.draw.line(d, _DRONE_EYE, (mid, cy_d),
+                         (mid + hx * 12, cy_d + hy * 12), 3)
+        # pulsing scanner eye
+        pulse = 3.5 + 1.8 * (0.5 + 0.5 * math.sin(t * 7.0))
+        pygame.draw.circle(d, (*_DRONE_EYE, 90), (mid, cy_d), pulse + 4)
+        pygame.draw.circle(d, _DRONE_EYE, (mid, cy_d), pulse)
+
+        surface.blit(d, d.get_rect(center=(round(cx), round(cy))))
