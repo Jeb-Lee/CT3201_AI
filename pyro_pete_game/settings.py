@@ -173,6 +173,14 @@ VICTIM_FOLLOW_SPACING_FRAMES = 40
 AGENT_SPEED = 165  # pixels/sec -- tune relative to PLAYER_SPEED to race Pete
 AGENT_COLOR = (90, 160, 230)
 AGENT_RADIUS = 8              # small dot -- the drawn route is the real "tell"
+
+# Visual style for the AI: "robot" draws the walking sprite in
+# assets/robot/ (4-direction idle + walk, matching Pete/victim
+# conventions); "drone" draws the original hand-drawn quadcopter, no art
+# needed. Automatically falls back to "drone" if assets/robot/ is missing
+# or incomplete, so an art-less checkout still runs.
+AGENT_VISUAL = "robot"
+AGENT_SPRITE_HEIGHT = 88  # matches VICTIM_SPRITE_HEIGHT -- doesn't upstage Pete
 AGENT_TRAIL_MAXLEN = PLAYER_TRAIL_MAXLEN
 AGENT_ROUTE_COLOR = (120, 190, 255)   # the AI's *planned* route
 AGENT_ROUTE_ALPHA = 130

@@ -33,13 +33,15 @@ victim first claims it.
 """
 
 import math
+import os
 
 import pygame
 
 from settings import (
     AGENT_SPEED, AGENT_COLOR, AGENT_RADIUS, AGENT_REPLAN_MIN_INTERVAL,
     AGENT_ROUTE_COLOR, AGENT_ROUTE_ALPHA, AGENT_TRAIL_COLOR, AGENT_TRAIL_ALPHA,
-    AGENT_VISION_TILES, HEALTH_MAX, TILE_SIZE,
+    AGENT_VISION_TILES, AGENT_VISUAL, AGENT_SPRITE_HEIGHT, WALK_ANIM_FPS,
+    HEALTH_MAX, TILE_SIZE,
 )
 from entities.victim import STATE_IDLE
 from pathfinding import astar_path, weighted_distances
@@ -47,18 +49,80 @@ from pathfinding import astar_path, weighted_distances
 OUTLINE_COLOR = (255, 255, 255)
 CORE_COLOR = (20, 20, 24)
 
-# the agent is a little search-and-rescue drone -- geometric, so it's drawn
-# from primitives (no sprite file): a dark body, four spinning rotors, and a
-# pulsing scanner eye. Reads instantly as "this one is the AI".
+# Default AI look is a walking robot sprite (assets/robot/, see
+# AGENT_VISUAL in settings.py). This is the no-art-required fallback: a
+# little search-and-rescue drone drawn from primitives -- a dark body,
+# four spinning rotors, and a pulsing scanner eye. Reads instantly as
+# "this one is the AI" either way.
 _DRONE_BODY = (44, 52, 66)
 _DRONE_ARM = (30, 34, 42)
 _DRONE_ROTOR = (150, 190, 235)
 _DRONE_EYE = (120, 235, 255)
 _DRONE_DEAD = (86, 86, 92)
 
+DIRECTIONS = ("down", "up", "left", "right")
+ROBOT_ASSET_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "robot")
+
+
+def _direction_from_heading(hx, hy):
+    """Same priority Player uses for its own facing: whichever axis is
+    moving more decides the sprite direction."""
+    if abs(hy) >= abs(hx):
+        return "down" if hy >= 0 else "up"
+    return "right" if hx > 0 else "left"
+
+
+def _load_robot_sprite(path, target_height):
+    image = pygame.image.load(path).convert_alpha()
+    if image.get_height() != target_height:
+        scale = target_height / image.get_height()
+        new_size = (max(1, round(image.get_width() * scale)), target_height)
+        image = pygame.transform.smoothscale(image, new_size)
+    return image
+
+
+def _load_robot_sprites():
+    """(idle_frames, walk_frames) dicts keyed by direction, or None if
+    assets/robot/ is missing or incomplete -- caller then falls back to
+    the drone, same graceful-degradation the victim sprites use. Loaded
+    once at import time since, unlike victims, there's only ever one of
+    these across the whole run (including restarts)."""
+    def load_dir(d):
+        idle_path = os.path.join(ROBOT_ASSET_DIR, f"idle_{d}.png")
+        walk_paths = [os.path.join(ROBOT_ASSET_DIR, f"walk_{d}_{i}.png") for i in range(1, 5)]
+        if not os.path.isfile(idle_path) or not all(os.path.isfile(p) for p in walk_paths):
+            return None
+        idle = _load_robot_sprite(idle_path, AGENT_SPRITE_HEIGHT)
+        walk = [_load_robot_sprite(p, AGENT_SPRITE_HEIGHT) for p in walk_paths]
+        return idle, walk
+
+    idle_frames, walk_frames = {}, {}
+    for d in DIRECTIONS:
+        loaded = load_dir(d)
+        if loaded is None:
+            return None
+        idle_frames[d], walk_frames[d] = loaded
+    return idle_frames, walk_frames
+
+
+_ROBOT_SPRITES_CACHE = "unloaded"  # sentinel distinct from None ("tried, unavailable")
+
+
+def _get_robot_sprites():
+    """Loads (and caches) lazily on first call rather than at import time --
+    convert_alpha() needs an active pygame display, which doesn't exist yet
+    when this module is first imported (main.py imports RescueAgent before
+    calling pygame.init()). First real call happens inside GameSession's
+    __init__, safely after display setup. Cached at module level so a
+    restart (R) doesn't reload the same 20 files from disk."""
+    global _ROBOT_SPRITES_CACHE
+    if _ROBOT_SPRITES_CACHE == "unloaded":
+        _ROBOT_SPRITES_CACHE = _load_robot_sprites()
+    return _ROBOT_SPRITES_CACHE
+
 
 class RescueAgent:
-    def __init__(self, tilemap, start_cell, hazard_field=None, stats=None):
+    def __init__(self, tilemap, start_cell, hazard_field=None, stats=None, visual=None):
         self.tilemap = tilemap
         self.hazards = hazard_field
         self.stats = stats
@@ -74,6 +138,17 @@ class RescueAgent:
         self._route_surface = None  # lazily made once, reused every frame
         self._anim_t = 0.0
         self._heading = (0.0, 1.0)  # unit-ish vector, for the drone's nose
+
+        # visual (an explicit param, e.g. from a skin-select menu) picks the
+        # look for *this* agent; falls back to the settings.py default when
+        # the caller doesn't care. "robot" with a complete assets/robot/
+        # set -> walk cycle sprites; otherwise the original hand-drawn
+        # drone, no art required. Checked once here rather than every
+        # draw() call. Deliberately a constructor param rather than reading
+        # settings.AGENT_VISUAL directly, so a menu can set it per-run
+        # without fighting Python's "from x import y" import-time binding.
+        visual = AGENT_VISUAL if visual is None else visual
+        self._sprites = _get_robot_sprites() if visual == "robot" else None
 
         # partial observability: the agent only knows a victim once it's
         # seen one, and only "knows" the map it has walked near
@@ -275,6 +350,10 @@ class RescueAgent:
         surface.blit(layer, (0, 0))
 
     def draw(self, surface, camera_offset):
+        if self._sprites is not None:
+            self._draw_robot(surface, camera_offset)
+            return
+
         ox, oy = camera_offset
         cx, cy = self.x - ox, self.y - oy
         S = 52  # drone canvas
@@ -326,3 +405,32 @@ class RescueAgent:
         pygame.draw.circle(d, _DRONE_EYE, (mid, cy_d), pulse)
 
         surface.blit(d, d.get_rect(center=(round(cx), round(cy))))
+
+    def _draw_robot(self, surface, camera_offset):
+        """Walking-robot alternative to the drone: same feet-anchored
+        convention as Player/Victim (self.x, self.y is the ground point
+        the pathfinder/collision use), 4-direction idle/walk sprites, and
+        a flat shadow rather than the drone's hover shadow."""
+        ox, oy = camera_offset
+        cx, cy = round(self.x - ox), round(self.y - oy)
+        idle_frames, walk_frames = self._sprites
+        direction = _direction_from_heading(*self._heading)
+        moving = bool(self._waypoints) and not self.done
+
+        if moving:
+            frame = walk_frames[direction][int(self._anim_t * WALK_ANIM_FPS) % 4]
+        else:
+            frame = idle_frames[direction]
+
+        shadow = pygame.Surface((32, 14), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (0, 0, 0, 70), shadow.get_rect())
+        surface.blit(shadow, shadow.get_rect(center=(cx, cy)))
+
+        rect = frame.get_rect(midbottom=(cx, cy))
+        if self.is_dead:
+            # dim + desaturate a copy rather than mutate the cached frame
+            crashed = frame.copy()
+            crashed.fill((130, 130, 130, 255), special_flags=pygame.BLEND_RGBA_MULT)
+            surface.blit(crashed, rect)
+        else:
+            surface.blit(frame, rect)

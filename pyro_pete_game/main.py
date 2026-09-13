@@ -17,7 +17,7 @@ Hazards (see hazard_field.HazardField): spreading fire + functional smoke
 that collapse into impassable rubble mid-run, and one locked door whose
 key is hidden on a side branch.
 
-Controls: WASD / arrows move, R restart, Esc quit.
+Controls: WASD / arrows move, P pause, R restart, Esc quit.
 """
 
 import sys
@@ -43,8 +43,10 @@ from camera import Camera
 from hazard_field import HazardField
 from visibility import VisibilitySystem
 from stats import RunStats
-from results import draw_results
+from results import draw_results, draw_watch_results
 from levels import level_01
+from intro import IntroScene
+from menu import ChoiceMenu, build_menu_background
 
 FONT_COLOR = (230, 230, 230)
 
@@ -102,10 +104,21 @@ def _mark_saved(follow_order):
 # ---------------------------------------------------------------- game session
 class GameSession:
     """All the per-run state, so restarting is just reset() and main()
-    stays a thin pygame shell around update()/draw()."""
+    stays a thin pygame shell around update()/draw().
 
-    def __init__(self, tilemap):
+    spectate=True is "Watch AI Play": no Pete at all -- the camera and fog
+    of war follow the AI instead, and the run ends (and shows a
+    single-column results panel) once the AI itself is done, rather than
+    waiting on a player who was never there.
+
+    agent_visual picks the AI's look ("robot" or "drone") for this run --
+    an explicit menu choice rather than always reading settings.AGENT_VISUAL,
+    so different runs in the same session can look different."""
+
+    def __init__(self, tilemap, spectate=False, agent_visual=None):
         self.tilemap = tilemap
+        self.spectate = spectate
+        self.agent_visual = agent_visual
         self.camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT,
                              tilemap.pixel_width, tilemap.pixel_height)
         self.visibility = VisibilitySystem()
@@ -119,9 +132,13 @@ class GameSession:
         self.visibility.reset()
 
         spawn_x, spawn_y = tm.spawn_pos()
+        # Player object always exists (RescueAgent's _occupied_cells wants
+        # someone to check against) but in spectate mode it's never fed
+        # input, updated, or drawn -- see the `if not self.spectate` guards
+        # below.
         self.player = Player(spawn_x, spawn_y)
         self.player_stats = RunStats("You (Pete)")
-        self.agent_stats = RunStats("AI drone")
+        self.agent_stats = RunStats("AI drone" if self.agent_visual != "robot" else "AI robot")
 
         self.hazards = HazardField(
             tm, seed=level_01.SEED,
@@ -138,12 +155,22 @@ class GameSession:
         self.player_done = None  # "exit" | "dead" | None
         self.player_walked = {tm.spawn_cell}  # every cell Pete has stepped on
 
-        self.agent = RescueAgent(tm, tm.spawn_cell,
-                                 hazard_field=self.hazards, stats=self.agent_stats)
+        self.agent = RescueAgent(tm, tm.spawn_cell, hazard_field=self.hazards,
+                                 stats=self.agent_stats, visual=self.agent_visual)
         self.agent_trail = deque(maxlen=AGENT_TRAIL_MAXLEN)
         self.agent_follow_order = []
 
         self.state = "playing"  # "playing" | "results"
+        # Independent of `state`: freezes update() (hazards, both rescuers,
+        # timers) without touching run state, so unpausing resumes exactly
+        # where it left off. Always cleared on reset so a restart never
+        # comes back up paused.
+        self.paused = False
+
+    # -- whichever entity the camera/fog should follow -------------------
+    @property
+    def _view_anchor(self):
+        return self.agent if self.spectate else self.player
 
     # -- debris callbacks ------------------------------------------------
     def _protected_cells(self):
@@ -163,11 +190,11 @@ class GameSession:
 
     # -- update -------------------------------------------------------
     def update(self, dt, keys):
-        if self.state != "playing":
+        if self.state != "playing" or self.paused:
             return
         tm = self.tilemap
 
-        if self.player_done is None:
+        if not self.spectate and self.player_done is None:
             self.player_stats.tick(dt)
             self.player.update(dt, keys, tilemap=tm,
                                hazards=self.hazards, stats=self.player_stats)
@@ -203,13 +230,30 @@ class GameSession:
         if self.agent.current_cell == tm.exit_cell:
             _mark_saved(self.agent_follow_order)
 
-        self.camera.update(self.player.x, self.player.y)
-        self.visibility.update(self.player, self.hazards)
+        anchor = self._view_anchor
+        self.camera.update(anchor.x, anchor.y)
+        self.visibility.update(anchor, self.hazards)
 
         self.player_stats.set_saved(
             sum(1 for v in self.player_follow_order if v.state == STATE_SAVED))
         self.agent_stats.set_saved(
             sum(1 for v in self.agent_follow_order if v.state == STATE_SAVED))
+
+        if self.spectate and self.agent.done and self.state == "playing":
+            self._end_run_spectate()
+
+    def _end_run_spectate(self):
+        """Watch-mode's equivalent of _end_run: there's no Pete run to hang
+        the ending on, so it triggers off the AI's own .done (reached the
+        exit with nothing left to rescue, or died)."""
+        if self.agent.is_dead:
+            agent_reason = "dead"
+        elif self.agent.current_cell == self.tilemap.exit_cell:
+            agent_reason = "exit"
+        else:
+            agent_reason = "time"
+        self.agent_stats.finish(agent_reason)
+        self.state = "results"
 
     def _end_run(self, player_reason):
         self.player_done = player_reason
@@ -230,18 +274,23 @@ class GameSession:
         self.hazards.draw_ground(surface, cam)
         for victim in self.victims:
             victim.draw(surface, cam, font=self.hud_font)
-        self.player.draw(surface, cam)
-        self.visibility.draw(surface, self.player, cam, self.hazards)
+        if not self.spectate:
+            self.player.draw(surface, cam)
+        self.visibility.draw(surface, self._view_anchor, cam, self.hazards)
 
         # Trails + the AI's planned route are drawn ON TOP of the fog on
         # purpose: the point of running an autonomous agent next to the
         # player is being able to compare where each one went, so both
         # paths stay visible even in unlit parts of the maze.
-        self._draw_player_trail(surface, cam)
+        if not self.spectate:
+            self._draw_player_trail(surface, cam)
         self.agent.draw_route(surface, cam)
         self.agent.draw(surface, cam)
 
-        self._draw_hud(surface)
+        if self.spectate:
+            self._draw_hud_spectate(surface)
+        else:
+            self._draw_hud(surface)
 
     def _draw_player_trail(self, surface, camera_offset):
         ox, oy = camera_offset
@@ -313,6 +362,57 @@ class GameSession:
             label = f"Fire -> exit  {int(left // 60)}:{int(left % 60):02d}"
         surface.blit(f.render(label, True, colour), (x, y + HEALTH_BAR_HEIGHT + 24))
 
+    def _draw_hud_spectate(self, surface):
+        """Single-rescuer HUD for "Watch AI Play" -- same panel language as
+        _draw_hud, just built around the AI alone instead of a You/AI pair."""
+        f = self.hud_font
+        total = len(self.victims)
+
+        self._panel(surface, pygame.Rect(8, 8, 300, 60))
+        surface.blit(f.render(
+            f"Occupants out   {self.agent_stats.victims_saved}/{total}",
+            True, FONT_COLOR), (16, 13))
+        surface.blit(f.render(
+            f"Score   {self.agent_stats.score}", True, RESULTS_ACCENT_COLOR), (16, 34))
+
+        x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
+        self._panel(surface, pygame.Rect(x - 10, 8, HEALTH_BAR_WIDTH + 20, 92))
+        y = HEALTH_BAR_MARGIN
+        bg = pygame.Rect(x, y, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
+        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, bg)
+        frac = max(0.0, min(1.0, self.agent.health / HEALTH_MAX))
+        pygame.draw.rect(surface, _health_bar_color(frac),
+                         pygame.Rect(x, y, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
+        pygame.draw.rect(surface, HEALTH_BAR_BORDER_COLOR, bg, 2)
+        surface.blit(f.render("AI HEALTH", True, FONT_COLOR), (x, y + HEALTH_BAR_HEIGHT + 3))
+
+        elapsed = self.agent_stats.elapsed
+        surface.blit(f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
+                              True, FONT_COLOR), (x + 96, y + HEALTH_BAR_HEIGHT + 3))
+        if self.hazards.fire.exit_on_fire:
+            label, colour = "EXIT ON FIRE", (240, 90, 60)
+        else:
+            left = self.hazards.fire.seconds_to_exit_fire
+            colour = (240, 90, 60) if left < 15 else (
+                (235, 175, 70) if left < 35 else (205, 205, 210))
+            label = f"Fire -> exit  {int(left // 60)}:{int(left % 60):02d}"
+        surface.blit(f.render(label, True, colour), (x, y + HEALTH_BAR_HEIGHT + 24))
+
+
+def _draw_pause_overlay(surface, title_font, body_font):
+    """Dims the frozen frame and labels it, rather than blanking the
+    screen -- the point of pausing mid-run is to let you study the maze/
+    hazard state, not lose sight of it."""
+    dim = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    dim.fill((0, 0, 0, 140))
+    surface.blit(dim, (0, 0))
+
+    w, h = surface.get_size()
+    title = title_font.render("PAUSED", True, (230, 230, 230))
+    surface.blit(title, title.get_rect(center=(w // 2, h // 2 - 20)))
+    hint = body_font.render("Press P to resume", True, (200, 200, 200))
+    surface.blit(hint, hint.get_rect(center=(w // 2, h // 2 + 22)))
+
 
 # ---------------------------------------------------------------- entry point
 def _disable_windows_dpi_scaling():
@@ -325,7 +425,41 @@ def _disable_windows_dpi_scaling():
         pass
 
 
+def _build_mode_menu(background=None):
+    return ChoiceMenu(
+        "Pyro Pete",
+        [
+            ("Play vs AI", "play", "Race the AI rescuer yourself"),
+            ("Watch AI Play", "watch", "Sit back and watch the AI solve it alone"),
+        ],
+        subtitle="Choose a mode",
+        background=background,
+    )
+
+
+def _build_skin_menu(background=None):
+    return ChoiceMenu(
+        "Choose the AI's Look",
+        [
+            ("Robot", "robot", "The walking rescue robot"),
+            ("Drone", "drone", "The original quadcopter"),
+        ],
+        subtitle="How should the AI opponent appear?",
+        background=background,
+    )
+
+
 def main():
+    """Thin pygame shell that steps through the run's screens in order:
+
+        intro -> menu_mode -> menu_skin -> playing/watching -> results
+                    ^________________________________________|
+                          (Enter on the results panel)
+
+    Each app_state's update() runs first (handles its own input and may
+    advance app_state), then its draw() -- kept as two separate passes so a
+    state transition mid-frame never draws half of two different screens.
+    """
     _disable_windows_dpi_scaling()
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -336,29 +470,96 @@ def main():
     head_font = pygame.font.SysFont(None, 30)
     body_font = pygame.font.SysFont(None, 24)
 
-    session = GameSession(level_01.build())
+    # Built once here (not per-call, and not at module import time): it
+    # loads sprites via convert_alpha(), which needs the display created
+    # above by set_mode() to already exist -- same ordering trap that once
+    # bit the robot sprite loader in rescue_agent.py. Same Surface is
+    # reused behind every menu screen instead of re-decoding the same PNGs
+    # and re-blitting the building crop each time a menu is (re)built.
+    menu_background = build_menu_background()
+
+    app_state = "intro"
+    intro_scene = IntroScene()
+    mode_menu = _build_mode_menu(menu_background)
+    skin_menu = None
+    chosen_mode = None
+    chosen_visual = "robot"
+    session = None
 
     running = True
     while running:
         dt = clock.tick(FPS) / 1000.0
+        events = pygame.event.get()
 
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-                elif event.key == pygame.K_r:
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                running = False
+        if not running:
+            break
+
+        # ---- update ----
+        if app_state == "intro":
+            intro_scene.update(dt, events)
+            if intro_scene.finished:
+                app_state = "menu_mode"
+                mode_menu = _build_mode_menu(menu_background)
+
+        elif app_state == "menu_mode":
+            mode_menu.update(dt, events)
+            if mode_menu.result is not None:
+                chosen_mode = mode_menu.result
+                skin_menu = _build_skin_menu(menu_background)
+                app_state = "menu_skin"
+
+        elif app_state == "menu_skin":
+            skin_menu.update(dt, events)
+            if skin_menu.result is not None:
+                chosen_visual = skin_menu.result
+                session = GameSession(level_01.build(),
+                                      spectate=(chosen_mode == "watch"),
+                                      agent_visual=chosen_visual)
+                app_state = "playing" if chosen_mode == "play" else "watching"
+            elif skin_menu.cancelled:
+                app_state = "menu_mode"
+                mode_menu = _build_mode_menu(menu_background)
+
+        elif app_state in ("playing", "watching"):
+            for event in events:
+                if event.type != pygame.KEYDOWN:
+                    continue
+                if event.key == pygame.K_r:
                     session.reset()
+                elif event.key == pygame.K_p and session.state == "playing":
+                    session.paused = not session.paused
+                elif (session.state == "results"
+                      and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER)):
+                    app_state = "menu_mode"
+                    mode_menu = _build_mode_menu(menu_background)
+            if app_state in ("playing", "watching"):
+                session.update(dt, pygame.key.get_pressed())
 
-        session.update(dt, pygame.key.get_pressed())
-
+        # ---- draw ----
         screen.fill((0, 0, 0))
-        session.draw(screen)
-        if session.state == "results":
-            draw_results(screen, title_font, head_font, body_font,
-                         session.player_stats, session.agent_stats,
-                         len(session.victims))
+        if app_state == "intro":
+            intro_scene.draw(screen)
+        elif app_state == "menu_mode":
+            mode_menu.draw(screen)
+        elif app_state == "menu_skin":
+            skin_menu.draw(screen)
+        elif app_state in ("playing", "watching"):
+            session.draw(screen)
+            if session.state == "results":
+                if session.spectate:
+                    draw_watch_results(screen, title_font, head_font, body_font,
+                                       session.agent_stats, len(session.victims))
+                else:
+                    draw_results(screen, title_font, head_font, body_font,
+                                 session.player_stats, session.agent_stats,
+                                 len(session.victims))
+            elif session.paused:
+                _draw_pause_overlay(screen, title_font, body_font)
 
         pygame.display.flip()
 
