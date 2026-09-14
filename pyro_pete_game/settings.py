@@ -197,6 +197,18 @@ AGENT_REPLAN_MIN_INTERVAL = 0.25   # seconds -- don't re-run A* more often than 
 # re-plans when it finds out) rather than beelining omnisciently.
 AGENT_VISION_TILES = 3.5
 
+# Fraction of its *current* health the agent is willing to spend on a
+# speculative search once it is standing at the exit with no known
+# occupant left to fetch. Below this it stops and calls the run done.
+#
+# Without it the agent got everyone out, reached the exit, and walked
+# straight back into a burning building because a few tiles were still
+# unexplored -- it has no idea whether the trip is survivable, so on the
+# bigger maps it died there on most runs. This does not gate rescues or
+# the walk to the exit, only exploring for occupants it has no evidence
+# exist. Lower = more cautious.
+AGENT_EXPLORE_HEALTH_BUDGET = 0.6
+
 # --- Run stats / score / results ---
 # Both rescuers are instrumented (see stats.py) so the end screen can show
 # a real human-vs-AI comparison, which is the point of running an

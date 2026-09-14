@@ -41,6 +41,7 @@ from settings import (
     AGENT_SPEED, AGENT_COLOR, AGENT_RADIUS, AGENT_REPLAN_MIN_INTERVAL,
     AGENT_ROUTE_COLOR, AGENT_ROUTE_ALPHA, AGENT_TRAIL_COLOR, AGENT_TRAIL_ALPHA,
     AGENT_VISION_TILES, AGENT_VISUAL, AGENT_SPRITE_HEIGHT, WALK_ANIM_FPS,
+    AGENT_EXPLORE_HEALTH_BUDGET,
     HEALTH_MAX, TILE_SIZE,
 )
 from entities.victim import STATE_IDLE
@@ -223,6 +224,46 @@ class RescueAgent:
         return best
 
     # ------------------------------------------------------------------ goal
+    def _route_damage(self, path):
+        """Health the agent would lose walking `path`, judged by the
+        hazards as they stand right now.
+
+        Deliberately a snapshot: the fire keeps spreading while it walks,
+        so this under-estimates, which is why the caller keeps a reserve
+        rather than spending down to zero.
+        """
+        if self.hazards is None or not path:
+            return 0.0
+        speed = max(1.0, AGENT_SPEED * self.speed_scale)
+        seconds_per_tile = self.tilemap.tile_size / speed
+        total = 0.0
+        for cell in path:
+            x, y = self.tilemap.cell_center(*cell)
+            rect = pygame.Rect(0, 0, AGENT_RADIUS * 2, AGENT_RADIUS * 2)
+            rect.center = (round(x), round(y))
+            dps = self.hazards.damage_per_second(rect)
+            if dps:
+                total += dps * seconds_per_tile
+        return total
+
+    def _worth_exploring(self, target):
+        """Can it afford to go and look, and still get back out?
+
+        Only ever consulted when no known occupant is waiting, so a
+        cautious answer can never strand someone -- it just means the
+        agent stops searching a building it has no evidence still holds
+        anyone, which is the difference between finishing a run and
+        burning to death two tiles from the door.
+        """
+        if self.hazards is None:
+            return True
+        path = astar_path(self.tilemap, self.current_cell, target, self._cost_fn())
+        if path is None:
+            return False
+        # out and back again -- reaching the far side is only half the job
+        round_trip = self._route_damage(path) * 2.0
+        return round_trip <= self.health * AGENT_EXPLORE_HEALTH_BUDGET
+
     def _choose_goal_cell(self, victims):
         """Chase the nearest *known* idle victim by weighted distance. No
         known victim -> explore toward the nearest unseen area. Nothing
@@ -236,7 +277,10 @@ class RescueAgent:
         if idle:
             target = min(idle, key=lambda c: dist[c])
         else:
-            target = self._nearest_unexplored(dist) or self.tilemap.exit_cell
+            unexplored = self._nearest_unexplored(dist)
+            if unexplored is not None and not self._worth_exploring(unexplored):
+                unexplored = None      # too expensive to go looking; head out
+            target = unexplored or self.tilemap.exit_cell
 
         doors = self.hazards.doors if self.hazards else None
         if doors and doors.enabled and not doors.key_collected and doors.key_cell:
@@ -279,10 +323,13 @@ class RescueAgent:
             # knows of no idle victim, and has nothing left to explore
             at_exit = self.current_cell == self.tilemap.exit_cell
             no_known = not any(v.state == STATE_IDLE for v in self.known_victims)
-            fully_mapped = self._nearest_unexplored(
+            unexplored = self._nearest_unexplored(
                 weighted_distances(self.tilemap, self.current_cell, self._cost_fn())
-            ) is None
-            if at_exit and no_known and fully_mapped:
+            )
+            # Done means either nothing left to look at, or nothing left
+            # worth the health it would cost to go and look.
+            search_over = unexplored is None or not self._worth_exploring(unexplored)
+            if at_exit and no_known and search_over:
                 self._finished = True
             return
 
