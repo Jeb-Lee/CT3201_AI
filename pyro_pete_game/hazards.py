@@ -42,8 +42,18 @@ MIN_SPREAD_INTERVAL = 0.15
 
 
 class FireSystem:
-    def __init__(self, tilemap):
+    def __init__(self, tilemap, seconds_to_exit=None, exclude_cells=()):
+        """seconds_to_exit overrides FIRE_TARGET_SECONDS_TO_EXIT for this
+        stage (see levels.tuning.StageTuning); None keeps the default.
+
+        exclude_cells are cells the fire must not start on or beside --
+        in practice the locked door's key. Igniting on the key made some
+        of the bigger stages unwinnable: the key is a mandatory fetch, so
+        a fire sitting on it forced both rescuers to walk through flame
+        with no alternative, and the AI died there every single run."""
         self.tilemap = tilemap
+        self.seconds_to_exit = (FIRE_TARGET_SECONDS_TO_EXIT
+                                if seconds_to_exit is None else seconds_to_exit)
 
         dist_from_exit = _bfs_distances(tilemap, tilemap.exit_cell)
         dist_from_spawn = _bfs_distances(tilemap, tilemap.spawn_cell)
@@ -56,9 +66,14 @@ class FireSystem:
         # from spawn too, so the fire always starts somewhere Pete actually
         # has to walk toward rather than starting in his lap.
         min_spawn_distance = max(3, spawn_to_exit // 4)
+        banned = set(exclude_cells)
+        for col, row in tuple(banned):       # also spare their neighbours
+            banned.update({(col + 1, row), (col - 1, row),
+                           (col, row + 1), (col, row - 1)})
         candidates = [
             c for c in dist_from_exit
-            if c != tilemap.spawn_cell and dist_from_spawn.get(c, 0) >= min_spawn_distance
+            if c != tilemap.spawn_cell and c not in banned
+            and dist_from_spawn.get(c, 0) >= min_spawn_distance
         ]
         if not candidates:
             candidates = [c for c in dist_from_exit if c != tilemap.spawn_cell] or list(dist_from_exit.keys())
@@ -66,7 +81,7 @@ class FireSystem:
 
         distance_to_exit = max(1, dist_from_exit[self.ignition_cell])
         self.spread_interval = max(
-            MIN_SPREAD_INTERVAL, FIRE_TARGET_SECONDS_TO_EXIT / distance_to_exit
+            MIN_SPREAD_INTERVAL, self.seconds_to_exit / distance_to_exit
         )
         # rough estimate of when the flame front reaches the exit tile,
         # for the HUD countdown. Braiding / debris can shift it a little.

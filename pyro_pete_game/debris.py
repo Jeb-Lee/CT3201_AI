@@ -28,11 +28,15 @@ FLOOR = "."
 
 
 class DebrisSystem:
-    def __init__(self, tilemap, protected_cells_fn, occupied_cells_fn):
+    def __init__(self, tilemap, protected_cells_fn, occupied_cells_fn,
+                 interval=None, max_tiles=None):
         """protected_cells_fn() -> iterable of cells that must stay
         connected (spawn, exit, every victim's cell).
         occupied_cells_fn() -> cells a rescuer is standing on right now."""
         self.tilemap = tilemap
+        # Per-stage overrides (levels.tuning.StageTuning); None = settings.
+        self.interval = DEBRIS_COLLAPSE_INTERVAL if interval is None else interval
+        self.max_tiles = DEBRIS_MAX_TILES if max_tiles is None else max_tiles
         self._protected = protected_cells_fn
         self._occupied = occupied_cells_fn
         self.debris = set()            # collapsed, impassable
@@ -60,12 +64,12 @@ class DebrisSystem:
                 self._pending = (cell, t_left)
             return
 
-        if len(self.debris) >= DEBRIS_MAX_TILES:
+        if len(self.debris) >= self.max_tiles:
             return
 
         self._timer += dt
-        if self._timer >= DEBRIS_COLLAPSE_INTERVAL:
-            self._timer -= DEBRIS_COLLAPSE_INTERVAL
+        if self._timer >= self.interval:
+            self._timer -= self.interval
             cell = self._pick_collapse_cell()
             if cell is not None:
                 self._pending = (cell, DEBRIS_WARN_SECONDS)

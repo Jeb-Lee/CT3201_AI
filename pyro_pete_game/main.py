@@ -7,17 +7,24 @@ time under the same rules -- it has health, takes hazard damage, and plans
 with hazard-weighted A* that it re-runs whenever the map changes under it.
 Its intended route is drawn on the floor.
 
-The run is a race against that agent: it ends when Pete reaches the exit
-or dies, and a results panel compares the two rescuers over the same
-clock -- victims saved, time, distance, damage, and (agent only) how many
-times the shifting hazards forced it to re-plan.
+The run is a race against that agent: it ends when Pete reaches the exit,
+dies, or is beaten out of the building by the AI, and a results panel
+compares the two rescuers over the same clock -- victims saved, time,
+distance, damage, and (agent only) how many times the shifting hazards
+forced it to re-plan.
+
+Clearing a stage promotes you to the next of the ten in levels/STAGES,
+which scale up through bigger floor plans, more occupants and harsher
+hazards (levels/tuning.py). Losing one puts you back at the menu.
 
 Hazards (see hazard_field.HazardField): spreading fire + functional smoke
 (slows you, closes in your view), stationary sparking panels, ceilings
 that collapse into impassable rubble mid-run, and one locked door whose
 key is hidden on a side branch.
 
-Controls: WASD / arrows move, P pause, R restart, Esc quit.
+Controls: WASD / arrows move, P pause, R restart, M mute, Esc quit.
+On the results panel, Enter advances to the next stage after a clear, or
+returns to the menu otherwise.
 """
 
 import sys
@@ -44,9 +51,11 @@ from hazard_field import HazardField
 from visibility import VisibilitySystem
 from stats import RunStats
 from results import draw_results, draw_watch_results
-from levels import level_01
+import levels
+from levels.tuning import DEFAULT as DEFAULT_TUNING
 from intro import IntroScene
 from menu import ChoiceMenu, build_menu_background
+from audio import AudioManager
 
 FONT_COLOR = (230, 230, 230)
 
@@ -115,12 +124,19 @@ class GameSession:
     an explicit menu choice rather than always reading settings.AGENT_VISUAL,
     so different runs in the same session can look different."""
 
-    def __init__(self, tilemap, spectate=False, agent_visual=None):
-        self.tilemap = tilemap
+    def __init__(self, stage, spectate=False, agent_visual=None, stage_index=0):
+        """stage is a module from levels.STAGES -- it carries the map
+        (build()), its fixed SEED, and the per-stage difficulty TUNING.
+        Taking the module rather than a bare TileMap is what lets one
+        GameSession serve all ten stages unchanged."""
+        self.stage = stage
+        self.stage_index = stage_index
+        self.tuning = getattr(stage, "TUNING", DEFAULT_TUNING)
+        self.tilemap = stage.build()
         self.spectate = spectate
         self.agent_visual = agent_visual
         self.camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT,
-                             tilemap.pixel_width, tilemap.pixel_height)
+                             self.tilemap.pixel_width, self.tilemap.pixel_height)
         self.visibility = VisibilitySystem()
         self.hud_font = pygame.font.SysFont(None, 28)
         self._trail_surface = None  # reused draw buffer for Pete's trail
@@ -141,12 +157,14 @@ class GameSession:
         self.agent_stats = RunStats("AI drone" if self.agent_visual != "robot" else "AI robot")
 
         self.hazards = HazardField(
-            tm, seed=level_01.SEED,
+            tm, seed=self.stage.SEED,
             protected_cells_fn=self._protected_cells,
             occupied_cells_fn=self._occupied_cells,
+            tuning=self.tuning,
         )
+        victim_count = self.tuning.victim_count or VICTIM_COUNT
         self.victims = place_victims(
-            tm, VICTIM_COUNT, exclude_cells=self.hazards.reserved_cells()
+            tm, victim_count, exclude_cells=self.hazards.reserved_cells()
         )
         self.hazards.activate_door()  # after victims, so they spawn on a doorless map
 
@@ -156,9 +174,16 @@ class GameSession:
         self.player_walked = {tm.spawn_cell}  # every cell Pete has stepped on
 
         self.agent = RescueAgent(tm, tm.spawn_cell, hazard_field=self.hazards,
-                                 stats=self.agent_stats, visual=self.agent_visual)
+                                 stats=self.agent_stats, visual=self.agent_visual,
+                                 speed_scale=self.tuning.agent_speed_scale)
         self.agent_trail = deque(maxlen=AGENT_TRAIL_MAXLEN)
         self.agent_follow_order = []
+
+        # Race outcome, set by _end_run: "cleared" (Pete got out),
+        # "outrun" (the AI finished first), "died" (Pete burned). The
+        # campaign in main() reads this to decide whether to advance a
+        # stage or re-run the same one.
+        self.outcome = None
 
         self.state = "playing"  # "playing" | "results"
         # Independent of `state`: freezes update() (hazards, both rescuers,
@@ -166,6 +191,23 @@ class GameSession:
         # where it left off. Always cleared on reset so a restart never
         # comes back up paused.
         self.paused = False
+
+    # -- campaign helpers ------------------------------------------------
+    @property
+    def stage_label(self):
+        return levels.label(self.stage_index)
+
+    @property
+    def has_next_stage(self):
+        return self.stage_index + 1 < levels.STAGE_COUNT
+
+    @property
+    def cleared(self):
+        """True when this stage was beaten: Pete got out in a race, or the
+        AI got itself out in watch mode."""
+        if self.spectate:
+            return self.agent.completed
+        return self.outcome == "cleared"
 
     # -- whichever entity the camera/fog should follow -------------------
     @property
@@ -230,6 +272,13 @@ class GameSession:
         if self.agent.current_cell == tm.exit_cell:
             _mark_saved(self.agent_follow_order)
 
+        # The AI finishing the stage alive ends the race -- previously the
+        # run only ended on Pete's exit or death, so once the AI was out
+        # the player kept wandering a building they had already lost.
+        if (not self.spectate and self.player_done is None
+                and self.agent.completed):
+            self._end_run("outrun")
+
         anchor = self._view_anchor
         self.camera.update(anchor.x, anchor.y)
         self.visibility.update(anchor, self.hazards)
@@ -257,7 +306,10 @@ class GameSession:
 
     def _end_run(self, player_reason):
         self.player_done = player_reason
-        self.player_stats.finish(player_reason)
+        # "outrun" is a loss, not an exit: Pete is still inside, so his
+        # stats close out on time rather than banking the exit bonus.
+        self.player_stats.finish("time" if player_reason == "outrun" else player_reason)
+        self.outcome = {"exit": "cleared", "dead": "died"}.get(player_reason, "outrun")
         if self.agent.is_dead:
             agent_reason = "dead"
         elif self.agent.current_cell == self.tilemap.exit_cell:
@@ -319,24 +371,25 @@ class GameSession:
         f = self.hud_font
 
         # ---- left panel: occupants + score / AI health / key ----
-        self._panel(surface, pygame.Rect(8, 8, 372, 104))
+        self._panel(surface, pygame.Rect(8, 8, 372, 126))
         total = len(self.victims)
+        surface.blit(f.render(self.stage_label, True, RESULTS_ACCENT_COLOR), (16, 13))
         surface.blit(f.render(
             f"Occupants out   You {self.player_stats.victims_saved}/{total}"
-            f"    AI {self.agent_stats.victims_saved}/{total}", True, FONT_COLOR), (16, 13))
+            f"    AI {self.agent_stats.victims_saved}/{total}", True, FONT_COLOR), (16, 35))
         surface.blit(f.render(
             f"Score   You {self.player_stats.score}    AI {self.agent_stats.score}",
-            True, RESULTS_ACCENT_COLOR), (16, 34))
+            True, RESULTS_ACCENT_COLOR), (16, 56))
 
         ah = max(0.0, min(1.0, self.agent.health / HEALTH_MAX))
-        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, pygame.Rect(16, 60, 120, 9))
-        pygame.draw.rect(surface, (120, 150, 210), pygame.Rect(16, 60, round(120 * ah), 9))
-        surface.blit(f.render("AI drone", True, (150, 170, 210)), (144, 56))
+        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, pygame.Rect(16, 82, 120, 9))
+        pygame.draw.rect(surface, (120, 150, 210), pygame.Rect(16, 82, round(120 * ah), 9))
+        surface.blit(f.render(self.agent_stats.label, True, (150, 170, 210)), (144, 78))
 
         if self.hazards.doors.enabled and not self.hazards.doors.key_collected:
-            surface.blit(f.render("Door locked - find the key", True, KEY_COLOR), (16, 82))
+            surface.blit(f.render("Door locked - find the key", True, KEY_COLOR), (16, 104))
         elif self.hazards.doors.enabled:
-            surface.blit(f.render("Key collected", True, (140, 200, 140)), (16, 82))
+            surface.blit(f.render("Key collected", True, (140, 200, 140)), (16, 104))
 
         # ---- right panel: health / run time / fire countdown ----
         x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
@@ -368,12 +421,13 @@ class GameSession:
         f = self.hud_font
         total = len(self.victims)
 
-        self._panel(surface, pygame.Rect(8, 8, 300, 60))
+        self._panel(surface, pygame.Rect(8, 8, 320, 82))
+        surface.blit(f.render(self.stage_label, True, RESULTS_ACCENT_COLOR), (16, 13))
         surface.blit(f.render(
             f"Occupants out   {self.agent_stats.victims_saved}/{total}",
-            True, FONT_COLOR), (16, 13))
+            True, FONT_COLOR), (16, 35))
         surface.blit(f.render(
-            f"Score   {self.agent_stats.score}", True, RESULTS_ACCENT_COLOR), (16, 34))
+            f"Score   {self.agent_stats.score}", True, RESULTS_ACCENT_COLOR), (16, 56))
 
         x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
         self._panel(surface, pygame.Rect(x - 10, 8, HEALTH_BAR_WIDTH + 20, 92))
@@ -465,6 +519,8 @@ def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Pyro Pete - Emergency Evacuation")
     clock = pygame.time.Clock()
+    # Falls back to silence on a machine with no audio device -- see audio.py.
+    audio = AudioManager()
 
     title_font = pygame.font.SysFont(None, 44)
     head_font = pygame.font.SysFont(None, 30)
@@ -485,6 +541,7 @@ def main():
     chosen_mode = None
     chosen_visual = "robot"
     session = None
+    stage_index = 0  # 0-based position in levels.STAGES for this campaign run
 
     running = True
     while running:
@@ -496,6 +553,8 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
+                audio.toggle_mute()
         if not running:
             break
 
@@ -517,9 +576,11 @@ def main():
             skin_menu.update(dt, events)
             if skin_menu.result is not None:
                 chosen_visual = skin_menu.result
-                session = GameSession(level_01.build(),
+                stage_index = 0  # every campaign starts at stage 1
+                session = GameSession(levels.get(stage_index),
                                       spectate=(chosen_mode == "watch"),
-                                      agent_visual=chosen_visual)
+                                      agent_visual=chosen_visual,
+                                      stage_index=stage_index)
                 app_state = "playing" if chosen_mode == "play" else "watching"
             elif skin_menu.cancelled:
                 app_state = "menu_mode"
@@ -535,10 +596,32 @@ def main():
                     session.paused = not session.paused
                 elif (session.state == "results"
                       and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER)):
-                    app_state = "menu_mode"
-                    mode_menu = _build_mode_menu(menu_background)
+                    # Clearing a stage promotes you to the next one; losing
+                    # it (or finishing the campaign) drops back to the menu.
+                    if session.cleared and session.has_next_stage:
+                        stage_index = session.stage_index + 1
+                        session = GameSession(levels.get(stage_index),
+                                              spectate=session.spectate,
+                                              agent_visual=chosen_visual,
+                                              stage_index=stage_index)
+                    else:
+                        app_state = "menu_mode"
+                        mode_menu = _build_mode_menu(menu_background)
             if app_state in ("playing", "watching"):
                 session.update(dt, pygame.key.get_pressed())
+
+        # ---- music ----
+        # Each screen just names the track it wants; AudioManager.play()
+        # no-ops when that track is already running, so this stays a
+        # simple per-frame statement instead of transition bookkeeping.
+        if app_state == "intro":
+            audio.play("title")
+        elif app_state in ("menu_mode", "menu_skin"):
+            audio.play("menu")
+        elif session is not None and session.state == "results":
+            audio.play("win" if session.cleared else "loss")
+        else:
+            audio.play("game")
 
         # ---- draw ----
         screen.fill((0, 0, 0))
@@ -553,16 +636,23 @@ def main():
             if session.state == "results":
                 if session.spectate:
                     draw_watch_results(screen, title_font, head_font, body_font,
-                                       session.agent_stats, len(session.victims))
+                                       session.agent_stats, len(session.victims),
+                                       stage_label=session.stage_label,
+                                       cleared=session.cleared,
+                                       has_next_stage=session.has_next_stage)
                 else:
                     draw_results(screen, title_font, head_font, body_font,
                                  session.player_stats, session.agent_stats,
-                                 len(session.victims))
+                                 len(session.victims),
+                                 outcome=session.outcome,
+                                 stage_label=session.stage_label,
+                                 has_next_stage=session.has_next_stage)
             elif session.paused:
                 _draw_pause_overlay(screen, title_font, body_font)
 
         pygame.display.flip()
 
+    audio.stop()
     pygame.quit()
     sys.exit()
 

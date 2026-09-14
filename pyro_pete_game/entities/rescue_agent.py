@@ -122,10 +122,15 @@ def _get_robot_sprites():
 
 
 class RescueAgent:
-    def __init__(self, tilemap, start_cell, hazard_field=None, stats=None, visual=None):
+    def __init__(self, tilemap, start_cell, hazard_field=None, stats=None,
+                 visual=None, speed_scale=1.0):
+        """speed_scale multiplies AGENT_SPEED for this run -- later
+        campaign stages nudge it up so the race stays tight as the
+        buildings get bigger (levels.tuning.StageTuning.agent_speed_scale)."""
         self.tilemap = tilemap
         self.hazards = hazard_field
         self.stats = stats
+        self.speed_scale = speed_scale
         self.x, self.y = tilemap.cell_center(*start_cell)
         self.current_cell = start_cell
         self.health = HEALTH_MAX
@@ -171,6 +176,13 @@ class RescueAgent:
         """Nothing left to do -- reached the exit with no reachable idle
         victims, or dead."""
         return self._finished or self.is_dead
+
+    @property
+    def completed(self):
+        """Finished the stage *successfully* -- out of the building alive.
+        Distinct from done(), which is also true when the agent burns to
+        death; only this counts as the AI winning the race."""
+        return self._finished and not self.is_dead
 
     def _cost_fn(self):
         if self.hazards is None:
@@ -303,7 +315,7 @@ class RescueAgent:
         if dist > 0.01:
             self._heading = (dx / dist, dy / dist)
 
-        speed = AGENT_SPEED
+        speed = AGENT_SPEED * self.speed_scale
         if self.hazards is not None:
             speed *= self.hazards.move_multiplier(self.x, self.y)
         step = speed * dt

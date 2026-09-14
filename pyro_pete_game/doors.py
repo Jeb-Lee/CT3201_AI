@@ -26,14 +26,14 @@ from pathfinding import bfs_path, bfs_distances
 
 
 class LockedDoorSystem:
-    def __init__(self, tilemap, seed=None):
+    def __init__(self, tilemap, seed=None, enabled=None):
         """Picks the door + key cells straight away (needs only the maze),
         but does NOT block the door yet -- activate() does that. The gap
         lets panels/victims be placed on a doorless map first, so a victim
         can legitimately end up *beyond* the door (a 'fetch the key first'
         sub-goal) instead of being excluded from spawning there."""
         self.tilemap = tilemap
-        self.enabled = LOCKED_DOOR_ENABLED
+        self.enabled = LOCKED_DOOR_ENABLED if enabled is None else enabled
         self.doors = set()
         self.key_cell = None
         self.key_collected = False

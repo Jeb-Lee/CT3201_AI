@@ -22,19 +22,38 @@ from hazards import FireSystem
 from panels import SparkPanelSystem
 from debris import DebrisSystem
 from doors import LockedDoorSystem
+from levels.tuning import DEFAULT as DEFAULT_TUNING
 
 
 class HazardField:
-    def __init__(self, tilemap, seed, protected_cells_fn, occupied_cells_fn):
+    def __init__(self, tilemap, seed, protected_cells_fn, occupied_cells_fn,
+                 tuning=None):
+        """tuning is a levels.tuning.StageTuning (None = settings defaults).
+        This is the single place stage difficulty is unpacked -- the hazard
+        systems below each take a plain override argument and know nothing
+        about stages."""
+        tuning = tuning or DEFAULT_TUNING
         self.tilemap = tilemap
-        self.fire = FireSystem(tilemap)
-        self.doors = LockedDoorSystem(tilemap, seed=seed)  # picks cells, unlocked
+        self.tuning = tuning
+        # Doors first: they pick the key cell from the bare maze, and the
+        # fire needs to know where it is so it doesn't ignite on top of a
+        # mandatory fetch.
+        self.doors = LockedDoorSystem(  # picks cells, unlocked
+            tilemap, seed=seed, enabled=tuning.door_enabled)
+        self.fire = FireSystem(
+            tilemap,
+            seconds_to_exit=tuning.fire_seconds_to_exit,
+            exclude_cells=[c for c in (self.doors.key_cell,) if c],
+        )
         self.panels = SparkPanelSystem(
             tilemap,
             exclude_cells=[self.fire.ignition_cell, *self.doors.reserved_cells()],
             seed=seed,
+            count=tuning.panel_count,
         )
-        self.debris = DebrisSystem(tilemap, protected_cells_fn, occupied_cells_fn)
+        self.debris = DebrisSystem(tilemap, protected_cells_fn, occupied_cells_fn,
+                                   interval=tuning.debris_interval,
+                                   max_tiles=tuning.debris_max_tiles)
 
     def reserved_cells(self):
         """Everything victims should avoid spawning on."""

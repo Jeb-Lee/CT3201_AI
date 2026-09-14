@@ -14,6 +14,7 @@ same way the maze and fire ignition are.
 """
 
 import random
+from collections import deque
 
 import pygame
 
@@ -25,9 +26,32 @@ from settings import (
 from pathfinding import bfs_distances
 
 
+def _route_exists_avoiding(tilemap, blocked):
+    """Is there a spawn->exit path that never crosses `blocked`? Plain
+    BFS over walkable tiles with those cells treated as walls."""
+    start, goal = tilemap.spawn_cell, tilemap.exit_cell
+    if start in blocked or goal in blocked:
+        return False
+    seen = {start}
+    queue = deque([start])
+    while queue:
+        col, row = queue.popleft()
+        if (col, row) == goal:
+            return True
+        for dc, dr in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+            nxt = (col + dc, row + dr)
+            if (nxt not in seen and nxt not in blocked
+                    and tilemap.is_walkable(*nxt)):
+                seen.add(nxt)
+                queue.append(nxt)
+    return False
+
+
 class SparkPanelSystem:
-    def __init__(self, tilemap, exclude_cells=(), seed=None):
+    def __init__(self, tilemap, exclude_cells=(), seed=None, count=None):
+        """count overrides SPARK_PANEL_COUNT for this stage."""
         self.tilemap = tilemap
+        count = SPARK_PANEL_COUNT if count is None else count
         rng = random.Random(seed)
         dist = bfs_distances(tilemap, tilemap.spawn_cell)
         banned = set(exclude_cells) | {tilemap.spawn_cell, tilemap.exit_cell}
@@ -36,8 +60,26 @@ class SparkPanelSystem:
             if c not in banned and d >= SPARK_PANEL_MIN_SPAWN_DISTANCE
         ]
         rng.shuffle(candidates)
-        self.panels = set(candidates[:SPARK_PANEL_COUNT])
+        self.panels = self._place_leaving_a_clean_route(candidates, count)
         self._t = 0.0
+
+    def _place_leaving_a_clean_route(self, candidates, count):
+        """Take panels from `candidates` one at a time, skipping any that
+        would seal off every panel-free route from spawn to exit.
+
+        Without this the later campaign stages were unwinnable: with eight
+        or more panels on a lightly-braided map, the seeded layout could
+        sit across the only corridor, and both Pete and the AI had to walk
+        through 34 dps to get anywhere. The cost surcharge in the A* only
+        helps if an alternative exists -- this is what guarantees one.
+        """
+        chosen = set()
+        for cell in candidates:
+            if len(chosen) >= count:
+                break
+            if _route_exists_avoiding(self.tilemap, chosen | {cell}):
+                chosen.add(cell)
+        return chosen
 
     def update(self, dt):
         self._t += dt

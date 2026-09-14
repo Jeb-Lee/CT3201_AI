@@ -4,8 +4,11 @@ A 2D top-down (Zelda-style, "early-days"/chibi art direction) evacuation game
 built for the CT3201 AI course. You drive Pyro Pete through a burning,
 collapsing maze, pick up trapped occupants and lead them to the exit -- while
 an autonomous **AI rescue agent** runs the same maze at the same time, under
-the same rules. The run ends when Pete reaches the exit or dies, and a
-results panel compares the two rescuers.
+the same rules. The run ends when Pete reaches the exit, dies, or is beaten
+out of the building by the AI, and a results panel compares the two rescuers.
+
+Clearing a stage promotes you to the next of **ten**, which scale up through
+bigger floor plans, more occupants and harsher hazards.
 
 Launching the game opens a short animated title sequence ("First Alarm"),
 then a menu to choose **Play vs AI** or **Watch AI Play** (spectate only,
@@ -31,7 +34,9 @@ BFS / Dijkstra / A* / Greedy comparison this enables.
 - [x] Robot sprite option for the AI, alongside the original drone (picked at the skin menu)
 - [x] "Watch AI Play" spectate mode -- no Pete, camera/fog follow the AI, single-column results
 - [x] Pause (`P`)
-- [ ] Multiple levels / difficulty progression
+- [x] Ten-stage campaign with a scaling difficulty curve (`levels/`, tuned via `levels/tuning.py`)
+- [x] The race ends when the AI gets out first -- outcome-aware results panel, Enter advances a stage
+- [x] Music for the title, menus, gameplay and both endings -- synthesised at runtime (`audio.py`), no audio assets, mute with `M`
 
 ## Running it
 
@@ -44,7 +49,9 @@ python main.py
 
 or in a venv: `python -m venv .venv && .venv\Scripts\pip install -r requirements.txt`.
 
-Controls: WASD / arrows move, `P` pause, `R` restart, `Esc` quit.
+Controls: WASD / arrows move, `P` pause, `R` restart, `M` mute, `Esc` quit.
+On the results panel, Enter goes to the next stage after a clear, or back to
+the menu otherwise.
 Menus: arrow keys or mouse to choose, Enter/click to confirm, `Esc` to back out a screen.
 Tests: `python -m pytest` (or `python tests/test_core.py`) from `pyro_pete_game/`.
 
@@ -56,6 +63,8 @@ pyro_pete_game/
   settings.py          # shared constants
   intro.py             # opening cinematic ("First Alarm") -- pygame-native, drawn not loaded
   menu.py              # reusable Play/Watch + skin-select menu, shared muted background
+  audio.py             # runtime-synthesised soundtrack (title/menu/game/win/loss), silent without a device
+  levels/              # the ten campaign stages + tuning.py (per-stage difficulty knobs)
   mazegen.py           # perfect-maze generation (recursive backtracker)
   tilemap.py           # tile grid: collision, dynamic blocks (debris/doors), rendering
   pathfinding.py       # BFS, Dijkstra, A*, Greedy -- all take a per-tile cost_fn
