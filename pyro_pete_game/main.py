@@ -360,65 +360,102 @@ class GameSession:
                                  (x + pad, y + pad, ts - 2 * pad, ts - 2 * pad))
         surface.blit(layer, (0, 0))
 
-    def _panel(self, surface, rect):
-        """Translucent backing so HUD text stays readable over sprites /
-        fire when the camera is pinned in a corner."""
-        p = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-        p.fill((12, 14, 20, 165))
-        surface.blit(p, rect.topleft)
+    # A HUD panel fades to this when the rescuer you are steering is
+    # underneath it. Every stage spawns at cell (1, 1) and the camera
+    # clamps at the map edge, so the first seconds of every run put you
+    # squarely behind the top-left panel -- readable HUD, invisible
+    # player. Fading is better than moving the panel: the corner you are
+    # in changes, the information does not.
+    HUD_ALPHA = 255
+    HUD_ALPHA_OCCLUDED = 70
+
+    def _panel_layer(self, rect):
+        """A panel-sized scratch surface with the translucent backing
+        already on it. Draw the panel's contents onto this in LOCAL
+        coordinates, then hand it to _blit_panel."""
+        layer = pygame.Surface(rect.size, pygame.SRCALPHA)
+        layer.fill((12, 14, 20, 165))
+        return layer
+
+    def _blit_panel(self, surface, layer, rect):
+        """Blit a panel, faded if the viewed rescuer is behind it. Fading
+        the whole layer (not just its backing) is the point -- dimming
+        the background alone would leave the text sitting on top of the
+        sprite."""
+        layer.set_alpha(self.HUD_ALPHA_OCCLUDED
+                        if self._anchor_behind(rect) else self.HUD_ALPHA)
+        surface.blit(layer, rect.topleft)
+
+    def _anchor_behind(self, rect):
+        anchor = self._view_anchor
+        ox, oy = self.camera.offset
+        # inflated by roughly a sprite, so it fades just before the
+        # overlap rather than at the moment you are already hidden
+        return rect.inflate(52, 52).collidepoint(anchor.x - ox, anchor.y - oy)
 
     def _draw_hud(self, surface):
         f = self.hud_font
 
-        # ---- left panel: occupants + score / AI health / key ----
-        self._panel(surface, pygame.Rect(8, 8, 372, 126))
+        # ---- left panel: stage / occupants + score / AI health / key ----
+        rect = pygame.Rect(8, 8, 372, 126)
+        layer = self._panel_layer(rect)
         total = len(self.victims)
-        surface.blit(f.render(self.stage_label, True, RESULTS_ACCENT_COLOR), (16, 13))
-        surface.blit(f.render(
+        layer.blit(f.render(self.stage_label, True, RESULTS_ACCENT_COLOR), (8, 5))
+        layer.blit(f.render(
             f"Occupants out   You {self.player_stats.victims_saved}/{total}"
-            f"    AI {self.agent_stats.victims_saved}/{total}", True, FONT_COLOR), (16, 35))
-        surface.blit(f.render(
+            f"    AI {self.agent_stats.victims_saved}/{total}", True, FONT_COLOR), (8, 27))
+        layer.blit(f.render(
             f"Score   You {self.player_stats.score}    AI {self.agent_stats.score}",
-            True, RESULTS_ACCENT_COLOR), (16, 56))
+            True, RESULTS_ACCENT_COLOR), (8, 48))
 
         ah = max(0.0, min(1.0, self.agent.health / HEALTH_MAX))
-        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, pygame.Rect(16, 82, 120, 9))
-        pygame.draw.rect(surface, (120, 150, 210), pygame.Rect(16, 82, round(120 * ah), 9))
-        surface.blit(f.render(self.agent_stats.label, True, (150, 170, 210)), (144, 78))
+        pygame.draw.rect(layer, HEALTH_BAR_BG_COLOR, pygame.Rect(8, 74, 120, 9))
+        pygame.draw.rect(layer, (120, 150, 210), pygame.Rect(8, 74, round(120 * ah), 9))
+        layer.blit(f.render(self.agent_stats.label, True, (150, 170, 210)), (136, 70))
 
         if self.hazards.doors.enabled and not self.hazards.doors.key_collected:
-            surface.blit(f.render("Door locked - find the key", True, KEY_COLOR), (16, 104))
+            layer.blit(f.render("Door locked - find the key", True, KEY_COLOR), (8, 96))
         elif self.hazards.doors.enabled:
-            surface.blit(f.render("Key collected", True, (140, 200, 140)), (16, 104))
+            layer.blit(f.render("Key collected", True, (140, 200, 140)), (8, 96))
+        self._blit_panel(surface, layer, rect)
 
         # ---- right panel: health / run time / fire countdown ----
-        x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
-        self._panel(surface, pygame.Rect(x - 10, 8, HEALTH_BAR_WIDTH + 20, 92))
-        y = HEALTH_BAR_MARGIN
-        bg = pygame.Rect(x, y, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
-        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, bg)
-        frac = max(0.0, min(1.0, self.player.health / HEALTH_MAX))
-        pygame.draw.rect(surface, _health_bar_color(frac),
-                         pygame.Rect(x, y, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
-        pygame.draw.rect(surface, HEALTH_BAR_BORDER_COLOR, bg, 2)
-        label = f.render("HEALTH", True, FONT_COLOR)
-        surface.blit(label, (x, y + HEALTH_BAR_HEIGHT + 3))
+        self._draw_status_panel(surface, "HEALTH", self.player.health,
+                                _health_bar_color, self.player_stats.elapsed)
 
-        elapsed = self.player_stats.elapsed
-        # Placed past the measured label rather than at a fixed offset --
-        # "AI HEALTH" in the spectate HUD is wider than "HEALTH" and used
-        # to run straight into the clock.
-        surface.blit(f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
-                              True, FONT_COLOR),
-                     (x + label.get_width() + 14, y + HEALTH_BAR_HEIGHT + 3))
+    def _draw_status_panel(self, surface, label_text, health, colour_fn, elapsed):
+        """The top-right panel, shared by the race and spectate HUDs --
+        they differ only in whose health and clock they show."""
+        f = self.hud_font
+        x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
+        rect = pygame.Rect(x - 10, 8, HEALTH_BAR_WIDTH + 20, 92)
+        layer = self._panel_layer(rect)
+        lx, ly = 10, HEALTH_BAR_MARGIN - 8   # panel-local origin of the bar
+
+        bg = pygame.Rect(lx, ly, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
+        pygame.draw.rect(layer, HEALTH_BAR_BG_COLOR, bg)
+        frac = max(0.0, min(1.0, health / HEALTH_MAX))
+        pygame.draw.rect(layer, colour_fn(frac),
+                         pygame.Rect(lx, ly, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
+        pygame.draw.rect(layer, HEALTH_BAR_BORDER_COLOR, bg, 2)
+
+        label = f.render(label_text, True, FONT_COLOR)
+        layer.blit(label, (lx, ly + HEALTH_BAR_HEIGHT + 3))
+        # placed past the measured label, since "AI HEALTH" is wider than
+        # "HEALTH" and a fixed offset ran the clock into it
+        layer.blit(f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
+                            True, FONT_COLOR),
+                   (lx + label.get_width() + 14, ly + HEALTH_BAR_HEIGHT + 3))
+
         if self.hazards.fire.exit_on_fire:
-            label, colour = "EXIT ON FIRE", (240, 90, 60)
+            text, colour = "EXIT ON FIRE", (240, 90, 60)
         else:
             left = self.hazards.fire.seconds_to_exit_fire
             colour = (240, 90, 60) if left < 15 else (
                 (235, 175, 70) if left < 35 else (205, 205, 210))
-            label = f"Fire -> exit  {int(left // 60)}:{int(left % 60):02d}"
-        surface.blit(f.render(label, True, colour), (x, y + HEALTH_BAR_HEIGHT + 24))
+            text = f"Fire -> exit  {int(left // 60)}:{int(left % 60):02d}"
+        layer.blit(f.render(text, True, colour), (lx, ly + HEALTH_BAR_HEIGHT + 24))
+        self._blit_panel(surface, layer, rect)
 
     def _draw_hud_spectate(self, surface):
         """Single-rescuer HUD for "Watch AI Play" -- same panel language as
@@ -426,38 +463,18 @@ class GameSession:
         f = self.hud_font
         total = len(self.victims)
 
-        self._panel(surface, pygame.Rect(8, 8, 320, 82))
-        surface.blit(f.render(self.stage_label, True, RESULTS_ACCENT_COLOR), (16, 13))
-        surface.blit(f.render(
+        rect = pygame.Rect(8, 8, 320, 82)
+        layer = self._panel_layer(rect)
+        layer.blit(f.render(self.stage_label, True, RESULTS_ACCENT_COLOR), (8, 5))
+        layer.blit(f.render(
             f"Occupants out   {self.agent_stats.victims_saved}/{total}",
-            True, FONT_COLOR), (16, 35))
-        surface.blit(f.render(
-            f"Score   {self.agent_stats.score}", True, RESULTS_ACCENT_COLOR), (16, 56))
+            True, FONT_COLOR), (8, 27))
+        layer.blit(f.render(
+            f"Score   {self.agent_stats.score}", True, RESULTS_ACCENT_COLOR), (8, 48))
+        self._blit_panel(surface, layer, rect)
 
-        x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
-        self._panel(surface, pygame.Rect(x - 10, 8, HEALTH_BAR_WIDTH + 20, 92))
-        y = HEALTH_BAR_MARGIN
-        bg = pygame.Rect(x, y, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
-        pygame.draw.rect(surface, HEALTH_BAR_BG_COLOR, bg)
-        frac = max(0.0, min(1.0, self.agent.health / HEALTH_MAX))
-        pygame.draw.rect(surface, _health_bar_color(frac),
-                         pygame.Rect(x, y, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
-        pygame.draw.rect(surface, HEALTH_BAR_BORDER_COLOR, bg, 2)
-        label = f.render("AI HEALTH", True, FONT_COLOR)
-        surface.blit(label, (x, y + HEALTH_BAR_HEIGHT + 3))
-
-        elapsed = self.agent_stats.elapsed
-        surface.blit(f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
-                              True, FONT_COLOR),
-                     (x + label.get_width() + 14, y + HEALTH_BAR_HEIGHT + 3))
-        if self.hazards.fire.exit_on_fire:
-            label, colour = "EXIT ON FIRE", (240, 90, 60)
-        else:
-            left = self.hazards.fire.seconds_to_exit_fire
-            colour = (240, 90, 60) if left < 15 else (
-                (235, 175, 70) if left < 35 else (205, 205, 210))
-            label = f"Fire -> exit  {int(left // 60)}:{int(left % 60):02d}"
-        surface.blit(f.render(label, True, colour), (x, y + HEALTH_BAR_HEIGHT + 24))
+        self._draw_status_panel(surface, "AI HEALTH", self.agent.health,
+                                _health_bar_color, self.agent_stats.elapsed)
 
 
 def _draw_pause_overlay(surface, title_font, body_font):
