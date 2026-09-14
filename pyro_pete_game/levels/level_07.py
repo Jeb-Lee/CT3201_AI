@@ -1,5 +1,15 @@
 """Stage 7: six occupants across a near-perfect maze.
 
+Known rough edge, and it is the agent rather than the map. Traced over
+repeated headless runs, the AI rescues all six, reaches the exit, and
+then walks back into the fire: RescueAgent._finished also requires the
+map to be fully explored, so with occupants still hypothetically out
+there it leaves safety to keep searching a building that is by then ~78
+tiles alight, and burns. Giving the stage a slower fire made it *worse*
+(more time alive is more time to wander back in), so the spread rate
+here is deliberately left where the rest of the curve puts it rather
+than tuned around a behaviour that tuning cannot reach.
+
 Same shape as every other stage module (NAME, DIFFICULTY, TUNING,
 build()) -- see levels/level_01.py for what the fields mean and
 levels/tuning.py for the difficulty knobs. Anything TUNING leaves unset
@@ -20,7 +30,7 @@ BRAID = 0.14
 
 TUNING = StageTuning(
     fire_seconds_to_exit=230,
-    fire_spread_interval=4.4,
+    fire_spread_interval=4.0,
     panel_count=6,
     debris_interval=6.6,
     debris_max_tiles=25,
