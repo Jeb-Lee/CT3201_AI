@@ -24,6 +24,18 @@ class StageTuning:
     # is harsher: it is the stage's real time limit.
     fire_seconds_to_exit: Optional[float] = None
 
+    # Seconds per ring of spread, overriding the rate derived from
+    # fire_seconds_to_exit. This is the knob that actually controls how
+    # fast the building fills, and on these maps it is the one that
+    # matters. The derived rate is seconds_to_exit / ignition-to-exit
+    # distance, so a stage whose fire starts a long way from the exit
+    # gets a *faster* per-ring spread out of the same budget -- measured
+    # headless, stage 2 burned out faster than stage 1 despite a longer
+    # timer, because its ignition point sits 40 steps from the exit
+    # rather than 28. Setting the interval directly makes the spread rate
+    # comparable across stages of different shapes.
+    fire_spread_interval: Optional[float] = None
+
     # --- spark panels ---
     panel_count: Optional[int] = None
 

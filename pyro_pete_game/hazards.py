@@ -42,7 +42,8 @@ MIN_SPREAD_INTERVAL = 0.15
 
 
 class FireSystem:
-    def __init__(self, tilemap, seconds_to_exit=None, exclude_cells=()):
+    def __init__(self, tilemap, seconds_to_exit=None, exclude_cells=(),
+                 spread_interval=None):
         """seconds_to_exit overrides FIRE_TARGET_SECONDS_TO_EXIT for this
         stage (see levels.tuning.StageTuning); None keeps the default.
 
@@ -80,8 +81,13 @@ class FireSystem:
         self.ignition_cell = max(candidates, key=lambda c: dist_from_exit[c])
 
         distance_to_exit = max(1, dist_from_exit[self.ignition_cell])
+        # An explicit per-ring interval wins over the rate derived from
+        # the exit budget -- see levels.tuning.StageTuning for why the
+        # campaign sets it directly.
+        derived = self.seconds_to_exit / distance_to_exit
         self.spread_interval = max(
-            MIN_SPREAD_INTERVAL, self.seconds_to_exit / distance_to_exit
+            MIN_SPREAD_INTERVAL,
+            derived if spread_interval is None else spread_interval,
         )
         # rough estimate of when the flame front reaches the exit tile,
         # for the HUD countdown. Braiding / debris can shift it a little.

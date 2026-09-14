@@ -20,6 +20,7 @@ BRAID = 0.14
 
 TUNING = StageTuning(
     fire_seconds_to_exit=230,
+    fire_spread_interval=4.0,
     panel_count=6,
     debris_interval=6.6,
     debris_max_tiles=25,

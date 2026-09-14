@@ -97,6 +97,24 @@ def test_difficulty_never_goes_backwards():
         prev_fire, prev_panels, prev_victims, prev_area = fire, panels, victims, area
 
 
+def test_fire_spread_rate_is_comparable_across_stages():
+    """Stage 1 rides the rate derived from its exit budget; every later
+    stage sets the per-ring interval explicitly, because the derived rate
+    depends on where the fire happens to start and so is not comparable
+    between maps of different shapes (see levels/tuning.py)."""
+    assert levels.get(0).TUNING.fire_spread_interval is None
+    for i in range(1, levels.STAGE_COUNT):
+        interval = levels.get(i).TUNING.fire_spread_interval
+        assert interval is not None, f"{levels.get(i).NAME} has no spread rate"
+        assert 2.0 <= interval <= 8.0
+
+
+def test_spread_interval_override_reaches_the_fire():
+    stage = levels.get(9)
+    session = GameSession(stage, spectate=True, stage_index=9)
+    assert session.hazards.fire.spread_interval == stage.TUNING.fire_spread_interval
+
+
 def test_stage_label_is_one_based():
     assert levels.label(0).startswith("Stage 1/10")
     assert levels.label(9).startswith("Stage 10/10")

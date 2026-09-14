@@ -44,6 +44,7 @@ class HazardField:
             tilemap,
             seconds_to_exit=tuning.fire_seconds_to_exit,
             exclude_cells=[c for c in (self.doors.key_cell,) if c],
+            spread_interval=tuning.fire_spread_interval,
         )
         self.panels = SparkPanelSystem(
             tilemap,
