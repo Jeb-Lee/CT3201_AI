@@ -141,8 +141,10 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
 
 
 def _verdict(p, a):
+    """Names the opponent from its own stats label, so a run with the
+    robot skin doesn't report being beaten by the drone."""
     if p.score > a.score:
-        return f"You beat the AI drone  ({p.score} vs {a.score})"
+        return f"You beat the {a.label}  ({p.score} vs {a.score})"
     if a.score > p.score:
-        return f"The AI drone beat you  ({a.score} vs {p.score})"
+        return f"The {a.label} beat you  ({a.score} vs {p.score})"
     return f"Dead heat  ({p.score} each)"

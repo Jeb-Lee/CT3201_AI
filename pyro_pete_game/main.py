@@ -401,11 +401,16 @@ class GameSession:
         pygame.draw.rect(surface, _health_bar_color(frac),
                          pygame.Rect(x, y, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
         pygame.draw.rect(surface, HEALTH_BAR_BORDER_COLOR, bg, 2)
-        surface.blit(f.render("HEALTH", True, FONT_COLOR), (x, y + HEALTH_BAR_HEIGHT + 3))
+        label = f.render("HEALTH", True, FONT_COLOR)
+        surface.blit(label, (x, y + HEALTH_BAR_HEIGHT + 3))
 
         elapsed = self.player_stats.elapsed
+        # Placed past the measured label rather than at a fixed offset --
+        # "AI HEALTH" in the spectate HUD is wider than "HEALTH" and used
+        # to run straight into the clock.
         surface.blit(f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
-                              True, FONT_COLOR), (x + 96, y + HEALTH_BAR_HEIGHT + 3))
+                              True, FONT_COLOR),
+                     (x + label.get_width() + 14, y + HEALTH_BAR_HEIGHT + 3))
         if self.hazards.fire.exit_on_fire:
             label, colour = "EXIT ON FIRE", (240, 90, 60)
         else:
@@ -438,11 +443,13 @@ class GameSession:
         pygame.draw.rect(surface, _health_bar_color(frac),
                          pygame.Rect(x, y, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
         pygame.draw.rect(surface, HEALTH_BAR_BORDER_COLOR, bg, 2)
-        surface.blit(f.render("AI HEALTH", True, FONT_COLOR), (x, y + HEALTH_BAR_HEIGHT + 3))
+        label = f.render("AI HEALTH", True, FONT_COLOR)
+        surface.blit(label, (x, y + HEALTH_BAR_HEIGHT + 3))
 
         elapsed = self.agent_stats.elapsed
         surface.blit(f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
-                              True, FONT_COLOR), (x + 96, y + HEALTH_BAR_HEIGHT + 3))
+                              True, FONT_COLOR),
+                     (x + label.get_width() + 14, y + HEALTH_BAR_HEIGHT + 3))
         if self.hazards.fire.exit_on_fire:
             label, colour = "EXIT ON FIRE", (240, 90, 60)
         else:
