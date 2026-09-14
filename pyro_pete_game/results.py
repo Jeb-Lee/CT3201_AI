@@ -147,4 +147,9 @@ def _verdict(p, a):
         return f"You beat the {a.label}  ({p.score} vs {a.score})"
     if a.score > p.score:
         return f"The {a.label} beat you  ({a.score} vs {p.score})"
+    if p.score == 0:
+        # Both on nothing is a tie only arithmetically. Calling it a dead
+        # heat reads as a photo finish, and sits directly under a
+        # headline that has just said Pete didn't make it.
+        return "Nobody got out"
     return f"Dead heat  ({p.score} each)"

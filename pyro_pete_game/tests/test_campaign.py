@@ -197,6 +197,32 @@ def test_stage_one_still_uses_the_defaults():
     assert session.agent.speed_scale == 1.0
 
 
+def test_verdict_wording():
+    """The verdict line has to agree with the outcome headline above it,
+    and name whichever AI skin was actually chosen."""
+    from results import _verdict
+    from stats import RunStats
+
+    def stats(label, saved, reason):
+        st = RunStats(label)
+        st.set_saved(saved)
+        st.finish(reason)
+        return st
+
+    pete_out = stats("You (Pete)", 3, "exit")
+    ai_out = stats("AI robot", 3, "exit")
+    nobody_p = stats("You (Pete)", 0, "dead")
+    nobody_a = stats("AI robot", 0, "dead")
+
+    # both on zero is a shared failure, not a photo finish
+    assert _verdict(nobody_p, nobody_a) == "Nobody got out"
+    # a real tie still reads as one
+    assert "Dead heat" in _verdict(pete_out, stats("AI robot", 3, "exit"))
+    # and the opponent is named by its own label, drone or robot
+    assert "AI robot" in _verdict(nobody_p, ai_out)
+    assert "AI drone" in _verdict(nobody_p, stats("AI drone", 3, "exit"))
+
+
 # ------------------------------------------------------------------- music
 def test_note_names_resolve_to_the_right_pitches():
     assert note_hz("A4") == pytest.approx(440.0)
