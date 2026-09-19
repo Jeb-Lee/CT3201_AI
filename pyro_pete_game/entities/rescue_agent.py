@@ -22,7 +22,10 @@ of fire) that isn't where it hoped, and re-plan.
 Goal selection:
   * nearest *known* idle victim by weighted distance (Dijkstra over the
     same cost function), i.e. nearest by effort, not by tile count
-  * no known victim -> head for the nearest unexplored area
+  * no occupant is left to find (all are out, being escorted, or lost) -> the
+    exit (it is told the head-count, like the human player, but not
+    where anyone is)
+  * otherwise no known victim -> head for the nearest unexplored area
   * if a locked door stands between the agent and its goal and the key
     hasn't been collected, the key becomes the goal first
   * fully explored, nothing left to rescue -> head for the exit
@@ -264,11 +267,29 @@ class RescueAgent:
         round_trip = self._route_damage(path) * 2.0
         return round_trip <= self.health * AGENT_EXPLORE_HEALTH_BUDGET
 
+    def _all_occupants_accounted(self, victims):
+        """True when nobody is left to find: every occupant is either out
+        or already being escorted.
+
+        The agent is told the head-count for the stage -- the same figure
+        the HUD shows the human player ("Occupants out 2/6") -- but not
+        where anyone is, so this is bookkeeping, not extra eyesight. It is
+        what stops it searching a building it has already emptied, which
+        used to send it back out looking for people who weren't there
+        (and once cost it the run, dying after everyone was already saved).
+        """
+        if not victims:
+            return False   # no head-count to go on; fall back to searching
+        # Only an occupant nobody has picked up still needs finding. One
+        # who is out, being escorted, or lost with a rescuer that died is
+        # already accounted for.
+        return not any(v.state == STATE_IDLE for v in victims)
+
     def _choose_goal_cell(self, victims):
-        """Chase the nearest *known* idle victim by weighted distance. No
-        known victim -> explore toward the nearest unseen area. Nothing
-        left to explore -> the exit. A locked door on the way makes the
-        key the real next goal."""
+        """Chase the nearest *known* idle victim by weighted distance.
+        Everyone accounted for -> the exit. Otherwise explore toward the
+        nearest unseen area; nothing left worth exploring -> the exit. A
+        locked door on the way makes the key the real next goal."""
         cost_fn = self._cost_fn()
         dist = weighted_distances(self.tilemap, self.current_cell, cost_fn)
 
@@ -276,6 +297,8 @@ class RescueAgent:
                 if v.state == STATE_IDLE and v.cell in dist]
         if idle:
             target = min(idle, key=lambda c: dist[c])
+        elif self._all_occupants_accounted(victims):
+            target = self.tilemap.exit_cell
         else:
             unexplored = self._nearest_unexplored(dist)
             if unexplored is not None and not self._worth_exploring(unexplored):
@@ -323,12 +346,16 @@ class RescueAgent:
             # knows of no idle victim, and has nothing left to explore
             at_exit = self.current_cell == self.tilemap.exit_cell
             no_known = not any(v.state == STATE_IDLE for v in self.known_victims)
-            unexplored = self._nearest_unexplored(
-                weighted_distances(self.tilemap, self.current_cell, self._cost_fn())
-            )
-            # Done means either nothing left to look at, or nothing left
-            # worth the health it would cost to go and look.
-            search_over = unexplored is None or not self._worth_exploring(unexplored)
+            # Done means everyone is accounted for, or nothing is left to
+            # look at, or nothing is left worth the health it would cost
+            # to go and look.
+            if self._all_occupants_accounted(victims):
+                search_over = True
+            else:
+                unexplored = self._nearest_unexplored(
+                    weighted_distances(self.tilemap, self.current_cell, self._cost_fn())
+                )
+                search_over = unexplored is None or not self._worth_exploring(unexplored)
             if at_exit and no_known and search_over:
                 self._finished = True
             return

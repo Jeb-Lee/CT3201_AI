@@ -42,6 +42,10 @@ from pathfinding import bfs_distances
 STATE_IDLE = "idle"
 STATE_FOLLOWING = "following"
 STATE_SAVED = "saved"
+# Died with the rescuer who was escorting them. Comes off the stage total
+# (see GameSession.victims_remaining) rather than counting as still needing
+# rescue, and is drawn as a grey cross instead of a sprite.
+STATE_DEAD = "dead"
 
 OUTLINE_COLOR = (20, 20, 24)
 
@@ -187,6 +191,15 @@ class Victim:
         rescue had actually registered."""
         ox, oy = camera_offset
         cx, cy = round(self.x - ox), round(self.y - oy)
+
+        if self.state == STATE_DEAD:
+            arm = 9
+            for a, b in (((-arm, -arm), (arm, arm)), ((-arm, arm), (arm, -arm))):
+                pygame.draw.line(surface, (26, 26, 30), (cx + a[0], cy + a[1]),
+                                 (cx + b[0], cy + b[1]), 6)
+                pygame.draw.line(surface, (150, 150, 158), (cx + a[0], cy + a[1]),
+                                 (cx + b[0], cy + b[1]), 3)
+            return
 
         if self._sprites is not None:
             frame = self._current_frame()

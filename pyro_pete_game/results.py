@@ -29,7 +29,8 @@ _NEG = (222, 130, 110)
 # runs and any future caller that doesn't track one still render.
 _OUTCOME_HEADLINE = {
     "cleared": ("Stage cleared", _POS),
-    "outrun": ("The AI got out first", RESULTS_ACCENT_COLOR),
+    # alive at the end, but the stage finished without Pete leading anyone out
+    "outrun": ("You didn't save anyone", RESULTS_ACCENT_COLOR),
     "died": ("Pete didn't make it", _NEG),
 }
 

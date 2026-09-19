@@ -142,7 +142,10 @@ def test_race_ends_when_the_ai_gets_out():
     session = GameSession(levels.get(0), spectate=False, agent_visual="robot")
     _run(session)
     assert session.state == "results"
-    if session.agent.completed:
+    # Two ways the AI can end the race: it finished the stage, or it led
+    # the last occupant out (the stage ends the instant none are left,
+    # which is a tick before the agent's own `completed` flag flips).
+    if session.agent.completed or session.victims_remaining == 0:
         assert session.player_done == "outrun"
         assert session.outcome == "outrun"
         assert not session.cleared
@@ -260,3 +263,358 @@ def test_playing_the_same_track_twice_does_not_restart_it():
     assert am.current == "game"
     am.play("game")
     assert am.current == "game"
+
+
+# ------------------------------------------------- occupant counter / stage end
+def _claim_all(session, state):
+    for v in session.victims:
+        v.state = state
+
+
+def test_victim_counters_start_at_full_and_track_saved_state():
+    from entities.victim import STATE_SAVED, STATE_FOLLOWING
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    total = len(s.victims)
+    assert total > 0
+    assert (s.victims_out, s.victims_remaining) == (0, total)
+    s.victims[0].state = STATE_FOLLOWING          # picked up is not out
+    assert s.victims_out == 0
+    s.victims[0].state = STATE_SAVED
+    assert (s.victims_out, s.victims_remaining) == (1, total - 1)
+
+
+def test_agent_heads_for_the_exit_once_everyone_is_accounted_for():
+    """The bug: with nobody left to find it kept exploring anyway. Now
+    the head-count sends it to the exit rather than an unexplored tile --
+    even though unexplored tiles remain."""
+    from entities.victim import STATE_SAVED
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    agent = s.agent
+    assert agent._nearest_unexplored(
+        __import__("pathfinding").weighted_distances(s.tilemap, agent.current_cell, None)
+    ) is not None                                  # there is still map to explore
+    _claim_all(s, STATE_SAVED)
+    assert agent._all_occupants_accounted(s.victims)
+    doors = s.hazards.doors
+    if doors.enabled and not doors.key_collected:
+        # a locked door on the way still makes the key the goal first --
+        # the head-count must not send it at a door it can't open
+        assert agent._choose_goal_cell(s.victims) == doors.key_cell
+        doors.key_collected = True
+    assert agent._choose_goal_cell(s.victims) == s.tilemap.exit_cell
+
+
+def test_agent_still_explores_while_an_occupant_is_unaccounted_for():
+    from entities.victim import STATE_SAVED
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    _claim_all(s, STATE_SAVED)
+    s.victims[0].state = "idle"                    # one still out there, unseen
+    assert not s.agent._all_occupants_accounted(s.victims)
+    assert s.agent._choose_goal_cell(s.victims) != s.tilemap.exit_cell
+
+
+def test_escorting_the_last_occupant_counts_as_accounted_for():
+    """Otherwise it would take its last follower on a sightseeing tour
+    instead of straight to the exit."""
+    from entities.victim import STATE_SAVED, STATE_FOLLOWING
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    _claim_all(s, STATE_SAVED)
+    s.victims[0].state = STATE_FOLLOWING
+    assert s.agent._all_occupants_accounted(s.victims)
+
+
+def test_no_headcount_means_keep_searching():
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    assert not s.agent._all_occupants_accounted([])
+
+
+def test_stage_ends_the_moment_the_last_occupant_is_out():
+    from entities.victim import STATE_SAVED
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    _claim_all(s, STATE_SAVED)
+    s.update(1 / 60.0, pygame.key.get_pressed())
+    assert s.victims_remaining == 0
+    assert s.state == "results"
+
+
+def test_race_ends_as_an_ai_win_when_it_leads_the_last_one_out():
+    from entities.victim import STATE_SAVED
+    s = GameSession(levels.get(0), spectate=False, stage_index=0)
+    _claim_all(s, STATE_SAVED)                     # the AI got them all; Pete is inside
+    s.update(1 / 60.0, pygame.key.get_pressed())
+    assert s.state == "results"
+    assert s.outcome == "outrun"
+
+
+def test_stage_does_not_end_while_anyone_is_left():
+    from entities.victim import STATE_SAVED
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    _claim_all(s, STATE_SAVED)
+    s.victims[0].state = "idle"
+    s.update(1 / 60.0, pygame.key.get_pressed())
+    assert s.victims_remaining == 1
+    assert s.state == "playing"
+
+
+def test_a_stage_with_no_occupants_does_not_end_on_frame_one():
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    s.victims = []
+    s.update(1 / 60.0, pygame.key.get_pressed())
+    assert s.state == "playing"
+
+
+# ------------------------------------------- watch-mode win/lose (regression)
+def test_watch_mode_is_a_win_when_the_ai_leads_everyone_out_alive():
+    """Regression: the stage now ends the instant the last occupant is out,
+    which is a tick before the agent's own `completed` flag flips. `cleared`
+    used to read that flag, so a flawless AI run was reported as "The AI
+    didn't make it" -- wrong headline, wrong music, and Enter dropped back
+    to the menu instead of advancing the campaign."""
+    from entities.victim import STATE_SAVED
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    _claim_all(s, STATE_SAVED)
+    s.update(1 / 60.0, pygame.key.get_pressed())
+    assert s.state == "results"
+    assert not s.agent.is_dead
+    assert s.cleared
+    assert s.has_next_stage   # ...so Enter would go on to stage 2
+
+
+def test_watch_mode_is_a_loss_when_the_ai_dies():
+    from entities.victim import STATE_SAVED
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    s.agent.health = 0.0
+    s.victims[0].state = STATE_SAVED           # some rescued, but it burned
+    s.update(1 / 60.0, pygame.key.get_pressed())
+    s.agent.health = 0.0
+    assert s.agent.is_dead
+    assert not s.cleared
+
+
+def test_a_dead_ai_is_not_cleared_even_if_the_count_reads_zero():
+    from entities.victim import STATE_SAVED
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    _claim_all(s, STATE_SAVED)
+    s.agent.health = 0.0
+    assert s.victims_remaining == 0
+    assert not s.cleared
+
+
+# ------------------------------------------------------- the stage-end rules
+# Every occupant is idle (waiting), following (being escorted), saved (out)
+# or dead (lost with a rescuer that died). The stage ends when everyone
+# left alive has been found AND either all are out or a rescuer is at the
+# exit; or when nobody still alive can carry on.
+from entities.victim import STATE_IDLE, STATE_FOLLOWING, STATE_SAVED, STATE_DEAD  # noqa: E402
+
+
+def _race(stage_index=0):
+    return GameSession(levels.get(stage_index), spectate=False, stage_index=stage_index)
+
+
+
+def _park_victims_away(s):
+    """Victim placement is random, and one can land right beside the exit
+    or spawn -- where a rescuer standing there claims it on the spot and
+    the scenario under test quietly changes. Move everyone to the floor
+    cell farthest from both, so those tests are deterministic."""
+    tm = s.tilemap
+    sx, sy = tm.spawn_cell
+    ex, ey = tm.exit_cell
+    best, best_d = None, -1
+    for r in range(tm.rows):
+        for c in range(tm.cols):
+            if tm.is_walkable(c, r):
+                d = min(abs(c - sx) + abs(r - sy), abs(c - ex) + abs(r - ey))
+                if d > best_d:
+                    best, best_d = (c, r), d
+    x, y = tm.cell_center(*best)
+    for v in s.victims:
+        v.cell, v.x, v.y = best, x, y
+
+def _put_on_exit(entity_session, who):
+    ex, ey = entity_session.tilemap.cell_center(*entity_session.tilemap.exit_cell)
+    target = entity_session.player if who == "pete" else entity_session.agent
+    target.x, target.y = ex, ey
+
+
+def _tick(s, n=1):
+    keys = pygame.key.get_pressed()
+    for _ in range(n):
+        s.update(1 / 60.0, keys)
+
+
+def test_reaching_the_exit_with_nobody_rescued_does_not_win():
+    """The bug: Pete walking to the exit empty-handed was 'Stage cleared'
+    (110 points) with every occupant still inside."""
+    s = _race()
+    _park_victims_away(s)
+    _put_on_exit(s, "pete")
+    _tick(s)
+    assert s.state == "playing"          # nothing has ended
+    assert s.victims_out == 0
+    assert s.outcome is None
+
+
+def test_exit_banks_escorted_occupants_but_does_not_end_the_stage():
+    s = _race()
+    _park_victims_away(s)
+    s.victims[0].state = STATE_FOLLOWING
+    s.player_follow_order.append(s.victims[0])
+    _put_on_exit(s, "pete")
+    _tick(s)
+    assert s.victims[0].state == STATE_SAVED
+    assert s.state == "playing"          # others are still waiting to be found
+
+
+def test_stage_ends_when_everyone_is_found_and_someone_reaches_the_exit():
+    """Rule 2: found_by_pete + found_by_ai == total, then whoever gets to
+    the exit first ends it -- even if the other is still mid-escort."""
+    s = _race()
+    a, b, c = s.victims[:3]
+    for v in s.victims:
+        v.state = STATE_SAVED            # park the rest of the stage
+    a.state, b.state, c.state = STATE_FOLLOWING, STATE_FOLLOWING, STATE_FOLLOWING
+    s.player_follow_order.extend([a])
+    s.agent_follow_order.extend([b, c])
+    _put_on_exit(s, "agent")
+    _tick(s)
+    assert s.state == "results"
+    assert s.evacuated
+    assert a.state == STATE_FOLLOWING    # Pete's escort didn't make it out
+    assert b.state == c.state == STATE_SAVED
+
+
+def test_stage_does_not_end_at_the_exit_while_someone_is_still_waiting():
+    s = _race()
+    _park_victims_away(s)
+    s.victims[0].state = STATE_FOLLOWING
+    s.agent_follow_order.append(s.victims[0])
+    _put_on_exit(s, "agent")
+    _tick(s)
+    assert any(v.state == STATE_IDLE for v in s.victims)
+    assert s.state == "playing"
+
+
+def test_stage_ends_when_everyone_is_out_split_between_both_rescuers():
+    s = _race()
+    for i, v in enumerate(s.victims):
+        v.state = STATE_SAVED
+    _tick(s)
+    assert s.state == "results" and s.evacuated
+    assert s.victims_remaining == 0
+
+
+def test_a_rescuer_dying_loses_the_occupants_it_was_escorting():
+    """Rule 3: they die and come off the stage total."""
+    s = _race()
+    total = len(s.victims)
+    s.victims[0].state = STATE_FOLLOWING
+    s.player_follow_order.append(s.victims[0])
+    s.player.health = 0.0
+    _tick(s)
+    assert s.victims[0].state == STATE_DEAD
+    assert s.victims_dead == 1
+    assert s.victims_remaining == total - 1        # deducted from the total
+    assert s.state == "playing"                    # the AI carries on
+
+
+def test_occupants_already_out_survive_their_rescuers_death():
+    s = _race()
+    s.victims[0].state = STATE_SAVED
+    s.player_follow_order.append(s.victims[0])
+    s.player.health = 0.0
+    _tick(s)
+    assert s.victims[0].state == STATE_SAVED
+    assert s.victims_dead == 0
+
+
+def test_the_ai_dying_loses_its_escort_too_and_pete_carries_on():
+    s = _race()
+    s.victims[0].state = STATE_FOLLOWING
+    s.agent_follow_order.append(s.victims[0])
+    s.agent.health = 0.0
+    _tick(s)
+    assert s.victims[0].state == STATE_DEAD
+    assert s.state == "playing"
+
+
+def test_stage_can_still_be_finished_after_pete_dies():
+    """'...if the other entity finds the remaining victims and reaches the
+    exit, the stage ends.'"""
+    s = _race()
+    s.victims[0].state = STATE_FOLLOWING
+    s.player_follow_order.append(s.victims[0])
+    s.player.health = 0.0
+    _tick(s)                                       # Pete dies, his occupant with him
+    for v in s.victims[1:]:
+        v.state = STATE_FOLLOWING
+        s.agent_follow_order.append(v)
+    _put_on_exit(s, "agent")
+    _tick(s)
+    assert s.state == "results"
+    assert s.evacuated
+    assert s.outcome == "died"                     # ...but Pete still lost
+
+
+def test_camera_follows_the_ai_once_pete_is_dead():
+    s = _race()
+    s.player.health = 0.0
+    _tick(s)
+    assert s._view_anchor is s.agent
+
+
+def test_stage_ends_when_nobody_alive_can_carry_on():
+    s = _race()
+    s.player.health = 0.0
+    s.agent.health = 0.0
+    _tick(s)
+    assert s.state == "results"
+    assert not s.evacuated
+    assert s.outcome == "died"
+
+
+def test_pete_clears_the_stage_only_if_alive_and_he_saved_someone():
+    s = _race()
+    for v in s.victims:
+        v.state = STATE_SAVED
+    s.player_follow_order.append(s.victims[0])     # Pete led one out, the AI the rest
+    _tick(s)
+    assert s.state == "results"
+    assert s.outcome == "cleared"
+    assert s.cleared
+
+
+def test_pete_who_saved_nobody_does_not_clear_even_if_the_ai_evacuated_everyone():
+    s = _race()
+    for v in s.victims:
+        v.state = STATE_SAVED                      # all the AI's doing
+    _tick(s)
+    assert s.state == "results"
+    assert s.outcome == "outrun"
+    assert not s.cleared
+
+
+def test_watch_mode_ends_as_a_loss_if_the_ai_gives_up_with_people_left():
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    s.agent._finished = True                        # gave up: search judged too risky
+    _tick(s)
+    assert s.state == "results"
+    assert any(v.state == STATE_IDLE for v in s.victims)
+    assert not s.evacuated
+    assert not s.cleared
+
+
+def test_watch_mode_ends_as_a_loss_when_the_ai_dies():
+    s = GameSession(levels.get(0), spectate=True, stage_index=0)
+    s.agent.health = 0.0
+    _tick(s)
+    assert s.state == "results"
+    assert not s.cleared
+
+
+def test_dead_occupant_is_drawn_without_error_and_not_as_a_sprite():
+    s = _race()
+    s.victims[0].state = STATE_DEAD
+    surf = pygame.Surface((960, 640))
+    s.victims[0].draw(surf, (0, 0), font=s.hud_font)   # must not raise

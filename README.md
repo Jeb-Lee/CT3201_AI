@@ -4,8 +4,8 @@ A 2D top-down (Zelda-style, "early-days"/chibi art direction) evacuation game
 built for the CT3201 AI course. You drive Pyro Pete through a burning,
 collapsing maze, pick up trapped occupants and lead them to the exit -- while
 an autonomous **AI rescue agent** runs the same maze at the same time, under
-the same rules. The run ends when Pete reaches the exit, dies, or is beaten
-out of the building by the AI, and a results panel compares the two rescuers.
+the same rules. The two of you share one pool of occupants, and a results
+panel compares the two rescuers when the stage ends (see *How a stage ends*).
 
 Clearing a stage promotes you to the next of **ten**, which scale up through
 bigger floor plans, more occupants and harsher hazards.
@@ -19,6 +19,35 @@ The floor-plan-as-graph setup mirrors the course's Emergency Evacuation
 Routing exercise, and the hazards deliberately make routing non-trivial so
 BFS is no longer automatically optimal -- see `docs/ai_critique.md` for the
 BFS / Dijkstra / A* / Greedy comparison this enables.
+
+## How a stage ends
+
+Every occupant is in one of four states: **waiting** to be found, **being
+escorted** by a rescuer, **out**, or **lost**. An occupant counts as *out* only
+once whoever is escorting them reaches the exit. The HUD shows this as
+`Occupants out 2/5   Left 3`, plus `Lost 1` when someone has died.
+
+The stage ends when either:
+
+1. everyone still alive has been **found** and either they are all out, or
+   Pete or the AI reaches the exit (first one there ends it -- an escort still
+   on its way doesn't count as out); or
+2. nobody still alive can carry on (Pete dead or absent, and the AI dead or
+   finished).
+
+Reaching the exit on its own does not end anything -- it only banks whoever
+you are escorting, so walking out empty-handed is not a win. If a rescuer dies,
+the occupants it was escorting die with it and come off the total; the other
+rescuer carries on with whoever is left.
+
+**Pete clears the stage** if he is alive at the end and led at least one
+occupant out; otherwise the panel reads "You didn't save anyone" or "Pete
+didn't make it". In Watch AI Play the AI clears it if it survives an
+evacuation of everyone left; giving up with people still inside is not a clear.
+
+The AI is told the stage's head-count (the same figure the HUD shows you) but
+not where anyone is, so it stops searching once nobody is left to find rather
+than wandering an emptied building.
 
 ## Status
 
@@ -35,7 +64,9 @@ BFS / Dijkstra / A* / Greedy comparison this enables.
 - [x] "Watch AI Play" spectate mode -- no Pete, camera/fog follow the AI, single-column results
 - [x] Pause (`P`)
 - [x] Ten-stage campaign with a scaling difficulty curve (`levels/`, tuned via `levels/tuning.py`)
-- [x] The race ends when the AI gets out first -- outcome-aware results panel, Enter advances a stage
+- [x] Shared occupant pool: `out / left / lost` counter, stage ends when everyone left alive is out (or found and someone reaches the exit); a dead rescuer loses its escort
+- [x] Outcome-aware results panel -- Enter advances a stage after a clear
+- [x] The AI knows the stage head-count, so it stops searching once nobody is left to find
 - [x] Music for the title, menus, gameplay and both endings -- synthesised at runtime (`audio.py`), no audio assets, mute with `M`
 
 ## Running it
@@ -53,7 +84,8 @@ Controls: WASD / arrows move, `P` pause, `R` restart, `M` mute, `Esc` quit.
 On the results panel, Enter goes to the next stage after a clear, or back to
 the menu otherwise.
 Menus: arrow keys or mouse to choose, Enter/click to confirm, `Esc` to back out a screen.
-Tests: `python -m pytest` (or `python tests/test_core.py`) from `pyro_pete_game/`.
+Tests: `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
+(`tests/test_core.py` also runs standalone with plain `python`).
 
 ## Project layout
 
@@ -80,7 +112,8 @@ pyro_pete_game/
   tools_make_transparent.py  # one-off sprite alpha baker (see its docstring)
   entities/
     player.py          # Pyro Pete: animation, movement, smoke slowdown
-    victim.py          # trapped occupants: 4-dir sprites + circle fallback, escort
+    victim.py          # trapped occupants: 4-dir sprites + circle fallback, escort;
+                       #   states idle / following / saved / dead
     rescue_agent.py    # autonomous hazard-weighted A* agent (robot or drone skin)
   levels/level_01.py   # first map (size + seed)
   assets/pete/         # Pete sprite frames (hand-picked from clips)
@@ -90,6 +123,7 @@ pyro_pete_game/
   assets/Claude outputs/   # robot concept sheets from the art-generation pass
   docs/ai_critique.md  # "what AI got wrong" write-up for the report
   tests/test_core.py   # maze / search / hazard-placement checks
+  tests/test_campaign.py   # ten stages, stage-end rules, win/lose outcomes, music
 tools/
   build_victim_sprites.py  # rebuilds assets/victims/ from the Drive art
   search_comparison.py     # BFS vs Dijkstra vs A* vs Greedy on the maze

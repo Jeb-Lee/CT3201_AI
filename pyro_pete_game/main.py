@@ -7,11 +7,15 @@ time under the same rules -- it has health, takes hazard damage, and plans
 with hazard-weighted A* that it re-runs whenever the map changes under it.
 Its intended route is drawn on the floor.
 
-The run is a race against that agent: it ends when Pete reaches the exit,
-dies, or is beaten out of the building by the AI, and a results panel
+You and the agent share one pool of occupants. Reaching the exit banks
+whoever you are escorting and nothing more; the stage ends when everyone
+left alive has been found and someone gets out (or all are already out),
+or when nobody still alive can carry on. A rescuer that dies loses the
+occupants it was escorting, and they come off the total. A results panel
 compares the two rescuers over the same clock -- victims saved, time,
 distance, damage, and (agent only) how many times the shifting hazards
-forced it to re-plan.
+forced it to re-plan. You clear the stage if you are alive at the end
+and led at least one occupant out.
 
 Clearing a stage promotes you to the next of the ten in levels/STAGES,
 which scale up through bigger floor plans, more occupants and harsher
@@ -44,7 +48,9 @@ from settings import (
     KEY_COLOR, PLAYER_TRAIL_COLOR, PLAYER_TRAIL_ALPHA, RESULTS_ACCENT_COLOR,
 )
 from entities.player import Player
-from entities.victim import place_victims, STATE_IDLE, STATE_FOLLOWING, STATE_SAVED
+from entities.victim import (
+    place_victims, STATE_IDLE, STATE_FOLLOWING, STATE_SAVED, STATE_DEAD,
+)
 from entities.rescue_agent import RescueAgent
 from camera import Camera
 from hazard_field import HazardField
@@ -104,6 +110,15 @@ def _advance_escort(follow_order, rescuer_trail):
         victim.follow(*target)
 
 
+def _lose_escorted(follow_order):
+    """A rescuer died: everyone it was still escorting dies with it. They
+    come off the stage total rather than staying on it as people nobody
+    can reach. Anyone it had already led out stays saved."""
+    for victim in follow_order:
+        if victim.state == STATE_FOLLOWING:
+            victim.state = STATE_DEAD
+
+
 def _mark_saved(follow_order):
     for victim in follow_order:
         if victim.state == STATE_FOLLOWING:
@@ -117,8 +132,8 @@ class GameSession:
 
     spectate=True is "Watch AI Play": no Pete at all -- the camera and fog
     of war follow the AI instead, and the run ends (and shows a
-    single-column results panel) once the AI itself is done, rather than
-    waiting on a player who was never there.
+    single-column results panel) by the same rules as a race, with the AI
+    as the only rescuer.
 
     agent_visual picks the AI's look ("robot" or "drone") for this run --
     an explicit menu choice rather than always reading settings.AGENT_VISUAL,
@@ -179,11 +194,15 @@ class GameSession:
         self.agent_trail = deque(maxlen=AGENT_TRAIL_MAXLEN)
         self.agent_follow_order = []
 
-        # Race outcome, set by _end_run: "cleared" (Pete got out),
-        # "outrun" (the AI finished first), "died" (Pete burned). The
+        # Race outcome, set by _end_stage: "cleared" (alive, and led at least
+        # one occupant out), "outrun" (alive, but the stage ended without
+        # him saving anyone), "died" (Pete burned). The
         # campaign in main() reads this to decide whether to advance a
         # stage or re-run the same one.
         self.outcome = None
+        # True once the stage ended because everyone left alive was
+        # evacuated (as opposed to nobody being able to carry on).
+        self.evacuated = False
 
         self.state = "playing"  # "playing" | "results"
         # Independent of `state`: freezes update() (hazards, both rescuers,
@@ -191,6 +210,26 @@ class GameSession:
         # where it left off. Always cleared on reset so a restart never
         # comes back up paused.
         self.paused = False
+
+    # -- occupant counters ------------------------------------------------
+    @property
+    def victims_out(self):
+        """Occupants who have actually reached the exit, led there by
+        either rescuer. Being picked up isn't enough -- an occupant is only
+        "out" once whoever is escorting them gets to the exit, which is
+        exactly when their state flips to SAVED."""
+        return sum(1 for v in self.victims if v.state == STATE_SAVED)
+
+    @property
+    def victims_dead(self):
+        """Occupants lost with a rescuer that died while escorting them."""
+        return sum(1 for v in self.victims if v.state == STATE_DEAD)
+
+    @property
+    def victims_remaining(self):
+        """Occupants who can still be saved and aren't out yet: the stage
+        total, minus those lost, minus those out."""
+        return len(self.victims) - self.victims_dead - self.victims_out
 
     # -- campaign helpers ------------------------------------------------
     @property
@@ -206,13 +245,15 @@ class GameSession:
         """True when this stage was beaten: Pete got out in a race, or the
         AI got itself out in watch mode."""
         if self.spectate:
-            return self.agent.completed
+            # The AI wins by seeing the evacuation through and surviving
+            # it. Giving up early with people still inside is not a win.
+            return self.evacuated and not self.agent.is_dead
         return self.outcome == "cleared"
 
     # -- whichever entity the camera/fog should follow -------------------
     @property
     def _view_anchor(self):
-        return self.agent if self.spectate else self.player
+        return self.agent if (self.spectate or self.player.is_dead) else self.player
 
     # -- debris callbacks ------------------------------------------------
     def _protected_cells(self):
@@ -255,10 +296,15 @@ class GameSession:
             self.hazards.doors.try_pickup(self.player.get_collision_rect())
 
             if self.player.is_dead:
-                self._end_run("dead")
+                # Pete is out of it, and so is everyone he was escorting.
+                # The stage carries on for the AI (see _resolve_stage).
+                self.player_done = "dead"
+                _lose_escorted(self.player_follow_order)
             elif tm.is_exit_rect(self.player.get_collision_rect()):
+                # Reaching the exit banks whoever he is escorting -- and
+                # that is all it does. It no longer ends the stage, so
+                # walking out empty-handed can't be a win.
                 _mark_saved(self.player_follow_order)
-                self._end_run("exit")
 
         self.hazards.update(dt)
 
@@ -269,15 +315,12 @@ class GameSession:
         _try_rescue(self.victims, self.agent.get_rect(), self.agent_follow_order)
         _advance_escort(self.agent_follow_order, self.agent_trail)
         self.hazards.doors.try_pickup(self.agent.get_rect())
-        if self.agent.current_cell == tm.exit_cell:
+        if self.agent.is_dead:
+            _lose_escorted(self.agent_follow_order)
+        elif self.agent.current_cell == tm.exit_cell:
             _mark_saved(self.agent_follow_order)
 
-        # The AI finishing the stage alive ends the race -- previously the
-        # run only ended on Pete's exit or death, so once the AI was out
-        # the player kept wandering a building they had already lost.
-        if (not self.spectate and self.player_done is None
-                and self.agent.completed):
-            self._end_run("outrun")
+        self._resolve_stage()
 
         anchor = self._view_anchor
         self.camera.update(anchor.x, anchor.y)
@@ -288,35 +331,66 @@ class GameSession:
         self.agent_stats.set_saved(
             sum(1 for v in self.agent_follow_order if v.state == STATE_SAVED))
 
-        if self.spectate and self.agent.done and self.state == "playing":
-            self._end_run_spectate()
+    # -- when does the stage end? -------------------------------------------
+    def _resolve_stage(self):
+        """One place that decides whether the stage is over.
 
-    def _end_run_spectate(self):
-        """Watch-mode's equivalent of _end_run: there's no Pete run to hang
-        the ending on, so it triggers off the AI's own .done (reached the
-        exit with nothing left to rescue, or died)."""
+        Every occupant is in one of four states: waiting to be found,
+        being escorted, out, or lost with a rescuer that died. The stage
+        ends when either:
+
+          * everyone left alive has been found AND either nobody is still
+            being escorted (they are all out), or a rescuer -- Pete or the
+            AI -- has reached the exit; or
+          * nobody who is still alive can carry on (Pete dead or absent,
+            and the AI dead or finished).
+
+        Reaching the exit on its own ends nothing: with occupants still
+        waiting to be found it just banks whoever that rescuer was
+        escorting. The second condition is the safety net that stops a
+        stage hanging forever once the last rescuer has given up or died.
+        """
+        if self.state != "playing" or not self.victims:
+            return
+        tm = self.tilemap
+        idle = sum(1 for v in self.victims if v.state == STATE_IDLE)
+        following = sum(1 for v in self.victims if v.state == STATE_FOLLOWING)
+
+        pete_alive = not self.spectate and not self.player.is_dead
+        ai_alive = not self.agent.is_dead
+        at_exit = ((pete_alive and tm.is_exit_rect(self.player.get_collision_rect()))
+                   or (ai_alive and self.agent.current_cell == tm.exit_cell))
+
+        evacuated = idle == 0 and (following == 0 or at_exit)
+        nobody_left = not pete_alive and not (ai_alive and not self.agent.done)
+        if evacuated or nobody_left:
+            self.evacuated = evacuated
+            self._end_stage()
+
+    def _end_stage(self):
+        tm = self.tilemap
         if self.agent.is_dead:
             agent_reason = "dead"
-        elif self.agent.current_cell == self.tilemap.exit_cell:
+        elif self.agent.current_cell == tm.exit_cell:
             agent_reason = "exit"
         else:
             agent_reason = "time"
         self.agent_stats.finish(agent_reason)
-        self.state = "results"
 
-    def _end_run(self, player_reason):
-        self.player_done = player_reason
-        # "outrun" is a loss, not an exit: Pete is still inside, so his
-        # stats close out on time rather than banking the exit bonus.
-        self.player_stats.finish("time" if player_reason == "outrun" else player_reason)
-        self.outcome = {"exit": "cleared", "dead": "died"}.get(player_reason, "outrun")
-        if self.agent.is_dead:
-            agent_reason = "dead"
-        elif self.agent.current_cell == self.tilemap.exit_cell:
-            agent_reason = "exit"
-        else:
-            agent_reason = "time"
-        self.agent_stats.finish(agent_reason)
+        if not self.spectate:
+            saved = sum(1 for v in self.player_follow_order if v.state == STATE_SAVED)
+            if self.player.is_dead:
+                player_reason, self.outcome = "dead", "died"
+            elif saved >= 1:
+                # He led at least one occupant out and is still alive.
+                player_reason = "exit" if tm.is_exit_rect(
+                    self.player.get_collision_rect()) else "time"
+                self.outcome = "cleared"
+            else:
+                # Alive, but the stage ended without him saving anyone.
+                player_reason, self.outcome = "time", "outrun"
+            self.player_done = {"cleared": "exit", "died": "dead"}.get(self.outcome, "outrun")
+            self.player_stats.finish(player_reason)
         self.state = "results"
 
     # -- draw -------------------------------------------------------
@@ -397,26 +471,34 @@ class GameSession:
         f = self.hud_font
 
         # ---- left panel: stage / occupants + score / AI health / key ----
-        rect = pygame.Rect(8, 8, 372, 126)
+        rect = pygame.Rect(8, 8, 372, 147)
         layer = self._panel_layer(rect)
-        total = len(self.victims)
+        # occupants lost with a dead rescuer come off the total
+        total = len(self.victims) - self.victims_dead
         layer.blit(f.render(self.stage_label, True, RESULTS_ACCENT_COLOR), (8, 5))
+        # The stage-wide counter: everyone out so far, and how many are
+        # still in. The stage ends when "left" reaches zero.
         layer.blit(f.render(
-            f"Occupants out   You {self.player_stats.victims_saved}/{total}"
-            f"    AI {self.agent_stats.victims_saved}/{total}", True, FONT_COLOR), (8, 27))
+            f"Occupants out   {self.victims_out}/{total}    Left {self.victims_remaining}",
+            True, FONT_COLOR), (8, 27))
+        who = f"  You {self.player_stats.victims_saved}    AI {self.agent_stats.victims_saved}"
+        layer.blit(f.render(who, True, (170, 170, 178)), (8, 48))
+        if self.victims_dead:
+            layer.blit(f.render(f"Lost {self.victims_dead}", True, (222, 130, 110)),
+                       (8 + f.size(who)[0] + 24, 48))
         layer.blit(f.render(
             f"Score   You {self.player_stats.score}    AI {self.agent_stats.score}",
-            True, RESULTS_ACCENT_COLOR), (8, 48))
+            True, RESULTS_ACCENT_COLOR), (8, 69))
 
         ah = max(0.0, min(1.0, self.agent.health / HEALTH_MAX))
-        pygame.draw.rect(layer, HEALTH_BAR_BG_COLOR, pygame.Rect(8, 74, 120, 9))
-        pygame.draw.rect(layer, (120, 150, 210), pygame.Rect(8, 74, round(120 * ah), 9))
-        layer.blit(f.render(self.agent_stats.label, True, (150, 170, 210)), (136, 70))
+        pygame.draw.rect(layer, HEALTH_BAR_BG_COLOR, pygame.Rect(8, 95, 120, 9))
+        pygame.draw.rect(layer, (120, 150, 210), pygame.Rect(8, 95, round(120 * ah), 9))
+        layer.blit(f.render(self.agent_stats.label, True, (150, 170, 210)), (136, 91))
 
         if self.hazards.doors.enabled and not self.hazards.doors.key_collected:
-            layer.blit(f.render("Door locked - find the key", True, KEY_COLOR), (8, 96))
+            layer.blit(f.render("Door locked - find the key", True, KEY_COLOR), (8, 117))
         elif self.hazards.doors.enabled:
-            layer.blit(f.render("Key collected", True, (140, 200, 140)), (8, 96))
+            layer.blit(f.render("Key collected", True, (140, 200, 140)), (8, 117))
         self._blit_panel(surface, layer, rect)
 
         # ---- right panel: health / run time / fire countdown ----
@@ -461,16 +543,19 @@ class GameSession:
         """Single-rescuer HUD for "Watch AI Play" -- same panel language as
         _draw_hud, just built around the AI alone instead of a You/AI pair."""
         f = self.hud_font
-        total = len(self.victims)
+        total = len(self.victims) - self.victims_dead
 
         rect = pygame.Rect(8, 8, 320, 82)
         layer = self._panel_layer(rect)
         layer.blit(f.render(self.stage_label, True, RESULTS_ACCENT_COLOR), (8, 5))
         layer.blit(f.render(
-            f"Occupants out   {self.agent_stats.victims_saved}/{total}",
+            f"Occupants out   {self.victims_out}/{total}    Left {self.victims_remaining}",
             True, FONT_COLOR), (8, 27))
-        layer.blit(f.render(
-            f"Score   {self.agent_stats.score}", True, RESULTS_ACCENT_COLOR), (8, 48))
+        score_text = f"Score   {self.agent_stats.score}"
+        layer.blit(f.render(score_text, True, RESULTS_ACCENT_COLOR), (8, 48))
+        if self.victims_dead:
+            layer.blit(f.render(f"Lost {self.victims_dead}", True, (222, 130, 110)),
+                       (8 + f.size(score_text)[0] + 24, 48))
         self._blit_panel(surface, layer, rect)
 
         self._draw_status_panel(surface, "AI HEALTH", self.agent.health,
