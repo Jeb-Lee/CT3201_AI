@@ -6,7 +6,7 @@ Same beats: camera starts low, pointed up at a tall building with smoke
 rolling off the roof; it settles at street level; Pete and the AI walk in
 from either side, meet in the middle, turn, and walk into the building,
 shrinking a little to read as moving away from camera; the screen ends on
-a slow-blinking "PRESS ENTER TO START".
+the game's title lockup fading in over the top and a "Press Enter to start" pill.
 
 Runs as its own self-contained scene object: main.py just calls
 update(dt, events) then draw(surface) every frame and checks .finished.
@@ -23,7 +23,16 @@ import random
 import pygame
 
 from fonts import ui_font
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT
+from hud_icons import (HINT, draw_panel, ease_out, hint_row_width, key_chip, key_hint_row,
+                       lerp_colour)
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT, RESULTS_ACCENT_COLOR
+
+TITLE = "PYRO PETE"
+TAGLINE = "EMERGENCY EVACUATION"
+LOCKUP_FADE = 0.9         # seconds for the title to fade in once the scene is held
+PROMPT_DELAY = 0.6        # ...and the prompt waits this long after the held frame
+BAND_H, BAND_SOLID = 220, 130   # the dark band behind the title: height, and how much is solid
+SKIP_AFTER = 1.0          # the "Enter: skip" hint appears after this many seconds
 
 # ---------------------------------------------------------------- timeline
 # Seconds. Mirrors the HTML prototype's T1..T6 beats.
@@ -365,6 +374,7 @@ class IntroScene:
         self.t = 0.0
         self.finished = False
         self.blink_t = 0.0
+        self.held_t = 0.0        # seconds spent on the held frame
         self._phase = "playing"  # "playing" -> "held"
         self.pete_sprites = _load_walker(PETE_ASSET_DIR)
         self.robot_sprites = _load_walker(ROBOT_ASSET_DIR)
@@ -448,6 +458,7 @@ class IntroScene:
                 self.t = T6
                 self._phase = "held"
         self.blink_t += dt
+        self.held_t = self.held_t + dt if self._phase == "held" else 0.0
 
         cam_y, zoom = self._camera_at(self.t)
         cam_x = self.BLD_CENTER_X
@@ -559,7 +570,10 @@ class IntroScene:
             self._draw_character(surface, self.robot_sprites, bot, cam_x, cam_y, zoom)
 
         if self._phase == "held":
+            self._draw_lockup(surface)
             self._draw_prompt(surface)
+        elif self.t >= SKIP_AFTER:
+            self._draw_skip_hint(surface)
 
     def _draw_character(self, surface, sprites, state, cam_x, cam_y, zoom):
         frame = self._sprite_for(sprites, state[3])
@@ -578,17 +592,105 @@ class IntroScene:
         rect = scaled.get_rect(midbottom=(sx, sy))
         surface.blit(scaled, rect)
 
+    # ------------------------------------------------------- title and prompt
+    def _fonts(self):
+        """The fonts the title screen uses, created once."""
+        fonts = getattr(self, "_ui_fonts", None)
+        if fonts is None:
+            fonts = self._ui_fonts = {"display": ui_font("display"), "tag": ui_font("body", bold=True),
+                                      "chip": ui_font("body", bold=True), "label": ui_font("body")}
+        return fonts
+
+    @staticmethod
+    def _spaced(font, text, colour, spacing):
+        """`text` with `spacing` extra pixels between letters (a tagline reads
+        better tracked out). Each letter lands on a whole pixel."""
+        glyphs = [font.render(ch, True, colour) for ch in text]
+        width = sum(g.get_width() for g in glyphs) + spacing * (len(glyphs) - 1)
+        out = pygame.Surface((width, font.get_height()), pygame.SRCALPHA)
+        x = 0
+        for g in glyphs:
+            out.blit(g, (x, 0))
+            x += g.get_width() + spacing
+        return out
+
+    def _draw_lockup(self, surface):
+        """PYRO PETE / EMERGENCY EVACUATION on a dark band across the top, fading
+        in and settling down a few pixels once the scene is held."""
+        w = surface.get_width()
+        fonts = self._fonts()
+        k = ease_out(getattr(self, "held_t", LOCKUP_FADE) / LOCKUP_FADE)
+        band = getattr(self, "_band", None)
+        if band is None or band.get_width() != w:
+            band = self._band = pygame.Surface((w, BAND_H), pygame.SRCALPHA)
+            for y in range(BAND_H):                      # a solid scrim behind the words, then a fade
+                fade = 1.0 if y < BAND_SOLID else 1 - (y - BAND_SOLID) / (BAND_H - BAND_SOLID)
+                band.fill((6, 6, 10, round(226 * fade)), (0, y, w, 1))
+        layer = pygame.Surface((w, BAND_H), pygame.SRCALPHA)
+        title = fonts["display"].render(TITLE, True, RESULTS_ACCENT_COLOR)
+        drop = fonts["display"].render(TITLE, True, (0, 0, 0))
+        top = round(38 - 14 * (1 - k))
+        rect = title.get_rect(midtop=(w // 2, top))
+        layer.blit(drop, rect.move(0, 3))
+        layer.blit(title, rect)
+        tag = self._spaced(fonts["tag"], TAGLINE, (232, 226, 214), 5)
+        tag_rect = tag.get_rect(midtop=(w // 2, rect.bottom + 6))
+        layer.blit(tag, tag_rect)
+        for side in (-1, 1):                                    # a hairline either side of the tagline
+            x0 = tag_rect.right + 16 if side > 0 else tag_rect.left - 16 - 70
+            y = tag_rect.centery
+            for j in range(70):
+                a = round(150 * (1 - j / 70)) if side > 0 else round(150 * (j / 70))
+                layer.fill((*RESULTS_ACCENT_COLOR, a), (x0 + j, y, 1, 2))
+        band.set_alpha(round(255 * k))
+        layer.set_alpha(round(255 * k))
+        surface.blit(band, (0, 0))
+        surface.blit(layer, (0, 0))
+
+    def _prompt_items(self):
+        return [("Enter", "to start")]
+
     def _draw_prompt(self, surface):
+        """"Press [Enter] to start" in a pill at the foot of the screen, clear of
+        the characters at the door. The pill's edge breathes; nothing blinks."""
         w, h = surface.get_size()
-        visible = (self.blink_t % 1.2) < 0.8
-        if not visible:
+        fonts = self._fonts()
+        k = ease_out((getattr(self, "held_t", 99.0) - PROMPT_DELAY) / LOCKUP_FADE)
+        if k <= 0:
             return
-        # created once, not every blink frame
-        font = getattr(self, "_prompt_font", None)
-        if font is None:
-            font = self._prompt_font = ui_font("title")
-        text = font.render("PRESS ENTER TO START", True, (245, 238, 224))
-        shadow = font.render("PRESS ENTER TO START", True, (0, 0, 0))
-        rect = text.get_rect(center=(w // 2, h // 2))
-        surface.blit(shadow, rect.move(2, 2))
-        surface.blit(text, rect)
+        press = fonts["label"].render("Press", True, (245, 238, 224))
+        after = fonts["label"].render("to start", True, (245, 238, 224))
+        chip_w = max(28, fonts["chip"].size("Enter")[0] + 18)
+        gap = 10
+        inner = press.get_width() + gap + chip_w + gap + after.get_width()
+        pill = pygame.Rect(0, 0, inner + 44, 46)
+        pill.midbottom = (w // 2, h - 26)
+        layer = pygame.Surface((pill.width + 16, pill.height + 16), pygame.SRCALPHA)
+        local = pygame.Rect(8, 8, pill.width, pill.height)
+        draw_panel(layer, local, radius=23, alpha=215, shadow=False)
+        glow = 0.5 + 0.5 * math.sin(self.blink_t * 3.2)
+        pygame.draw.rect(layer, (*lerp_colour((120, 100, 50), RESULTS_ACCENT_COLOR, glow), 255),
+                         local, 2, border_radius=23)
+        x = local.left + 22
+        cy = local.centery
+        layer.blit(press, press.get_rect(midleft=(x, cy)))
+        x += press.get_width() + gap
+        chip = key_chip(layer, x, cy - 14, "Enter", fonts["chip"])
+        layer.blit(after, after.get_rect(midleft=(chip.right + gap, cy)))
+        layer.set_alpha(round(255 * k))
+        surface.blit(layer, (pill.x - 8, pill.y - 8))
+
+    def _draw_skip_hint(self, surface):
+        """A small "[Enter] Skip" tag, bottom right, on its own dark pill so it
+        reads against the bright daytime sky."""
+        w, h = surface.get_size()
+        fonts = self._fonts()
+        items = [("Enter", "Skip")]
+        k = ease_out((self.t - SKIP_AFTER) / 0.8)
+        row_w = hint_row_width(items, fonts["chip"], fonts["label"])
+        size = (row_w + 28, 40)
+        layer = pygame.Surface((size[0] + 12, size[1] + 12), pygame.SRCALPHA)
+        draw_panel(layer, pygame.Rect(6, 6, *size), radius=14, alpha=205, shadow=False)
+        key_hint_row(layer, items, fonts["chip"], fonts["label"], 6 + size[0] // 2, 6 + size[1] // 2 - 1)
+        layer.set_alpha(round(255 * k))
+        surface.blit(layer, (w - size[0] - 14 - 6, h - size[1] - 12 - 6))

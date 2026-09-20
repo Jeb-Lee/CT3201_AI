@@ -349,16 +349,18 @@ def test_waiting_occupant_marker_stays_at_least_as_tall_as_it_was():
     assert glyph.height >= 14
 
 
-def test_intro_prompt_font_is_created_once_not_every_frame():
+def test_intro_fonts_are_created_once_not_every_frame():
     import intro
 
-    class Scene:
-        blink_t = 0.0
+    scene = intro.IntroScene.__new__(intro.IntroScene)      # just the drawing, no art or animation
+    scene.blink_t, scene.held_t = 0.0, 5.0
     surf = pygame.Surface((SCREEN_WIDTH, 640))
-    intro.IntroScene._draw_prompt(Scene, surf)
-    first = Scene._prompt_font
-    intro.IntroScene._draw_prompt(Scene, surf)
-    assert Scene._prompt_font is first
+    scene._draw_prompt(surf)
+    scene._draw_lockup(surf)
+    first = scene._ui_fonts
+    scene._draw_prompt(surf)
+    scene._draw_lockup(surf)
+    assert scene._ui_fonts is first
 
 
 # --- the Total row is the one bold row ----------------------------------------
