@@ -27,7 +27,8 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV",
+         "XVI", "XVII", "XVIII", "XIX", "XX", "XXI", "XXII", "XXIII", "XXIV", "XXV", "XXVI", "XXVII", "XXVIII"]
 
 AUTHORS = [
     "[TEAM \u2014 full names and matriculation numbers]",
@@ -61,6 +62,19 @@ INDEX_TERMS = (
     "heuristic search, A* algorithm, intelligent agents, path planning, "
     "decision-making under uncertainty, human-AI collaboration, responsible AI"
 )
+
+ABSTRACT_REV2 = ABSTRACT + (
+    " In this revision we also report a second, optional brain for the same agent: a neural network."
+    " Reinforcement learning from the game score alone never rescued anyone (0% of episodes fully"
+    " evacuated; the network learned to stand still), so we changed the question to imitation of A*"
+    " with behaviour cloning and DAgger. Correcting our own information-parity assumption, adding a"
+    " memory of the agent's own path and changing the search order it imitates took the network from"
+    " 20% (first version) to 84% (final version, on 300 fresh episodes) of stages fully evacuated, against 85% for A* itself: a"
+    " difference we cannot tell from noise, although the network still trails A* on stages it never"
+    " trained on (73% against 87%)."
+)
+
+INDEX_TERMS_REV2 = INDEX_TERMS + ", reinforcement learning, imitation learning, behaviour cloning, DAgger"
 
 ACCENT = RGBColor(0, 0, 0)
 GREY = "D9D9D9"
@@ -240,7 +254,7 @@ class Builder:
         r = p.add_run("TABLE %s.\u2003" % roman)
         r.font.size = Pt(8)
         r.font.name = "Times New Roman"
-        r2 = p.add_run(text.upper())
+        r2 = p.add_run(text.replace("\\*", "∗").upper())
         r2.font.size = Pt(8)
         r2.font.name = "Times New Roman"
         r2.font.small_caps = True
@@ -284,6 +298,36 @@ class Builder:
             t.columns[ci].width = widths[ci]
         self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
+    def figure(self, path, caption, wide=False):
+        """A real picture with its own "Fig. N." caption (numbering continues after the
+        hard-coded Fig. 1). Wide figures span both columns."""
+        self.fig_no = getattr(self, "fig_no", 1) + 1
+        self.ensure(1 if wide else 2)
+        p = self.doc.add_paragraph()
+        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_before = Pt(6)
+        p.paragraph_format.space_after = Pt(2)
+        p.paragraph_format.keep_with_next = True
+        p.add_run().add_picture(path, width=Pt(500 if wide else 232))
+        cap = self.doc.add_paragraph()
+        cap.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY if not wide else WD_ALIGN_PARAGRAPH.CENTER
+        cap.paragraph_format.space_after = Pt(8)
+        r = cap.add_run("Fig. %d. " % self.fig_no)
+        r.font.size = Pt(8)
+        r.font.name = "Times New Roman"
+        runs(cap, caption, 8)
+
+    def reference(self, text):
+        self.ensure(2)
+        p = self.doc.add_paragraph()
+        pf = p.paragraph_format
+        pf.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        pf.left_indent = Pt(20)
+        pf.first_line_indent = Pt(-20)
+        pf.space_after = Pt(2)
+        pf.line_spacing = 1.0
+        runs(p, text, 8)
+
     def figure_placeholder(self, lines):
         self.ensure(1)
         box = self.doc.add_paragraph()
@@ -308,8 +352,9 @@ class Builder:
 # --------------------------------------------------------------------------- #
 #  markdown -> builder                                                         #
 # --------------------------------------------------------------------------- #
-def build(md_path, out_path):
+def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS):
     lines = open(md_path, encoding="utf-8").read().splitlines()
+    md_dir = os.path.dirname(os.path.abspath(md_path))
     b = Builder()
     doc = b.doc
 
@@ -344,7 +389,7 @@ def build(md_path, out_path):
     r.italic = True
     r.font.size = Pt(9)
     r.font.name = "Times New Roman"
-    r = ap.add_run(ABSTRACT)
+    r = ap.add_run(abstract)
     r.bold = True
     r.font.size = Pt(9)
     r.font.name = "Times New Roman"
@@ -359,7 +404,7 @@ def build(md_path, out_path):
     r.italic = True
     r.font.size = Pt(9)
     r.font.name = "Times New Roman"
-    r = kp.add_run(INDEX_TERMS)
+    r = kp.add_run(index_terms)
     r.italic = True
     r.font.size = Pt(9)
     r.font.name = "Times New Roman"
@@ -369,6 +414,7 @@ def build(md_path, out_path):
     h2_i = 0
     table_i = 0
     last_heading = "results"
+    pending_caption = None
     i = 0
     in_fence = False
     fence_lang = ""
@@ -408,11 +454,28 @@ def build(md_path, out_path):
             i += 1
             continue
 
+        m_img = re.match(r"^!\[(.*)\]\((.+?)\)(\{wide\})?$", s)
+        if m_img:                                   # ![caption](path){wide}
+            b.figure(os.path.join(md_dir, m_img.group(2)), m_img.group(1), wide=bool(m_img.group(3)))
+            i += 1
+            continue
+        if s.startswith("Table: "):                 # caption for the next table
+            pending_caption = s[7:].strip()
+            i += 1
+            continue
+        m_ref = re.match(r"^\[(\d+)\]\s+(.*)", s)
+        if m_ref:                                   # [n] a reference-list entry
+            b.reference("[%s] %s" % (m_ref.group(1), m_ref.group(2)))
+            i += 1
+            continue
+
         if s.startswith("## "):
             txt = s[3:]
             txt = re.sub(r"\s*\*\(.*?\)\*\s*$", "", txt)       # strip phase note
             txt = re.sub(r"^Section\s+\d+\s*[\u2014-]\s*", "", txt)
-            if re.match(r"^Appendix", txt):
+            if re.match(r"^References", txt):
+                b.h1(None, "References")
+            elif re.match(r"^Appendix", txt):
                 txt = "Appendix: " + re.sub(r"^Appendix\s*[\u2014-]\s*", "", txt)
                 b.h1(None, txt)
             else:
@@ -439,7 +502,8 @@ def build(md_path, out_path):
                 rows.append(cells)
                 i += 1
             table_i += 1
-            b.table_caption(ROMAN[table_i - 1], last_heading)
+            b.table_caption(ROMAN[table_i - 1], pending_caption or last_heading)
+            pending_caption = None
             b.table(rows)
             continue
 
@@ -459,8 +523,8 @@ def build(md_path, out_path):
         i += 1
         while i < len(lines):
             nx = lines[i].strip()
-            if (not nx or nx.startswith(("#", "|", ">", "```", "---", "- ", "* "))
-                    or re.match(r"^\d+\.\s+", nx)):
+            if (not nx or nx.startswith(("#", "|", ">", "```", "---", "- ", "* ", "![", "Table: "))
+                    or re.match(r"^\d+\.\s+", nx) or re.match(r"^\[\d+\]\s", nx)):
                 break
             buf.append(nx)
             i += 1
@@ -490,7 +554,15 @@ def _mermaid_to_text():
 
 
 if __name__ == "__main__":
-    base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        "docs", "report")
-    build(os.path.join(base, "REPORT.md"),
-          os.path.join(base, "CT3201_Report_IEEE.docx"))
+    import argparse
+    ap = argparse.ArgumentParser(description="REPORT.md -> IEEE two-column .docx")
+    ap.add_argument("--rev2", action="store_true",
+                    help="revision 2: build REPORT_rev2.md (adds the learned-agent section, figures and "
+                         "references) into CT3201_Report_IEEE_rev2.docx, with the extended abstract")
+    args = ap.parse_args()
+    base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "report")
+    if args.rev2:
+        build(os.path.join(base, "REPORT_rev2.md"), os.path.join(base, "CT3201_Report_IEEE_rev2.docx"),
+              abstract=ABSTRACT_REV2, index_terms=INDEX_TERMS_REV2)
+    else:
+        build(os.path.join(base, "REPORT.md"), os.path.join(base, "CT3201_Report_IEEE.docx"))
