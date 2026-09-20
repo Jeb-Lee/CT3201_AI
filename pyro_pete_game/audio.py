@@ -150,8 +150,12 @@ def _build_game(intensity=0.0):
     * **the tritone** -- from the midpoint a dissonant Eb against the A
       fades in. It is the interval that refuses to resolve, and it is
       doing most of the "something is wrong" work on stages 6+.
-    * **the siren** -- on the last stages a slow pitch-bent wail sits
-      under everything, an alarm rather than an instrument.
+
+    A swept-sine siren used to sit under stages 8-10 as well. It was cut:
+    a continuous glide on a pure sine reads as a wobbling hum rather than
+    as an alarm, and it was the most noticeable thing about the late
+    stages for the wrong reason. The four knobs above carry the ramp on
+    their own.
     """
     i = max(0.0, min(1.0, float(intensity)))
 
@@ -194,28 +198,7 @@ def _build_game(intensity=0.0):
                                 beat, wave="tri", gain=0.11 * weight,
                                 detune=18, env=(0.25, 0.3, 0.7, 0.4)))
 
-    if i >= 0.75:
-        layers.append(_siren(len(arp) / SAMPLE_RATE,
-                             gain=0.05 + 0.05 * (i - 0.75) / 0.25))
-
     return _mix(*layers)
-
-
-def _siren(seconds, gain=0.06, low=380.0, high=560.0, sweep=1.6):
-    """A slow two-tone wail for the late stages.
-
-    Built by integrating a swept frequency rather than by concatenating
-    notes, so the pitch actually bends between the two tones the way an
-    alarm does instead of stepping between them.
-    """
-    n = max(1, int(seconds * SAMPLE_RATE))
-    t = np.arange(n) / SAMPLE_RATE
-    lfo = 0.5 * (1.0 + np.sin(2 * math.pi * t / sweep))
-    freq = low + (high - low) * lfo
-    phase = 2 * math.pi * np.cumsum(freq) / SAMPLE_RATE
-    # Fade the ends so the loop point isn't a click.
-    fade = np.minimum(1.0, np.minimum(t, seconds - t) / 0.4)
-    return np.sin(phase) * gain * np.clip(fade, 0.0, 1.0)
 
 
 def _build_win():

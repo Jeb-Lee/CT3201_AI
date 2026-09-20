@@ -787,8 +787,8 @@ def test_the_music_speeds_up_every_single_stage():
 
 
 def test_the_music_gets_more_intense_every_single_stage():
-    """RMS energy: louder, denser, and from stage 6 carrying a tritone
-    and later a siren on top."""
+    """RMS energy: louder and denser, and from stage 6 carrying a
+    tritone on top."""
     energy = [float(np.sqrt((_TRACKS[game_track(i)]() ** 2).mean()))
               for i in range(10)]
     assert energy == sorted(energy)
@@ -814,7 +814,7 @@ def test_the_late_stages_carry_the_dissonance_the_early_ones_do_not():
 
 def test_every_gameplay_track_stays_inside_the_mix():
     """_mix soft-clips, but a track that pins at 1.0 is distorting rather
-    than loud -- the siren and tritone layers are the ones that could."""
+    than loud -- the stacked late-stage layers are the ones that could."""
     for i in range(10):
         peak = float(abs(_TRACKS[game_track(i)]()).max())
         assert 0.05 < peak < 0.95

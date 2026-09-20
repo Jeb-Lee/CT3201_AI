@@ -70,7 +70,7 @@ than wandering an emptied building.
 - [x] Optional learned-AI option (opt-in, AI player only): Gymnasium environment, evaluation harness with confidence intervals, `LearnedAgent` -- **no model trained yet**, see "Learned AI (optional)"
 - [x] Music for the title, menus, gameplay and both endings -- synthesised at runtime (`audio.py`), no audio assets, mute with `M`
 - [x] Per-stage set dressing (`props.py`): each of the ten stages has its own palette and furniture -- canteen tables and chairs, server racks, parked cars, hospital beds, open sky on the roof. Drawn, never collided with, so it changes how a stage looks and not how it plays
-- [x] Per-stage music: one gameplay bed parameterised from calm (stage 1) to frantic (stage 10) -- faster tempo, harsher timbre, a tritone from the midpoint and a siren on the last stages
+- [x] Per-stage music: one gameplay bed parameterised from calm (stage 1) to frantic (stage 10) -- faster tempo, harsher timbre, a drier pulse and a tritone from the midpoint
 
 ## Learned AI (optional)
 
@@ -232,7 +232,6 @@ is monotonic by construction rather than by hand-tuning ten tracks:
 - **the pulse** -- the eighth-note bass gets louder and drier, like a countdown
 - **detune** -- the pad drifts from 8 to 34 cents, from warm to queasy
 - **the tritone** -- from the midpoint a dissonant Eb fades in against the A
-- **the siren** -- on the last stages a pitch-bent wail sits underneath
 
 Tracks stay lazily built, so reaching stage 3 never costs the seven
 stages you haven't heard. The tests assert the loop gets strictly shorter
