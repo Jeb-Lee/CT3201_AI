@@ -528,26 +528,9 @@ class GameSession:
         """The top-right panel, shared by the race and spectate HUDs --
         they differ only in whose health and clock they show."""
         f = self.hud_font
-        x = SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN
-        rect = pygame.Rect(x - 10, 8, HEALTH_BAR_WIDTH + 20, 92)
-        layer = self._panel_layer(rect)
-        lx, ly = 10, HEALTH_BAR_MARGIN - 8   # panel-local origin of the bar
-
-        bg = pygame.Rect(lx, ly, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
-        pygame.draw.rect(layer, HEALTH_BAR_BG_COLOR, bg)
-        frac = max(0.0, min(1.0, health / HEALTH_MAX))
-        pygame.draw.rect(layer, colour_fn(frac),
-                         pygame.Rect(lx, ly, round(HEALTH_BAR_WIDTH * frac), HEALTH_BAR_HEIGHT))
-        pygame.draw.rect(layer, HEALTH_BAR_BORDER_COLOR, bg, 2)
-
         label = f.render(label_text, True, FONT_COLOR)
-        layer.blit(label, (lx, ly + HEALTH_BAR_HEIGHT + 3))
-        # placed past the measured label, since "AI HEALTH" is wider than
-        # "HEALTH" and a fixed offset ran the clock into it
-        layer.blit(f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
-                            True, FONT_COLOR),
-                   (lx + label.get_width() + 14, ly + HEALTH_BAR_HEIGHT + 3))
-
+        clock = f.render(f"Time  {int(elapsed // 60)}:{int(elapsed % 60):02d}",
+                         True, FONT_COLOR)
         if self.hazards.fire.exit_on_fire:
             text, colour = "EXIT ON FIRE", (240, 90, 60)
         else:
@@ -555,7 +538,36 @@ class GameSession:
             colour = (240, 90, 60) if left < 15 else (
                 (235, 175, 70) if left < 35 else (205, 205, 210))
             text = f"Fire -> exit  {int(left // 60)}:{int(left % 60):02d}"
-        layer.blit(f.render(text, True, colour), (lx, ly + HEALTH_BAR_HEIGHT + 24))
+        fire = f.render(text, True, colour)
+
+        # The panel is sized from its widest row. "AI HEALTH" plus the clock is
+        # wider than the 200px bar, so a fixed-width panel let the clock run
+        # out the right-hand side and hit the window edge. The right edge
+        # stays put, so a wider panel grows leftwards.
+        # Measured against the widest clock/fire text rather than the current
+        # one: the font is proportional, so sizing from "0:43" would make the
+        # panel twitch by a pixel or two every time a digit changed.
+        inner_w = max(HEALTH_BAR_WIDTH,
+                      label.get_width() + 14 + f.size("Time  99:59")[0],
+                      f.size("Fire -> exit  99:59")[0], f.size("EXIT ON FIRE")[0])
+        width = inner_w + 20
+        right = SCREEN_WIDTH - HEALTH_BAR_MARGIN + 10
+        rect = pygame.Rect(right - width, 8, width, 92)
+        layer = self._panel_layer(rect)
+        lx, ly = 10, HEALTH_BAR_MARGIN - 8   # panel-local origin of the bar
+
+        bg = pygame.Rect(lx, ly, inner_w, HEALTH_BAR_HEIGHT)
+        pygame.draw.rect(layer, HEALTH_BAR_BG_COLOR, bg)
+        frac = max(0.0, min(1.0, health / HEALTH_MAX))
+        pygame.draw.rect(layer, colour_fn(frac),
+                         pygame.Rect(lx, ly, round(inner_w * frac), HEALTH_BAR_HEIGHT))
+        pygame.draw.rect(layer, HEALTH_BAR_BORDER_COLOR, bg, 2)
+
+        layer.blit(label, (lx, ly + HEALTH_BAR_HEIGHT + 3))
+        # placed past the measured label, since "AI HEALTH" is wider than
+        # "HEALTH" and a fixed offset ran the clock into it
+        layer.blit(clock, (lx + label.get_width() + 14, ly + HEALTH_BAR_HEIGHT + 3))
+        layer.blit(fire, (lx, ly + HEALTH_BAR_HEIGHT + 24))
         self._blit_panel(surface, layer, rect)
 
     def _draw_hud_spectate(self, surface):

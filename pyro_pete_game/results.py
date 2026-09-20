@@ -102,13 +102,37 @@ def draw_results(surface, title_font, head_font, body_font,
     surface.blit(hint, (px + (panel_w - hint.get_width()) // 2, py + panel_h - 32))
 
 
+def _fit_panel_width(*needed, minimum=420):
+    """Width for a panel whose widest content line needs `needed` pixels:
+    never narrower than `minimum`, never wider than the screen."""
+    return min(max(minimum, *needed), SCREEN_WIDTH - 20)
+
+
 def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
                        total_victims, stage_label=None, cleared=False,
                        has_next_stage=False):
     """Single-column variant for spectate ("Watch AI Play") runs -- same
     panel language as draw_results, just one column since there's no Pete
     to compare against."""
-    panel_w, panel_h = 420, 470
+    sub = f"{total_victims} occupants in the building"
+    if stage_label:
+        sub = f"{stage_label}  --  {sub}"
+    sub_surf = body_font.render(sub, True, _DIM)
+
+    if cleared and has_next_stage:
+        hint_text = "Enter for the next stage     R to replay     Esc to quit"
+    elif cleared:
+        hint_text = "Campaign complete!     Enter for menu     Esc to quit"
+    else:
+        hint_text = "R to run again     Enter for menu     Esc to quit"
+    hint = body_font.render(hint_text, True, (150, 150, 155))
+
+    # The subtitle carries the stage name, so its length varies per stage
+    # ("Turbine Hall" vs "Staff Canteen"). A fixed 420px panel let it spill
+    # out the right-hand side; size the panel to the widest line instead,
+    # never narrower than the original design and never wider than the screen.
+    panel_w = _fit_panel_width(sub_surf.get_width() + 60, hint.get_width() + 40)
+    panel_h = 470
     px = (SCREEN_WIDTH - panel_w) // 2
     py = (SCREEN_HEIGHT - panel_h) // 2
 
@@ -124,20 +148,10 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
         ("Stage cleared", _POS) if cleared else ("The AI didn't make it", _NEG))
     surface.blit(title_font.render(headline, True, headline_colour),
                  (px + 28, py + 18))
-    sub = f"{total_victims} occupants in the building"
-    if stage_label:
-        sub = f"{stage_label}  --  {sub}"
-    surface.blit(body_font.render(sub, True, _DIM), (px + 30, py + 54))
+    surface.blit(sub_surf, (px + 30, py + 54))
 
     _draw_column(surface, head_font, body_font, px + 40, py + 86, agent_stats)
 
-    if cleared and has_next_stage:
-        hint_text = "Enter for the next stage     R to replay     Esc to quit"
-    elif cleared:
-        hint_text = "Campaign complete!     Enter for menu     Esc to quit"
-    else:
-        hint_text = "R to run again     Enter for menu     Esc to quit"
-    hint = body_font.render(hint_text, True, (150, 150, 155))
     surface.blit(hint, (px + (panel_w - hint.get_width()) // 2, py + panel_h - 32))
 
 
