@@ -58,6 +58,7 @@ from hazard_field import HazardField
 from visibility import VisibilitySystem
 from stats import RunStats
 from results import draw_results, draw_watch_results
+from fonts import ui_font
 import levels
 from levels.tuning import DEFAULT as DEFAULT_TUNING
 from intro import IntroScene
@@ -692,9 +693,9 @@ def main():
     # Falls back to silence on a machine with no audio device -- see audio.py.
     audio = AudioManager()
 
-    title_font = pygame.font.SysFont(None, 44)
-    head_font = pygame.font.SysFont(None, 30)
-    body_font = pygame.font.SysFont(None, 24)
+    title_font = ui_font("title")
+    head_font = ui_font("head")
+    body_font = ui_font("body")
 
     # Built once here (not per-call, and not at module import time): it
     # loads sprites via convert_alpha(), which needs the display created

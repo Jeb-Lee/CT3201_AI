@@ -73,9 +73,12 @@ def test_status_panel_width_does_not_twitch_as_the_clock_changes():
 
 # --- results panel alignment -------------------------------------------------
 import results
+from fonts import ui_font
 from stats import RunStats
 
-_FONTS = tuple(pygame.font.SysFont(None, s) for s in (44, 30, 24))
+_FONTS = tuple(ui_font(r) for r in ("title", "head", "body"))          # what the game uses
+_DEFAULT_FONTS = tuple(pygame.font.SysFont(None, s) for s in (44, 30, 24))  # the fallback
+_TALL_FONTS = tuple(pygame.font.SysFont(None, s) for s in (72, 54, 44))      # stress: much taller lines
 
 
 def _stats(label="AI robot", **kw):
@@ -111,7 +114,7 @@ def test_draw_column_uses_exactly_the_height_it_reports(kw):
     st = _stats(**kw)
     surf = pygame.Surface((600, 700), pygame.SRCALPHA)
     end = results._draw_column(surf, _FONTS[1], _FONTS[2], 0, 10, 300, st)
-    assert end - 10 == results._column_height(_FONTS[2], st)
+    assert end - 10 == results._column_height(_FONTS[1], _FONTS[2], st)
 
 
 def test_values_end_on_the_shared_right_edge():
@@ -123,7 +126,7 @@ def test_values_end_on_the_shared_right_edge():
     right = 380
     results._draw_column(surf, _FONTS[1], _FONTS[2], 20, 0, right - 20, st)
     # first score row: y = section heading + rule, then one row of text
-    row_top = results._HEAD_H + _FONTS[2].get_height() + 2 + 8
+    row_top = results._head_block(_FONTS[1], _FONTS[2])[2] + _FONTS[2].get_height() + 2 + 8
     band = range(row_top, row_top + _FONTS[2].get_height())
     lit = [x for x in range(399, 20, -1)
            if any(surf.get_at((x, yy))[:3] != (0, 0, 0) for yy in band)]
@@ -181,7 +184,7 @@ def _row_pixels(st, colour):
     surf = pygame.Surface((400, 500))
     surf.fill((0, 0, 0))
     results._draw_column(surf, _FONTS[1], _FONTS[2], 20, 0, 360, st)
-    top = results._HEAD_H + _FONTS[2].get_height() + 2 + 8
+    top = results._head_block(_FONTS[1], _FONTS[2])[2] + _FONTS[2].get_height() + 2 + 8
     return any(surf.get_at((x, y))[:3] == colour
                for x in range(20, 380) for y in range(top, top + _FONTS[2].get_height()))
 
@@ -204,7 +207,7 @@ def test_race_panel_has_a_divider_between_the_columns(monkeypatch):
     px, py, w, h = seen[0]
     col_w = (w - 2 * results._MARGIN - results._GAP) // 2
     mid = px + results._MARGIN + col_w + results._GAP // 2
-    assert screen.get_at((mid, py + results._TOP + 20))[:3] == (60, 62, 70)
+    assert screen.get_at((mid, py + results._top(_FONTS[0], _FONTS[2]) + 20))[:3] == (60, 62, 70)
 
 
 @pytest.mark.parametrize("which", ["watch", "race"])
@@ -228,3 +231,79 @@ def test_headline_is_centred_on_the_panel(which, monkeypatch):
     lit = [x for x in range(px + 4, px + w - 4)
            if any(screen.get_at((x, y))[:3] != bg for y in band)]
     assert abs((lit[0] + lit[-1]) / 2 - (px + w / 2)) <= 3
+
+
+# --- fonts -------------------------------------------------------------------
+import fonts
+
+
+def test_ui_font_falls_back_to_the_default_font_when_no_face_exists(monkeypatch):
+    """Teammates on other machines may have no Arial at all. The game must
+    still start, with the font it used before."""
+    monkeypatch.setattr(fonts, "_ARIAL_PATHS", ("/no/such/font.ttf",))
+    for role, (_, default_size) in fonts._SIZES.items():
+        f = fonts.ui_font(role)
+        assert f.get_height() == pygame.font.SysFont(None, default_size).get_height()
+
+
+def test_ui_font_falls_back_when_the_font_file_cannot_be_opened(monkeypatch):
+    """A file that exists but can't be opened (permissions, locked) raises
+    OSError; the game should fall back rather than fail to start. (A
+    *corrupt* file is not testable: pygame 2.6 crashes the whole process on
+    one instead of raising.)"""
+    def cannot_open(*a, **k):
+        raise OSError("cannot open")
+    monkeypatch.setattr(fonts.pygame.font, "Font", cannot_open)
+    monkeypatch.setattr(fonts, "_find_face", lambda: "C:/Windows/Fonts/arial.ttf")
+    f = fonts.ui_font("body")
+    assert f.get_height() == pygame.font.SysFont(None, fonts._SIZES["body"][1]).get_height()
+
+
+def test_default_font_layout_is_unchanged_by_the_font_metrics_refactor():
+    """Spacing now derives from font heights. With pygame's default font it
+    must come out to the numbers that were hard-coded before, so the fallback
+    looks exactly as it did."""
+    t, h, b = _DEFAULT_FONTS
+    assert results._row_h(b) == 22
+    assert results._sub_y(t) == 54
+    assert results._top(t, b) == 86
+    assert results._head_block(h, b) == (26, 46, 78)
+
+
+@pytest.mark.parametrize("fonts_", [_FONTS, _DEFAULT_FONTS, _TALL_FONTS],
+                         ids=["arial", "default", "tall"])
+def test_spacing_scales_with_the_font_so_nothing_overlaps(fonts_):
+    """The reason for deriving spacing from font heights: a taller face used
+    to leave rows touching and the subtitle touching the headline."""
+    t, h, b = fonts_
+    assert results._row_h(b) >= b.get_linesize()            # rows don't collide
+    assert results._sub_y(t) >= 18 + t.get_height()         # subtitle below headline
+    assert results._top(t, b) >= results._sub_y(t) + b.get_height()
+    reason_y, score_y, head_h = results._head_block(h, b)
+    assert reason_y >= h.get_height()                       # reason below the name
+    assert score_y >= reason_y + b.get_height()             # score below the reason
+    assert head_h >= score_y + h.get_height()               # section below the score
+
+
+@pytest.mark.parametrize("fonts_", [_FONTS, _DEFAULT_FONTS], ids=["arial", "default"])
+@pytest.mark.parametrize("draw", ["watch", "race"])
+def test_results_panel_fits_the_screen_with_either_font(fonts_, draw, monkeypatch):
+    """Arial's lines are taller than the default font's, so the tallest panel
+    (4 score rows + 5 stats rows + Total + verdict) must still fit on screen."""
+    seen = []
+    real = results._draw_panel
+    monkeypatch.setattr(results, "_draw_panel",
+                        lambda s, px, py, w, h: (seen.append((px, py, w, h)),
+                                                 real(s, px, py, w, h))[1])
+    screen = pygame.display.get_surface()
+    st = _stats(saved=3, dmg=200, reason="exit", died=True)
+    label = levels.label(levels.STAGE_COUNT - 1)
+    if draw == "watch":
+        results.draw_watch_results(screen, *fonts_, st, 12, stage_label=label,
+                                   cleared=True, has_next_stage=True)
+    else:
+        results.draw_results(screen, *fonts_, st, st, 12, outcome="cleared",
+                             stage_label=label, has_next_stage=True)
+    px, py, w, h = seen[0]
+    assert py >= 10 and py + h <= results.SCREEN_HEIGHT - 10   # a margin each side
+    assert px >= 0 and px + w <= SCREEN_WIDTH

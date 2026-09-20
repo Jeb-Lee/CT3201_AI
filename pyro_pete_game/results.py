@@ -42,12 +42,38 @@ _OUTCOME_HEADLINE = {
 # stats numbers sat at different distances, and the values were left-aligned
 # so their right edges were ragged.)
 _MARGIN = 32          # panel edge -> content, both sides
-_ROW = 22             # height of one label/value row
+_ROW = 22             # minimum height of one label/value row
 _GAP = 40             # between the two columns of the race panel
-_HEAD_H = 78          # name + reason + big score, before the first section
 _SECTION_GAP = 10     # blank space between the score and stats sections
-_TOP = 86             # panel top -> first column (below headline + subtitle)
 _TOTAL_PAD = 10       # rule + gap above the Total row (rule is 4px in, row 6px below)
+
+
+# Vertical spacing comes from the fonts' own heights, not fixed pixel offsets.
+# The offsets were tuned for pygame's default font (16px lines) and left a
+# taller face (Arial, ~23px lines) cramped: rows touching, the subtitle
+# touching the headline. With the default font these work out to exactly the
+# old numbers (row 22, first column 86px down, name/reason/score at 0/26/46,
+# 78px before the first section), so the fallback layout is unchanged.
+def _row_h(body_font):
+    return max(_ROW, body_font.get_linesize() + 1)
+
+
+def _sub_y(title_font):
+    """Subtitle's top, relative to the panel: below the headline."""
+    return 18 + title_font.get_height() + 6
+
+
+def _top(title_font, body_font):
+    """Panel top -> first column: below the headline and the subtitle."""
+    return _sub_y(title_font) + body_font.get_height() + 16
+
+
+def _head_block(head_font, body_font):
+    """(reason_y, score_y, height) of a column's name / reason / big-score
+    block, relative to the column's top."""
+    reason_y = head_font.get_height() + 6
+    score_y = reason_y + body_font.get_height() + 4
+    return reason_y, score_y, score_y + head_font.get_height() + 12
 
 
 def _section(surface, body_font, x, right, y, title):
@@ -63,30 +89,32 @@ def _row(surface, body_font, x, right, y, label, value, value_colour):
     surface.blit(body_font.render(label, True, _DIM), (x, y))
     v = body_font.render(value, True, value_colour)
     surface.blit(v, (right - v.get_width(), y))
-    return y + _ROW
+    return y + _row_h(body_font)
 
 
-def _column_height(body_font, st):
+def _column_height(head_font, body_font, st):
     """Height _draw_column will use, so a panel can be sized to its content
     instead of a fixed 470px with a dead strip at the bottom."""
     section = body_font.get_height() + 2 + 8
-    return (_HEAD_H
-            + section + len(st.score_breakdown()) * _ROW
-            + _TOTAL_PAD + _ROW
+    row = _row_h(body_font)
+    return (_head_block(head_font, body_font)[2]
+            + section + len(st.score_breakdown()) * row
+            + _TOTAL_PAD + row
             + _SECTION_GAP
-            + section + len(st.summary_rows()) * _ROW)
+            + section + len(st.summary_rows()) * row)
 
 
 def _draw_column(surface, head_font, body_font, x, top_y, width, st):
     right = x + width
+    reason_y, score_y, head_h = _head_block(head_font, body_font)
     surface.blit(head_font.render(st.label, True, RESULTS_ACCENT_COLOR), (x, top_y))
     reason = _REASON_TEXT.get(st.finished_reason, "")
     if reason:
-        surface.blit(body_font.render(reason, True, _DIM), (x, top_y + 26))
+        surface.blit(body_font.render(reason, True, _DIM), (x, top_y + reason_y))
     surface.blit(head_font.render(str(st.score), True, RESULTS_TEXT_COLOR),
-                 (x, top_y + 46))
+                 (x, top_y + score_y))
 
-    y = _section(surface, body_font, x, right, top_y + _HEAD_H, "SCORE")
+    y = _section(surface, body_font, x, right, top_y + head_h, "SCORE")
     for label, pts in st.score_breakdown():
         # green is for points actually earned and red for penalties; a zero
         # row ("Occupants led out x0  +0") is neither
@@ -119,7 +147,8 @@ def _draw_heading(surface, title_font, headline, colour, sub_surf, px, py, panel
     at the bottom -- they used to be left-aligned, so the panel mixed the two."""
     h = title_font.render(headline, True, colour)
     surface.blit(h, (px + (panel_w - h.get_width()) // 2, py + 18))
-    surface.blit(sub_surf, (px + (panel_w - sub_surf.get_width()) // 2, py + 54))
+    surface.blit(sub_surf, (px + (panel_w - sub_surf.get_width()) // 2,
+                            py + _sub_y(title_font)))
 
 
 def _draw_panel(surface, px, py, panel_w, panel_h):
@@ -153,10 +182,11 @@ def draw_results(surface, title_font, head_font, body_font,
                                v.get_width() + 2 * _MARGIN,
                                hint.get_width() + 40, minimum=660)
     col_w = (panel_w - 2 * _MARGIN - _GAP) // 2
-    col_h = max(_column_height(body_font, player_stats),
-                _column_height(body_font, agent_stats))
+    top = _top(title_font, body_font)
+    col_h = max(_column_height(head_font, body_font, player_stats),
+                _column_height(head_font, body_font, agent_stats))
     # columns, then the verdict, then the hint -- panel is as tall as that
-    panel_h = _TOP + col_h + 16 + v.get_height() + 14 + hint.get_height() + 18
+    panel_h = top + col_h + 16 + v.get_height() + 14 + hint.get_height() + 18
     px = (SCREEN_WIDTH - panel_w) // 2
     py = (SCREEN_HEIGHT - panel_h) // 2
     _draw_panel(surface, px, py, panel_w, panel_h)
@@ -168,13 +198,13 @@ def draw_results(surface, title_font, head_font, body_font,
 
     for i, st in enumerate((player_stats, agent_stats)):
         x = px + _MARGIN + i * (col_w + _GAP)
-        _draw_column(surface, head_font, body_font, x, py + _TOP, col_w, st)
+        _draw_column(surface, head_font, body_font, x, py + top, col_w, st)
     # a thin rule down the gutter so the two columns read as two blocks
     mid = px + _MARGIN + col_w + _GAP // 2
-    pygame.draw.line(surface, (60, 62, 70), (mid, py + _TOP + 4),
-                     (mid, py + _TOP + col_h - 4))
+    pygame.draw.line(surface, (60, 62, 70), (mid, py + top + 4),
+                     (mid, py + top + col_h - 4))
 
-    vy = py + _TOP + col_h + 16
+    vy = py + top + col_h + 16
     surface.blit(v, (px + (panel_w - v.get_width()) // 2, vy))
     surface.blit(hint, (px + (panel_w - hint.get_width()) // 2,
                         vy + v.get_height() + 14))
@@ -205,8 +235,9 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
     # narrower than the original design and never wider than the screen.
     panel_w = _fit_panel_width(sub_surf.get_width() + 2 * _MARGIN,
                                hint.get_width() + 40)
-    col_h = _column_height(body_font, agent_stats)
-    panel_h = _TOP + col_h + 16 + hint.get_height() + 18
+    top = _top(title_font, body_font)
+    col_h = _column_height(head_font, body_font, agent_stats)
+    panel_h = top + col_h + 16 + hint.get_height() + 18
     px = (SCREEN_WIDTH - panel_w) // 2
     py = (SCREEN_HEIGHT - panel_h) // 2
     _draw_panel(surface, px, py, panel_w, panel_h)
@@ -216,11 +247,11 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
     _draw_heading(surface, title_font, headline, headline_colour, sub_surf,
                   px, py, panel_w)
 
-    _draw_column(surface, head_font, body_font, px + _MARGIN, py + _TOP,
+    _draw_column(surface, head_font, body_font, px + _MARGIN, py + top,
                  panel_w - 2 * _MARGIN, agent_stats)
 
     surface.blit(hint, (px + (panel_w - hint.get_width()) // 2,
-                        py + _TOP + col_h + 16))
+                        py + top + col_h + 16))
 
 
 def _verdict(p, a):
