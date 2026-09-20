@@ -348,3 +348,95 @@ def test_intro_prompt_font_is_created_once_not_every_frame():
     first = Scene._prompt_font
     intro.IntroScene._draw_prompt(Scene, surf)
     assert Scene._prompt_font is first
+
+
+# --- the Total row is the one bold row ----------------------------------------
+_BOLD = ui_font("body", bold=True)
+
+
+def _draw_col(st, total_font):
+    surf = pygame.Surface((400, 500))
+    surf.fill((0, 0, 0))
+    end = results._draw_column(surf, _FONTS[1], _FONTS[2], 20, 0, 360, st, total_font)
+    return surf, end
+
+
+def _total_band(st):
+    """The y range of the Total row in a column drawn at top 0."""
+    body = _FONTS[2]
+    y = (results._head_block(_FONTS[1], body)[2] + body.get_height() + 2 + 8
+         + len(st.score_breakdown()) * results._row_h(body) + results._TOTAL_PAD)
+    return y, y + body.get_height()
+
+
+def _ink(surf, box):
+    """How many non-black pixels are inside box (x0, y0, x1, y1)."""
+    x0, y0, x1, y1 = box
+    return sum(1 for x in range(x0, x1) for y in range(y0, y1) if surf.get_at((x, y))[:3] != (0, 0, 0))
+
+
+def test_only_the_total_row_changes_when_it_goes_bold():
+    st = _stats()
+    regular, _ = _draw_col(st, None)
+    bold, _ = _draw_col(st, _BOLD)
+    top, bottom = _total_band(st)
+    diff = [y for y in range(500) if any(regular.get_at((x, y)) != bold.get_at((x, y))
+                                         for x in range(400))]
+    assert diff and top - 2 <= min(diff) and max(diff) <= bottom + 2      # nothing outside the Total row
+    assert _ink(bold, (20, top, 380, bottom)) > _ink(regular, (20, top, 380, bottom))
+
+
+def test_the_total_label_is_full_white_where_the_other_labels_are_dim():
+    st = _stats()
+    surf, _ = _draw_col(st, _BOLD)
+    body = _FONTS[2]
+
+    def brightest(top):
+        return max(max(surf.get_at((x, y))[:3]) for x in range(20, 100)
+                   for y in range(top, top + body.get_height()))
+    total_top, _ = _total_band(st)
+    first_row = results._head_block(_FONTS[1], body)[2] + body.get_height() + 2 + 8
+    assert brightest(total_top) >= 225            # RESULTS_TEXT_COLOR
+    assert brightest(first_row) <= 180            # "Occupants led out": dim grey
+
+
+def test_a_bold_total_does_not_change_the_columns_height():
+    """The panel is sized from _column_height; the Total row's height comes
+    from the body font, not the bold one."""
+    for kw in (dict(), dict(dmg=200, reason="dead", died=True)):
+        st = _stats(**kw)
+        _, end_regular = _draw_col(st, None)
+        _, end_bold = _draw_col(st, _BOLD)
+        assert end_regular == end_bold == results._column_height(_FONTS[1], _FONTS[2], st)
+
+
+def test_the_widest_bold_total_still_fits_a_race_column():
+    col_w = (660 - 2 * results._MARGIN - results._GAP) // 2
+    assert _BOLD.size("Total (min 0)")[0] + 24 + _BOLD.size("99999")[0] <= col_w
+
+
+@pytest.mark.parametrize("draw", ["watch", "race"])
+def test_both_results_panels_accept_the_bold_total_and_still_fit(draw, monkeypatch):
+    seen = []
+    real = results._draw_panel
+    monkeypatch.setattr(results, "_draw_panel",
+                        lambda s, px, py, w, h: (seen.append((px, py, w, h)), real(s, px, py, w, h))[1])
+    screen = pygame.display.get_surface()
+    st = _stats(saved=3, dmg=200, reason="exit", died=True)
+    label = levels.label(levels.STAGE_COUNT - 1)
+    if draw == "watch":
+        results.draw_watch_results(screen, *_FONTS, st, 12, stage_label=label, cleared=True,
+                                   has_next_stage=True, total_font=_BOLD)
+    else:
+        results.draw_results(screen, *_FONTS, st, st, 12, outcome="cleared", stage_label=label,
+                             has_next_stage=True, total_font=_BOLD)
+    px, py, w, h = seen[0]
+    assert py >= 10 and py + h <= results.SCREEN_HEIGHT - 10 and px >= 0 and px + w <= SCREEN_WIDTH
+
+
+def test_the_game_hands_the_bold_font_to_both_results_panels():
+    """main() is a loop that can't be driven from a test, so check the wiring
+    at the source: a font built once, and passed at both call sites."""
+    src = (_GAME_DIR / "main.py").read_text(encoding="utf-8")
+    assert 'total_font = ui_font("body", bold=True)' in src
+    assert src.count("total_font=total_font") == 2      # draw_results and draw_watch_results

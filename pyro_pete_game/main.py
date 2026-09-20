@@ -560,6 +560,7 @@ def main():
     title_font = ui_font("title")
     head_font = ui_font("heading")
     body_font = ui_font("body")
+    total_font = ui_font("body", bold=True)      # the results' Total row
 
     # Built once here (not per-call, and not at module import time): it
     # loads sprites via convert_alpha(), which needs the display created
@@ -697,14 +698,16 @@ def main():
                                        session.agent_stats, len(session.victims),
                                        stage_label=session.stage_label,
                                        cleared=session.cleared,
-                                       has_next_stage=session.has_next_stage)
+                                       has_next_stage=session.has_next_stage,
+                                       total_font=total_font)
                 else:
                     draw_results(screen, title_font, head_font, body_font,
                                  session.player_stats, session.agent_stats,
                                  len(session.victims),
                                  outcome=session.outcome,
                                  stage_label=session.stage_label,
-                                 has_next_stage=session.has_next_stage)
+                                 has_next_stage=session.has_next_stage,
+                                 total_font=total_font)
             elif session.paused:
                 _draw_pause_overlay(screen, title_font, body_font)
 

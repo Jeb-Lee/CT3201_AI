@@ -84,10 +84,14 @@ def _section(surface, body_font, x, right, y, title):
     return rule_y + 8
 
 
-def _row(surface, body_font, x, right, y, label, value, value_colour):
-    """Label at the left edge, value right-aligned to the shared right edge."""
-    surface.blit(body_font.render(label, True, _DIM), (x, y))
-    v = body_font.render(value, True, value_colour)
+def _row(surface, body_font, x, right, y, label, value, value_colour,
+         label_colour=_DIM, font=None):
+    """Label at the left edge, value right-aligned to the shared right edge.
+    `font` draws the text in something other than body_font (the bold Total);
+    the row's height still comes from body_font so the layout is unchanged."""
+    f = font or body_font
+    surface.blit(f.render(label, True, label_colour), (x, y))
+    v = f.render(value, True, value_colour)
     surface.blit(v, (right - v.get_width(), y))
     return y + _row_h(body_font)
 
@@ -104,7 +108,7 @@ def _column_height(head_font, body_font, st):
             + section + len(st.summary_rows()) * row)
 
 
-def _draw_column(surface, head_font, body_font, x, top_y, width, st):
+def _draw_column(surface, head_font, body_font, x, top_y, width, st, total_font=None):
     right = x + width
     reason_y, score_y, head_h = _head_block(head_font, body_font)
     surface.blit(head_font.render(st.label, True, RESULTS_ACCENT_COLOR), (x, top_y))
@@ -124,10 +128,14 @@ def _draw_column(surface, head_font, body_font, x, top_y, width, st):
     # The rows above are what the total is made of. Rule + Total makes the sum
     # visible; when damage drove it below zero the score is held at 0, so the
     # label says so rather than leaving rows that add to -40 above a "0".
+    # It is the one row set in bold (label and value, full white): it is the
+    # number everything above adds up to, and at regular weight it read as just
+    # another row that the eye had to hunt for.
     pygame.draw.line(surface, (60, 62, 70), (x, y + 4), (right, y + 4))
     y = _row(surface, body_font, x, right, y + _TOTAL_PAD,
              "Total (min 0)" if st.score_floored else "Total",
-             str(st.score), RESULTS_TEXT_COLOR)
+             str(st.score), RESULTS_TEXT_COLOR,
+             label_colour=RESULTS_TEXT_COLOR, font=total_font)
 
     y += _SECTION_GAP
     y = _section(surface, body_font, x, right, y, "RUN STATS")
@@ -162,7 +170,8 @@ def _draw_panel(surface, px, py, panel_w, panel_h):
 
 def draw_results(surface, title_font, head_font, body_font,
                  player_stats, agent_stats, total_victims,
-                 outcome=None, stage_label=None, has_next_stage=False):
+                 outcome=None, stage_label=None, has_next_stage=False,
+                 total_font=None):
     sub = f"{total_victims} occupants in the building"
     if stage_label:
         sub = f"{stage_label}  --  {sub}"
@@ -198,7 +207,7 @@ def draw_results(surface, title_font, head_font, body_font,
 
     for i, st in enumerate((player_stats, agent_stats)):
         x = px + _MARGIN + i * (col_w + _GAP)
-        _draw_column(surface, head_font, body_font, x, py + top, col_w, st)
+        _draw_column(surface, head_font, body_font, x, py + top, col_w, st, total_font)
     # a thin rule down the gutter so the two columns read as two blocks
     mid = px + _MARGIN + col_w + _GAP // 2
     pygame.draw.line(surface, (60, 62, 70), (mid, py + top + 4),
@@ -212,7 +221,7 @@ def draw_results(surface, title_font, head_font, body_font,
 
 def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
                        total_victims, stage_label=None, cleared=False,
-                       has_next_stage=False):
+                       has_next_stage=False, total_font=None):
     """Single-column variant for spectate ("Watch AI Play") runs -- same
     panel language as draw_results, just one column since there's no Pete
     to compare against."""
@@ -248,7 +257,7 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
                   px, py, panel_w)
 
     _draw_column(surface, head_font, body_font, px + _MARGIN, py + top,
-                 panel_w - 2 * _MARGIN, agent_stats)
+                 panel_w - 2 * _MARGIN, agent_stats, total_font)
 
     surface.blit(hint, (px + (panel_w - hint.get_width()) // 2,
                         py + top + col_h + 16))
