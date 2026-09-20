@@ -56,6 +56,8 @@ from stats import RunStats
 from results import draw_results, draw_watch_results
 from fonts import ui_font
 from hud import Hud
+from notice import Notices
+from pause import PauseScreen
 import levels
 from levels.tuning import DEFAULT as DEFAULT_TUNING
 from intro import IntroScene
@@ -460,21 +462,6 @@ class GameSession:
         return rect.inflate(52, 52).collidepoint(anchor.x - ox, anchor.y - oy)
 
 
-def _draw_pause_overlay(surface, title_font, body_font):
-    """Dims the frozen frame and labels it, rather than blanking the
-    screen -- the point of pausing mid-run is to let you study the maze/
-    hazard state, not lose sight of it."""
-    dim = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-    dim.fill((0, 0, 0, 140))
-    surface.blit(dim, (0, 0))
-
-    w, h = surface.get_size()
-    title = title_font.render("PAUSED", True, (230, 230, 230))
-    surface.blit(title, title.get_rect(center=(w // 2, h // 2 - 20)))
-    hint = body_font.render("Press P to resume", True, (200, 200, 200))
-    surface.blit(hint, hint.get_rect(center=(w // 2, h // 2 + 22)))
-
-
 # ---------------------------------------------------------------- entry point
 def _disable_windows_dpi_scaling():
     """Without this, Windows stretches the 960x640 window to fit the
@@ -564,6 +551,8 @@ def main():
     body_font = ui_font("body")
     total_font = ui_font("body", bold=True)      # the results' Total row
     small_font = ui_font("small")                # the results' "role \u00b7 outcome" line
+    pause_screen = PauseScreen()
+    notices = Notices()                          # "Sound off" and the muted chip, on every screen
 
     # Built once here (not per-call, and not at module import time): it
     # loads sprites via convert_alpha(), which needs the display created
@@ -588,6 +577,7 @@ def main():
     while running:
         dt = clock.tick(FPS) / 1000.0
         events = pygame.event.get()
+        notices.update(dt)
 
         for event in events:
             if event.type == pygame.QUIT:
@@ -596,6 +586,7 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
                 audio.toggle_mute()
+                notices.sound_changed(audio)
         if not running:
             break
 
@@ -712,8 +703,9 @@ def main():
                                  has_next_stage=session.has_next_stage,
                                  total_font=total_font, small_font=small_font)
             elif session.paused:
-                _draw_pause_overlay(screen, title_font, body_font)
+                pause_screen.draw(screen, session, audio)
 
+        notices.draw(screen, audio)                  # over everything, including the pause panel
         pygame.display.flip()
 
     audio.stop()

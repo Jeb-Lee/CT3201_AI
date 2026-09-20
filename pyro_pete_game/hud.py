@@ -22,7 +22,7 @@ import pygame
 from entities.victim import STATE_IDLE, STATE_FOLLOWING
 from fonts import ui_font
 from hud_icons import (
-    TEXT, DIM, EDGE, BLUE, lerp_colour, ease_out, shadowed_text, gradient_panel, drop_shadow,
+    TEXT, DIM, EDGE, BLUE, GREEN, lerp_colour, ease_out, shadowed_text, gradient_panel, drop_shadow,
     flame, person, cross, key_icon, padlock, clock_icon, tick, drone_icon,
 )
 from portraits import portrait_image
@@ -34,7 +34,6 @@ from settings import (
 
 # --- palette ---------------------------------------------------------------
 GOLD = RESULTS_ACCENT_COLOR                 # Pete / "you" (the same gold as the menus)
-GREEN = (130, 210, 140)
 POS, NEG = (150, 210, 150), (222, 130, 110)
 FIRE_CALM, FIRE_WARN, FIRE_HOT = (222, 224, 230), (240, 178, 64), (240, 84, 58)
 
