@@ -426,8 +426,13 @@ class GameSession:
         self.agent.draw_route(surface, cam)
         self.agent.draw(surface, cam)
 
-        mouse = pygame.mouse.get_pos() if pygame.mouse.get_focused() else None
-        self.hud.draw(surface, self, mouse)
+        # The HUD belongs to a stage in progress. Once the stage has ended the
+        # results panel takes over the screen; drawing the HUD first meant its
+        # clock and cards showed through around (and were cut by) the panel.
+        # (Paused is still "playing", so the pause screen keeps a dimmed HUD.)
+        if self.state == "playing":
+            mouse = pygame.mouse.get_pos() if pygame.mouse.get_focused() else None
+            self.hud.draw(surface, self, mouse)
 
     def _draw_player_trail(self, surface, camera_offset):
         ox, oy = camera_offset
