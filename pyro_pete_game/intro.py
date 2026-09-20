@@ -22,6 +22,7 @@ import random
 
 import pygame
 
+from fonts import ui_font
 from settings import SCREEN_WIDTH, SCREEN_HEIGHT
 
 # ---------------------------------------------------------------- timeline
@@ -582,7 +583,10 @@ class IntroScene:
         visible = (self.blink_t % 1.2) < 0.8
         if not visible:
             return
-        font = pygame.font.SysFont("couriernew", 30, bold=True)
+        # created once, not every blink frame
+        font = getattr(self, "_prompt_font", None)
+        if font is None:
+            font = self._prompt_font = ui_font("title")
         text = font.render("PRESS ENTER TO START", True, (245, 238, 224))
         shadow = font.render("PRESS ENTER TO START", True, (0, 0, 0))
         rect = text.get_rect(center=(w // 2, h // 2))

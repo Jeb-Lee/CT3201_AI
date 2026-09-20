@@ -256,6 +256,14 @@ class AudioManager:
         if self.enabled and self._channel.get_sound():
             self._channel.get_sound().set_volume(self.volume)
 
+    @property
+    def muted(self):
+        """True when the sound is off because the player muted it. False on a
+        machine with no audio device (enabled is False): there, nothing is
+        playing anyway, and "muted" would be a claim about a switch that
+        does not exist."""
+        return self.enabled and self.volume <= 0
+
     def toggle_mute(self):
         """Returns True if audio is now muted. Restores whatever the
         volume was before muting rather than a hard-coded level."""
