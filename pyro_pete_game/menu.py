@@ -9,6 +9,7 @@ import traceback
 
 import pygame
 
+from fonts import ui_font
 from settings import SCREEN_WIDTH, SCREEN_HEIGHT, RESULTS_ACCENT_COLOR
 from intro import build_building_layer, _load_sprite, PETE_ASSET_DIR, ROBOT_ASSET_DIR
 
@@ -92,7 +93,7 @@ def build_menu_background(width=SCREEN_WIDTH, height=SCREEN_HEIGHT):
     # visible to someone just running the packaged game, so surface the
     # actual exception text directly in the window instead.
     if problems:
-        diag_font = pygame.font.SysFont(None, 20)
+        diag_font = ui_font("small")
         y = 8
         surf.blit(diag_font.render(
             "menu background error(s) -- see below:", True, (255, 80, 80)), (8, y))
@@ -123,11 +124,11 @@ class ChoiceMenu:
         self.cancelled = False
         self._option_rects = []
 
-        self._title_font = pygame.font.SysFont(None, 54)
-        self._subtitle_font = pygame.font.SysFont(None, 24)
-        self._option_font = pygame.font.SysFont(None, 36)
-        self._desc_font = pygame.font.SysFont(None, 22)
-        self._hint_font = pygame.font.SysFont(None, 22)
+        self._title_font = ui_font("title")
+        self._subtitle_font = ui_font("body")
+        self._option_font = ui_font("heading")
+        self._desc_font = ui_font("small")
+        self._hint_font = ui_font("small")
 
     def update(self, dt, events):
         for event in events:

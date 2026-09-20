@@ -76,7 +76,7 @@ import results
 from fonts import ui_font
 from stats import RunStats
 
-_FONTS = tuple(ui_font(r) for r in ("title", "head", "body"))          # what the game uses
+_FONTS = tuple(ui_font(r) for r in ("title", "heading", "body"))       # what the game uses
 _DEFAULT_FONTS = tuple(pygame.font.SysFont(None, s) for s in (44, 30, 24))  # the fallback
 _TALL_FONTS = tuple(pygame.font.SysFont(None, s) for s in (72, 54, 44))      # stress: much taller lines
 
@@ -239,9 +239,10 @@ import fonts
 
 def test_ui_font_falls_back_to_the_default_font_when_no_face_exists(monkeypatch):
     """Teammates on other machines may have no Arial at all. The game must
-    still start, with the font it used before."""
-    monkeypatch.setattr(fonts, "_ARIAL_PATHS", ("/no/such/font.ttf",))
-    for role, (_, default_size) in fonts._SIZES.items():
+    still start, with the default font."""
+    monkeypatch.setattr(fonts, "_REGULAR_PATHS", ("/no/such/font.ttf",))
+    monkeypatch.setattr(fonts, "_BOLD_PATHS", ("/no/such/font-bold.ttf",))
+    for role, (_, default_size, _) in fonts._SCALE.items():
         f = fonts.ui_font(role)
         assert f.get_height() == pygame.font.SysFont(None, default_size).get_height()
 
@@ -254,9 +255,9 @@ def test_ui_font_falls_back_when_the_font_file_cannot_be_opened(monkeypatch):
     def cannot_open(*a, **k):
         raise OSError("cannot open")
     monkeypatch.setattr(fonts.pygame.font, "Font", cannot_open)
-    monkeypatch.setattr(fonts, "_find_face", lambda: "C:/Windows/Fonts/arial.ttf")
+    monkeypatch.setattr(fonts, "_first_existing", lambda paths: "C:/Windows/Fonts/arial.ttf")
     f = fonts.ui_font("body")
-    assert f.get_height() == pygame.font.SysFont(None, fonts._SIZES["body"][1]).get_height()
+    assert f.get_height() == pygame.font.SysFont(None, fonts._SCALE["body"][1]).get_height()
 
 
 def test_default_font_layout_is_unchanged_by_the_font_metrics_refactor():
@@ -307,3 +308,91 @@ def test_results_panel_fits_the_screen_with_either_font(fonts_, draw, monkeypatc
     px, py, w, h = seen[0]
     assert py >= 10 and py + h <= results.SCREEN_HEIGHT - 10   # a margin each side
     assert px >= 0 and px + w <= SCREEN_WIDTH
+
+
+# --- one typeface, one scale, across every screen ------------------------------
+import re
+from pathlib import Path
+
+_GAME_DIR = Path(__file__).resolve().parent.parent
+
+
+def test_no_module_creates_its_own_font():
+    """The point of fonts.ui_font: one typeface and one size scale. A stray
+    pygame.font.SysFont / Font call anywhere else is how the intro ended up in
+    Courier New, the menus in six default-font sizes and the results in Arial."""
+    offenders = []
+    for path in _GAME_DIR.rglob("*.py"):
+        rel = path.relative_to(_GAME_DIR).as_posix()
+        if rel.startswith(("tests/", "ml/")) or rel == "fonts.py":
+            continue
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            code = line.split("#", 1)[0]
+            if re.search(r"font\.(SysFont|Font)\(|freetype", code):
+                offenders.append(f"{rel}:{n}: {line.strip()}")
+    assert not offenders, "create fonts through fonts.ui_font instead:\n" + "\n".join(offenders)
+
+
+def test_the_scale_is_strictly_ordered_and_bold_differs_from_regular():
+    heights = [ui_font(r).get_height() for r in ("title", "heading", "body", "small")]
+    assert heights == sorted(heights, reverse=True) and len(set(heights)) == 4
+    # the scale's weights: titles and headings bold, reading text regular
+    assert fonts._SCALE["title"][2] and fonts._SCALE["heading"][2]
+    assert not fonts._SCALE["body"][2] and not fonts._SCALE["small"][2]
+    # asking for bold body text really gives a different (wider) face
+    if fonts._first_existing(fonts._BOLD_PATHS):
+        assert ui_font("body", bold=True).size("Occupants out")[0] > \
+            ui_font("body", bold=False).size("Occupants out")[0]
+
+
+@pytest.mark.parametrize("build", ["_build_mode_menu", "_build_skin_menu", "_build_brain_menu"])
+def test_every_menu_line_fits_its_panel(build):
+    """The menu panel is min(560, width-40) wide and each option box 420: the
+    subtitle, every label and description and the hint must fit inside."""
+    menu = getattr(game, build)(None)
+    panel_w = min(560, SCREEN_WIDTH - 40)
+    lines = [(menu._title_font, menu.title, panel_w - 40),
+             (menu._subtitle_font, menu.subtitle or "", panel_w - 40),
+             (menu._hint_font, "Arrow keys or mouse to choose, Enter to select", panel_w - 40)]
+    for label, _, desc in menu.options:
+        lines.append((menu._option_font, label, 420 - 20))
+        if desc:
+            lines.append((menu._desc_font, desc, 420 - 20))
+    for font, text, room in lines:
+        assert font.size(text)[0] <= room, (text, font.size(text)[0], room)
+    # and the whole thing draws
+    menu.draw(pygame.Surface((SCREEN_WIDTH, 640)))
+
+
+@pytest.mark.parametrize("spectate", [False, True])
+def test_hud_rows_fit_their_fixed_positions(spectate):
+    """The HUD rows sit at fixed y offsets (5, 27, 48, 69, ...): the closest
+    two are 21px apart, so the font's line must not be taller than that, and
+    the widest row must fit the 372px (race) / 320px (watch) panel."""
+    s = game.GameSession(levels.get(0), spectate=spectate, agent_visual="robot")
+    f = s.hud_font
+    assert f.get_linesize() <= 21
+    widest = f.size("Occupants out   99/99    Left 99")[0]
+    assert widest <= (320 if spectate else 372) - 16
+    if not spectate:
+        assert f.size("Score   You 9999    AI 9999")[0] <= 372 - 16
+
+
+def test_waiting_occupant_marker_stays_at_least_as_tall_as_it_was():
+    """The red "!" is a gameplay cue: it must not shrink now that the HUD font
+    is smaller. (It measured 14px in the old default font at size 28.)"""
+    s = game.GameSession(levels.get(0), spectate=False, agent_visual="robot")
+    glyph = s.marker_font.render("!", True, (255, 80, 80)).get_bounding_rect()
+    assert glyph.height >= 14
+
+
+def test_intro_prompt_font_is_created_once_not_every_frame():
+    import intro
+
+    class Scene:
+        blink_t = 0.0
+    surf = pygame.Surface((SCREEN_WIDTH, 640))
+    intro.IntroScene._draw_prompt(Scene, surf)
+    first = Scene._prompt_font
+    intro.IntroScene._draw_prompt(Scene, surf)
+    assert Scene._prompt_font is first

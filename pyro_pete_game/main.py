@@ -166,7 +166,11 @@ class GameSession:
         self.camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT,
                              self.tilemap.pixel_width, self.tilemap.pixel_height)
         self.visibility = VisibilitySystem()
-        self.hud_font = pygame.font.SysFont(None, 28)
+        # body size, bold: the HUD sits over a busy map, where regular gets lost
+        self.hud_font = ui_font("body", bold=True)
+        # the red "!" over a waiting occupant is a gameplay cue, so it keeps
+        # heading size (about the height it had before) rather than shrinking to body
+        self.marker_font = ui_font("heading")
         self._trail_surface = None  # reused draw buffer for Pete's trail
         self.reset()
 
@@ -419,7 +423,7 @@ class GameSession:
         self.tilemap.draw(surface, cam)
         self.hazards.draw_ground(surface, cam)
         for victim in self.victims:
-            victim.draw(surface, cam, font=self.hud_font)
+            victim.draw(surface, cam, font=self.marker_font)
         if not self.spectate:
             self.player.draw(surface, cam)
         self.visibility.draw(surface, self._view_anchor, cam, self.hazards)
@@ -694,7 +698,7 @@ def main():
     audio = AudioManager()
 
     title_font = ui_font("title")
-    head_font = ui_font("head")
+    head_font = ui_font("heading")
     body_font = ui_font("body")
 
     # Built once here (not per-call, and not at module import time): it
