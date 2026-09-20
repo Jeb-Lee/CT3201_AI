@@ -24,7 +24,11 @@ pygame.display.set_mode((960, 640))
 import levels                        # noqa: E402  (needs pygame up first)
 from levels.tuning import StageTuning  # noqa: E402
 from main import GameSession          # noqa: E402
-from audio import AudioManager, note_hz, _TRACKS  # noqa: E402
+from audio import AudioManager, note_hz, game_track, _TRACKS  # noqa: E402
+import audio                            # noqa: E402
+import props                            # noqa: E402
+import numpy as np                      # noqa: E402
+from tilemap import TileMap             # noqa: E402
 
 
 # ------------------------------------------------------------------ stages
@@ -619,3 +623,199 @@ def test_dead_occupant_is_drawn_without_error_and_not_as_a_sprite():
     s.victims[0].state = STATE_DEAD
     surf = pygame.Surface((960, 640))
     s.victims[0].draw(surf, (0, 0), font=s.marker_font)   # must not raise
+
+
+# ------------------------------------------------------- stage set dressing
+@pytest.mark.parametrize("index", range(10))
+def test_every_stage_declares_a_known_theme(index):
+    stage = levels.get(index)
+    assert isinstance(stage.THEME, str) and stage.THEME
+    assert stage.THEME in props.THEMES
+
+
+def test_every_stage_has_a_distinct_theme():
+    """Ten stages that all looked like a lobby would defeat the point."""
+    themes = [levels.get(i).THEME for i in range(10)]
+    assert len(set(themes)) == 10
+
+
+@pytest.mark.parametrize("index", range(10))
+def test_stage_is_actually_furnished(index):
+    tm = levels.get(index).build()
+    assert tm.theme == levels.get(index).THEME
+    assert len(tm.props) > 5
+
+
+def test_every_prop_a_theme_asks_for_can_be_drawn():
+    """A theme naming a kind with no draw function would silently render
+    nothing, which is the kind of bug you only notice on stage 9."""
+    wanted = {kind for theme in props.THEMES.values() for kind, _ in theme.props}
+    assert wanted <= set(props.DRAWERS)
+
+
+@pytest.mark.parametrize("index", range(10))
+def test_props_never_change_what_is_walkable(index):
+    """The load-bearing invariant of the whole feature.
+
+    Set dressing is drawn, never collided with: if a chair could block a
+    corridor it would change maze solvability, the A* agent's route, the
+    difficulty tuning and the observations the learned agent trains on.
+    Rebuilding the same stage with its theme stripped must give an
+    identical walkability grid.
+    """
+    stage = levels.get(index)
+    furnished = stage.build()
+    bare = TileMap(furnished.rows_text, furnished.spawn_cell, furnished.exit_cell)
+    assert furnished.props and not bare.props
+    for r in range(furnished.rows):
+        for c in range(furnished.cols):
+            assert furnished.is_walkable(c, r) == bare.is_walkable(c, r)
+
+
+@pytest.mark.parametrize("index", range(10))
+def test_props_keep_clear_of_the_spawn_and_the_exit(index):
+    """The two cells the player has to read at a glance stay unfurnished,
+    along with their immediate neighbours."""
+    tm = levels.get(index).build()
+    for cell in (tm.spawn_cell, tm.exit_cell):
+        c, r = cell
+        for dc in (-1, 0, 1):
+            for dr in (-1, 0, 1):
+                assert (c + dc, r + dr) not in tm.props
+
+
+@pytest.mark.parametrize("index", range(10))
+def test_props_never_stand_on_a_wall(index):
+    tm = levels.get(index).build()
+    for (c, r) in tm.props:
+        assert tm.grid[r][c] != "#"
+
+
+def test_furniture_lands_in_the_same_place_every_run():
+    """Same seeded reproducibility the maze itself has -- a screenshot of
+    stage 4 is always the same stage 4."""
+    assert levels.get(3).build().props == levels.get(3).build().props
+
+
+def test_an_undecorated_map_is_completely_unchanged():
+    """TileMap's theme is opt-in: the three-argument form the tests and
+    the training environment use must behave exactly as it always did."""
+    grid = ["#####", "#...#", "#...#", "#####"]
+    tm = TileMap(grid, (1, 1), (3, 2))
+    assert tm.props == {}
+    assert tm.palette is props.DEFAULT_PALETTE
+
+
+@pytest.mark.parametrize("kind", sorted(props.DRAWERS))
+def test_every_prop_kind_draws_without_raising(kind):
+    surf = pygame.Surface((64, 64))
+    rect = pygame.Rect(0, 0, 64, 64)
+    for variant in (0.0, 0.49, 0.5, 0.99):
+        props.DRAWERS[kind](surf, rect, props.DEFAULT_PALETTE, variant)
+
+
+@pytest.mark.parametrize("index", range(10))
+def test_drawing_a_furnished_stage_does_not_raise(index):
+    s = GameSession(levels.get(index), stage_index=index)
+    s.draw(pygame.Surface((960, 640)))          # must not raise
+
+
+def test_props_are_not_drawn_under_fallen_debris():
+    """Rubble covers the floor; a chair drawn on top of it reads as a bug.
+
+    Checked by recording which tiles the draw pass actually painted --
+    every drawer is wrapped, and each call is keyed by the rect it was
+    handed, so this can tell one cell apart from another cell holding
+    the same kind of prop.
+    """
+    tm = levels.get(1).build()
+    surf = pygame.Surface((tm.pixel_width, tm.pixel_height))
+    real = dict(props.DRAWERS)
+    painted = []
+
+    def recorder(fn):
+        def wrapped(s, rect, pal, v):
+            painted.append((rect.left // tm.tile_size, rect.top // tm.tile_size))
+            return fn(s, rect, pal, v)
+        return wrapped
+
+    props.DRAWERS.update({k: recorder(v) for k, v in real.items()})
+    try:
+        tm.draw_props(surf, (0, 0))
+        before = set(painted)
+        cell = next(iter(tm.props))
+        assert cell in before            # it was being drawn to begin with
+
+        painted.clear()
+        tm.block_cell(cell, "debris")
+        tm.draw_props(surf, (0, 0))
+        after = set(painted)
+    finally:
+        props.DRAWERS.update(real)
+
+    assert cell not in after
+    assert after == before - {cell}      # and nothing else stopped drawing
+
+
+# --------------------------------------------------------- per-stage music
+def test_there_is_one_gameplay_track_per_stage():
+    assert audio.STAGE_TRACKS == levels.STAGE_COUNT
+
+
+@pytest.mark.parametrize("index", range(10))
+def test_every_stage_maps_to_a_registered_track(index):
+    assert game_track(index) in _TRACKS
+
+
+def test_game_track_clamps_instead_of_raising():
+    """Matches levels.get(): a drifted stage index can pick the wrong
+    music, but it can never crash a run."""
+    assert game_track(0) == "game_1"
+    assert game_track(9) == "game_10"
+    assert game_track(99) == "game_10"
+    assert game_track(-5) == "game_1"
+
+
+def test_the_music_speeds_up_every_single_stage():
+    """Tempo is the strongest panic cue, and the ramp is parameterised
+    precisely so it can't go backwards. Same beat count per loop, so a
+    shorter loop is strictly a faster one."""
+    lengths = [len(_TRACKS[game_track(i)]()) for i in range(10)]
+    assert lengths == sorted(lengths, reverse=True)
+    assert len(set(lengths)) == 10
+    # Stage 10 is not a marginal change from stage 1 -- it is frantic.
+    assert lengths[9] < lengths[0] * 0.65
+
+
+def test_the_music_gets_more_intense_every_single_stage():
+    """RMS energy: louder and denser, and from stage 6 carrying a
+    tritone on top."""
+    energy = [float(np.sqrt((_TRACKS[game_track(i)]() ** 2).mean()))
+              for i in range(10)]
+    assert energy == sorted(energy)
+    assert len(set(energy)) == 10
+    assert energy[9] > energy[0] * 1.5
+
+
+def test_the_late_stages_carry_the_dissonance_the_early_ones_do_not():
+    """The tritone layer fades in past the midpoint. Compared spectrally
+    rather than by inspecting the builder, so this tests what a player
+    would actually hear."""
+    def energy_at(samples, hz, width=12.0):
+        spec = np.abs(np.fft.rfft(samples))
+        freqs = np.fft.rfftfreq(len(samples), 1.0 / audio.SAMPLE_RATE)
+        band = (freqs > hz - width) & (freqs < hz + width)
+        return float(spec[band].sum() / spec.sum())
+
+    eb4 = note_hz("Eb4")
+    calm = energy_at(_TRACKS[game_track(0)](), eb4)
+    frantic = energy_at(_TRACKS[game_track(9)](), eb4)
+    assert frantic > calm * 2
+
+
+def test_every_gameplay_track_stays_inside_the_mix():
+    """_mix soft-clips, but a track that pins at 1.0 is distorting rather
+    than loud -- the stacked late-stage layers are the ones that could."""
+    for i in range(10):
+        peak = float(abs(_TRACKS[game_track(i)]()).max())
+        assert 0.05 < peak < 0.95

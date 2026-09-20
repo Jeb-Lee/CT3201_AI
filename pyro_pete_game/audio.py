@@ -18,6 +18,7 @@ Usage from main.py:
 """
 
 import math
+from functools import partial
 
 import numpy as np
 import pygame
@@ -125,26 +126,79 @@ def _build_menu():
     return _mix(lead, bass)
 
 
-def _build_game():
-    """Faster, driving, and stays in the minor -- the building is on fire.
-    The pulsing eighth-note bass is what makes it feel like a timer."""
-    beat = 0.26
-    arp = _sequence([("A4", 1), ("C5", 1), ("E5", 1), ("C5", 1),
-                     ("A4", 1), ("C5", 1), ("E5", 1), ("G5", 1),
-                     ("F4", 1), ("A4", 1), ("C5", 1), ("A4", 1),
-                     ("G4", 1), ("B4", 1), ("D5", 1), ("B4", 1)],
-                    beat, wave="square", gain=0.11,
+def _build_game(intensity=0.0):
+    """The gameplay bed, dialled from calm to frantic by `intensity`.
+
+    intensity is 0.0 on stage 1 and 1.0 on stage 10 (see game_track).
+    One track parameterised across the campaign, rather than ten
+    hand-written ones, so the progression is monotonic by construction --
+    every knob below moves one way only, and a stage can never
+    accidentally end up calmer than the one before it.
+
+    What actually changes, and why each reads as panic:
+
+    * **tempo** -- the beat shortens from 0.30s to 0.17s. The single
+      strongest cue; everything else is reinforcement.
+    * **timbre** -- the arpeggio starts as a soft triangle and crosses to
+      a square wave, which is buzzier and more urgent.
+    * **the pulse** -- the eighth-note bass gets louder and drier
+      (shorter release), so late stages feel like a countdown rather
+      than a groove.
+    * **detune** -- the pad's second oscillator drifts from 8 to 34
+      cents. Slight detuning is warmth; heavy detuning beats against
+      itself and reads as queasy.
+    * **the tritone** -- from the midpoint a dissonant Eb against the A
+      fades in. It is the interval that refuses to resolve, and it is
+      doing most of the "something is wrong" work on stages 6+.
+
+    A swept-sine siren used to sit under stages 8-10 as well. It was cut:
+    a continuous glide on a pure sine reads as a wobbling hum rather than
+    as an alarm, and it was the most noticeable thing about the late
+    stages for the wrong reason. The four knobs above carry the ramp on
+    their own.
+    """
+    i = max(0.0, min(1.0, float(intensity)))
+
+    beat = 0.30 - 0.13 * i
+    arp_wave = "tri" if i < 0.35 else "square"
+    arp_gain = 0.10 + 0.04 * i
+    pulse_gain = 0.13 + 0.07 * i
+    pulse_release = 0.10 - 0.06 * i
+    pad_detune = 8 + 26 * i
+
+    # The melody climbs a fifth over the campaign (A minor -> E minor
+    # shapes) so the later stages sit higher and tighter in the ear.
+    high = i > 0.6
+    arp_notes = ([("A4", 1), ("C5", 1), ("E5", 1), ("C5", 1),
+                  ("A4", 1), ("C5", 1), ("E5", 1), ("G5", 1),
+                  ("F4", 1), ("A4", 1), ("C5", 1), ("A4", 1),
+                  ("G4", 1), ("B4", 1), ("D5", 1), ("B4", 1)]
+                 if not high else
+                 [("E5", 1), ("G5", 1), ("B5", 1), ("G5", 1),
+                  ("E5", 1), ("G5", 1), ("B5", 1), ("D6", 1),
+                  ("C5", 1), ("E5", 1), ("G5", 1), ("E5", 1),
+                  ("D5", 1), ("F5", 1), ("A5", 1), ("F5", 1)])
+
+    arp = _sequence(arp_notes, beat, wave=arp_wave, gain=arp_gain,
                     env=(0.005, 0.06, 0.35, 0.08))
-    pulse = _sequence([("A2", 1), ("A2", 1), ("A2", 1), ("A2", 1),
-                       ("A2", 1), ("A2", 1), ("A2", 1), ("A2", 1),
-                       ("F2", 1), ("F2", 1), ("F2", 1), ("F2", 1),
-                       ("G2", 1), ("G2", 1), ("G2", 1), ("G2", 1)],
-                      beat, wave="saw", gain=0.17,
-                      env=(0.005, 0.09, 0.2, 0.05))
+    pulse = _sequence([("A2", 1)] * 8 + [("F2", 1)] * 4 + [("G2", 1)] * 4,
+                      beat, wave="saw", gain=pulse_gain,
+                      env=(0.005, 0.09, 0.2, max(0.02, pulse_release)))
     pad = _sequence([("A3", 8), ("F3", 4), ("G3", 4)],
-                    beat, wave="sine", gain=0.13, detune=10,
+                    beat, wave="sine", gain=0.13, detune=pad_detune,
                     env=(0.2, 0.3, 0.8, 0.4))
-    return _mix(arp, pulse, pad)
+    layers = [arp, pulse, pad]
+
+    if i >= 0.5:
+        # Eb against A: a tritone, the most unstable interval there is.
+        # Faded in by how far past the midpoint the stage sits, so it
+        # arrives as unease rather than a jump-scare on stage 6.
+        weight = (i - 0.5) / 0.5
+        layers.append(_sequence([("Eb4", 4), ("Eb4", 4), ("Eb4", 4), ("Eb4", 4)],
+                                beat, wave="tri", gain=0.11 * weight,
+                                detune=18, env=(0.25, 0.3, 0.7, 0.4)))
+
+    return _mix(*layers)
 
 
 def _build_win():
@@ -170,13 +224,42 @@ def _build_loss():
     return _mix(lead, bass)
 
 
+# How many stages the gameplay bed is spread across. Reads levels.
+# STAGE_COUNT indirectly -- audio.py deliberately does not import levels
+# (it would drag pygame display setup into the music tests), so this is
+# asserted against the real campaign length in tests/test_campaign.py.
+STAGE_TRACKS = 10
+
+
+def game_track(stage_index):
+    """Track name for a 0-based stage index: 'game_1' ... 'game_10'.
+
+    Out-of-range indices clamp rather than raise, matching levels.get(),
+    so a stage index that has drifted can only ever pick the wrong music
+    and never crash a run.
+    """
+    n = max(0, min(STAGE_TRACKS - 1, int(stage_index)))
+    return f"game_{n + 1}"
+
+
 _TRACKS = {
     "title": _build_title,
     "menu": _build_menu,
-    "game": _build_game,
+    "game": _build_game,        # stage-1 intensity; kept as the neutral default
     "win": _build_win,
     "loss": _build_loss,
 }
+
+# One gameplay bed per stage, calm (stage 1) through frantic (stage 10).
+# Built by partial rather than by writing ten builders so the ramp is
+# defined in exactly one place -- see _build_game for what each knob
+# does. They stay lazy: AudioManager only synthesises a track the first
+# time it is played, so reaching stage 3 never costs the seven stages
+# you haven't seen.
+for _n in range(STAGE_TRACKS):
+    _TRACKS[f"game_{_n + 1}"] = partial(
+        _build_game, _n / (STAGE_TRACKS - 1))
+del _n
 
 # Endings are stingers, not beds: they play once and let the results
 # panel sit in silence rather than looping a fanfare under it.
