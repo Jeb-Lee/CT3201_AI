@@ -69,6 +69,8 @@ than wandering an emptied building.
 - [x] The AI knows the stage head-count, so it stops searching once nobody is left to find
 - [x] Optional learned-AI option (opt-in, AI player only): Gymnasium environment, evaluation harness with confidence intervals, `LearnedAgent` -- **no model trained yet**, see "Learned AI (optional)"
 - [x] Music for the title, menus, gameplay and both endings -- synthesised at runtime (`audio.py`), no audio assets, mute with `M`
+- [x] Per-stage set dressing (`props.py`): each of the ten stages has its own palette and furniture -- canteen tables and chairs, server racks, parked cars, hospital beds, open sky on the roof. Drawn, never collided with, so it changes how a stage looks and not how it plays
+- [x] Per-stage music: one gameplay bed parameterised from calm (stage 1) to frantic (stage 10) -- faster tempo, harsher timbre, a tritone from the midpoint and a siren on the last stages
 
 ## Learned AI (optional)
 
@@ -183,8 +185,59 @@ Controls: WASD / arrows move, `P` pause, `R` restart, `M` mute, `Esc` quit.
 On the results panel, Enter goes to the next stage after a clear, or back to
 the menu otherwise.
 Menus: arrow keys or mouse to choose, Enter/click to confirm, `Esc` to back out a screen.
-Tests (160): `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
+Tests (290): `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
 (`tests/test_core.py` also runs standalone with plain `python`).
+
+## Stage identity: set dressing and music
+
+The ten stages are generated from the same maze algorithm, so on their own
+they are ten grey corridor grids with different names in the HUD. Two
+systems give each one a character of its own.
+
+**Set dressing** (`props.py`). Every stage module declares a `THEME`, which
+carries a palette (floor, wall, accent) and a bag of props placed on the
+floor:
+
+| Stage | Theme | What's in the room |
+|---|---|---|
+| 1 Ground Floor | `lobby` | reception desks, benches, planters, noticeboards |
+| 2 Staff Canteen | `canteen` | tables, chairs, a serving counter, fridges |
+| 3 Records Office | `records` | filing cabinets, shelving, loose paper |
+| 4 Server Room | `server` | racks, cable trays, consoles, cooling plant |
+| 5 Chemical Store | `chemical` | drums, crates, hazard signs, eyewash |
+| 6 Car Park B2 | `carpark` | parked cars, pillars, bay markings, cones |
+| 7 Ward Block | `ward` | beds, privacy screens, drip stands, trolleys |
+| 8 Turbine Hall | `turbine` | turbines, pipework, valves, a gantry rail |
+| 9 Reactor Annex | `reactor` | coolant tanks, shielding, consoles, trefoils |
+| 10 Roof Plant | `roof` | open sky, HVAC units, vents, ducts, aerials |
+
+Two rules hold throughout. Props are **drawn, never collided with** --
+making a chair solid would change which routes exist, and with them maze
+solvability, the A* agent's plan, the difficulty tuning and the
+observations the learned agent trains on. `tests/test_campaign.py` pins
+this by rebuilding each stage with its theme stripped and asserting an
+identical walkability grid. And they are **drawn, not loaded**: pygame
+primitives like the rest of the rendering, so ten themed stages cost
+nothing in the repository. Placement is seeded off the stage's own `SEED`,
+so the furniture is in the same place every run.
+
+**Music** (`audio.py`). The single gameplay track is now
+`_build_game(intensity)`, registered once per stage as `game_1` ...
+`game_10` and selected by `game_track(session.stage_index)`. Stage 1 is
+0.0 and stage 10 is 1.0, and every knob moves one way only, so the ramp
+is monotonic by construction rather than by hand-tuning ten tracks:
+
+- **tempo** -- the beat shortens from 0.30s to 0.17s; the strongest cue
+- **timbre** -- the arpeggio crosses from a soft triangle to a buzzing square
+- **the pulse** -- the eighth-note bass gets louder and drier, like a countdown
+- **detune** -- the pad drifts from 8 to 34 cents, from warm to queasy
+- **the tritone** -- from the midpoint a dissonant Eb fades in against the A
+- **the siren** -- on the last stages a pitch-bent wail sits underneath
+
+Tracks stay lazily built, so reaching stage 3 never costs the seven
+stages you haven't heard. The tests assert the loop gets strictly shorter
+and strictly louder on every one of the ten steps, and measure the
+tritone spectrally rather than trusting the builder.
 
 ## Project layout
 
@@ -194,7 +247,8 @@ pyro_pete_game/
   settings.py          # shared constants
   intro.py             # opening cinematic ("First Alarm") -- pygame-native, drawn not loaded
   menu.py              # reusable Play/Watch + skin-select menu, shared muted background
-  audio.py             # runtime-synthesised soundtrack (title/menu/game/win/loss), silent without a device
+  audio.py             # runtime-synthesised soundtrack; the gameplay bed ramps per stage
+  props.py             # per-stage palettes + set dressing (decorative only, never blocks)
   levels/              # the ten campaign stages + tuning.py (per-stage difficulty knobs)
   mazegen.py           # perfect-maze generation (recursive backtracker)
   tilemap.py           # tile grid: collision, dynamic blocks (debris/doors), rendering

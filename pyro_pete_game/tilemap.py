@@ -1,15 +1,23 @@
 """Tile grid: collision, rendering, and pixel/tile coordinate conversion.
 
 Tile art doesn't exist yet, so walls/floor/exit are drawn as flat colored
-rectangles for now -- swap draw() for real tile sprites later without
-touching the collision or camera code, since those only care about the
-grid of tile types, not how each tile is drawn.
+rectangles -- swap draw() for real tile sprites later without touching
+the collision or camera code, since those only care about the grid of
+tile types, not how each tile is drawn.
+
+A map may carry a `theme` (see props.py), which repaints those flat
+colours in the stage's own palette and stands set dressing on the floor
+-- tables in the canteen, racks in the server room. Both are purely
+visual: the props are drawn, never collided with, so is_walkable() below
+is deliberately unaware that any of it exists and a themed stage plays
+identically to an undecorated one.
 """
 
 import pygame
 
+import props
 from settings import (
-    TILE_SIZE, WALL_COLOR, FLOOR_COLOR, EXIT_COLOR, GRID_LINE_COLOR,
+    TILE_SIZE, EXIT_COLOR, GRID_LINE_COLOR,
     DEBRIS_COLOR, LOCKED_DOOR_COLOR,
 )
 
@@ -19,9 +27,16 @@ EXIT = "E"
 
 
 class TileMap:
-    def __init__(self, rows, spawn_cell, exit_cell):
+    def __init__(self, rows, spawn_cell, exit_cell, theme=None, seed=0):
         """rows: list of strings (each char WALL/FLOOR). spawn_cell/exit_cell
-        are (col, row) tile coordinates."""
+        are (col, row) tile coordinates.
+
+        `theme` names an entry in props.THEMES and is optional: without
+        one the map paints itself in the settings.py defaults and stands
+        nothing on the floor, which is what the tests and any
+        undecorated map get. `seed` is the stage's own SEED, so the
+        furniture lands in the same place every run just as the maze
+        does."""
         self.rows_text = rows
         self.rows = len(rows)
         self.cols = len(rows[0])
@@ -33,6 +48,13 @@ class TileMap:
 
         self.spawn_cell = spawn_cell
         self.exit_cell = exit_cell
+
+        # Set dressing. Resolved once at build time rather than per
+        # frame: placement shuffles every floor tile, which is cheap
+        # once and wasteful sixty times a second.
+        self.theme = theme
+        self.palette = props.palette_for(theme)
+        self.props = props.place(self, theme, seed)
 
         # Cells that are floor in `grid` but currently impassable because a
         # hazard system put something there -- fallen debris, a locked
@@ -105,8 +127,8 @@ class TileMap:
         for row in range(first_row, last_row):
             for col in range(first_col, last_col):
                 tile = self.grid[row][col]
-                color = WALL_COLOR if tile == WALL else (
-                    EXIT_COLOR if tile == EXIT else FLOOR_COLOR)
+                color = self.palette.wall if tile == WALL else (
+                    EXIT_COLOR if tile == EXIT else self.palette.floor)
                 block = self.dynamic_blocked.get((col, row))
                 if block == "debris":
                     color = DEBRIS_COLOR
@@ -117,3 +139,15 @@ class TileMap:
                 rect = pygame.Rect(x, y, self.tile_size, self.tile_size)
                 pygame.draw.rect(surface, color, rect)
                 pygame.draw.rect(surface, GRID_LINE_COLOR, rect, 1)
+
+    def draw_props(self, surface, camera_offset):
+        """Set dressing, drawn as its own pass after the floor.
+
+        Kept separate from draw() so main.py can slot it into the right
+        layer: above the tiles, below the fire and smoke, and below the
+        fog of war -- furniture in an unexplored room stays unseen like
+        everything else.
+        """
+        props.draw(surface, self.props, self.palette, camera_offset,
+                   self.tile_size, self.cols, self.rows,
+                   skip_cells=self.dynamic_blocked)

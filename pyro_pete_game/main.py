@@ -62,7 +62,7 @@ import levels
 from levels.tuning import DEFAULT as DEFAULT_TUNING
 from intro import IntroScene
 from menu import ChoiceMenu, build_menu_background
-from audio import AudioManager
+from audio import AudioManager, game_track
 from ml.policy import model_available, load_policy
 
 FONT_COLOR = (230, 230, 230)
@@ -416,6 +416,10 @@ class GameSession:
     def draw(self, surface):
         cam = self.camera.offset
         self.tilemap.draw(surface, cam)
+        # Set dressing sits between the floor and the hazards: furniture
+        # is under the fire and smoke, and under the fog, so a room you
+        # haven't been in yet doesn't show you its contents.
+        self.tilemap.draw_props(surface, cam)
         self.hazards.draw_ground(surface, cam)
         for victim in self.victims:
             victim.draw(surface, cam, font=self.hud_font)
@@ -799,8 +803,13 @@ def main():
             audio.play("menu")
         elif session is not None and session.state == "results":
             audio.play("win" if session.cleared else "loss")
-        else:
-            audio.play("game")
+        elif session is not None:
+            # The gameplay bed is per-stage: calm on stage 1, frantic by
+            # stage 10 (see audio._build_game). Naming the track from the
+            # stage index means advancing a stage changes the music with
+            # no extra bookkeeping -- play() ignores a repeat of what is
+            # already running, so this stays a per-frame statement.
+            audio.play(game_track(session.stage_index))
 
         # ---- draw ----
         screen.fill((0, 0, 0))

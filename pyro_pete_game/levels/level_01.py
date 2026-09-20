@@ -42,6 +42,11 @@ BRAID = 0.18
 
 # Stage 1 is the original level, so it deliberately overrides
 # nothing -- it plays exactly as it did before the campaign.
+# Set dressing for this stage -- an office lobby -- reception desk, benches, planters.
+# Purely visual: props are drawn, never collided with, so this changes
+# how the stage looks and not how it plays (see props.py).
+THEME = "lobby"
+
 TUNING = StageTuning()
 
 
@@ -49,4 +54,4 @@ def build():
     rows, actual_rows, actual_cols = generate_maze(COLS, ROWS, seed=SEED, braid=BRAID)
     spawn_cell = (1, 1)
     exit_cell = (actual_cols - 2, actual_rows - 2)
-    return TileMap(rows, spawn_cell, exit_cell)
+    return TileMap(rows, spawn_cell, exit_cell, theme=THEME, seed=SEED)

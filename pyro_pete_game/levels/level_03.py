@@ -18,6 +18,11 @@ COLS = 21
 ROWS = 15
 BRAID = 0.16
 
+# Set dressing for this stage -- filing cabinets, shelving and loose paper.
+# Purely visual: props are drawn, never collided with, so this changes
+# how the stage looks and not how it plays (see props.py).
+THEME = "records"
+
 TUNING = StageTuning(
     fire_seconds_to_exit=115,
     fire_spread_interval=3.2,
@@ -33,4 +38,4 @@ def build():
     rows, actual_rows, actual_cols = generate_maze(COLS, ROWS, seed=SEED, braid=BRAID)
     spawn_cell = (1, 1)
     exit_cell = (actual_cols - 2, actual_rows - 2)
-    return TileMap(rows, spawn_cell, exit_cell)
+    return TileMap(rows, spawn_cell, exit_cell, theme=THEME, seed=SEED)

@@ -18,6 +18,11 @@ COLS = 31
 ROWS = 21
 BRAID = 0.13
 
+# Set dressing for this stage -- open sky, HVAC units, vents, ducts and aerials.
+# Purely visual: props are drawn, never collided with, so this changes
+# how the stage looks and not how it plays (see props.py).
+THEME = "roof"
+
 TUNING = StageTuning(
     fire_seconds_to_exit=285,
     fire_spread_interval=4.4,
@@ -33,4 +38,4 @@ def build():
     rows, actual_rows, actual_cols = generate_maze(COLS, ROWS, seed=SEED, braid=BRAID)
     spawn_cell = (1, 1)
     exit_cell = (actual_cols - 2, actual_rows - 2)
-    return TileMap(rows, spawn_cell, exit_cell)
+    return TileMap(rows, spawn_cell, exit_cell, theme=THEME, seed=SEED)

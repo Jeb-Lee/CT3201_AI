@@ -18,6 +18,11 @@ COLS = 25
 ROWS = 17
 BRAID = 0.15
 
+# Set dressing for this stage -- parked cars, concrete pillars and bay markings.
+# Purely visual: props are drawn, never collided with, so this changes
+# how the stage looks and not how it plays (see props.py).
+THEME = "carpark"
+
 TUNING = StageTuning(
     fire_seconds_to_exit=155,
     fire_spread_interval=3.6,
@@ -33,4 +38,4 @@ def build():
     rows, actual_rows, actual_cols = generate_maze(COLS, ROWS, seed=SEED, braid=BRAID)
     spawn_cell = (1, 1)
     exit_cell = (actual_cols - 2, actual_rows - 2)
-    return TileMap(rows, spawn_cell, exit_cell)
+    return TileMap(rows, spawn_cell, exit_cell, theme=THEME, seed=SEED)
