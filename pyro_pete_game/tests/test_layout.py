@@ -318,19 +318,25 @@ def test_the_scale_is_strictly_ordered_and_bold_differs_from_regular():
 
 @pytest.mark.parametrize("build", ["_build_mode_menu", "_build_skin_menu", "_build_brain_menu"])
 def test_every_menu_line_fits_its_panel(build):
-    """The menu panel is min(560, width-40) wide and each option box 420: the
-    subtitle, every label and description and the hint must fit inside."""
+    """Panel and option cards have fixed widths: the subtitle, every label and
+    description (beside the icon, when the option has one) and the hint row must
+    fit inside them."""
+    import menu as menu_mod
+    from hud_icons import hint_row_width
     menu = getattr(game, build)(None)
-    panel_w = min(560, SCREEN_WIDTH - 40)
+    panel_w = menu.panel_rect(SCREEN_WIDTH).width
     lines = [(menu._title_font, menu.title, panel_w - 40),
-             (menu._subtitle_font, menu.subtitle or "", panel_w - 40),
-             (menu._hint_font, "Arrow keys or mouse to choose, Enter to select", panel_w - 40)]
-    for label, _, desc in menu.options:
-        lines.append((menu._option_font, label, 420 - 20))
+             (menu._subtitle_font, menu.subtitle or "", panel_w - 40)]
+    text_room = menu_mod.CARD_W - 20
+    if menu.has_icons():
+        text_room -= menu_mod.ICON + 26 + 30       # icon, its margins, and the selection chevron
+    for label, _, desc, *_ in menu.options:
+        lines.append((menu._option_font, label, text_room))
         if desc:
-            lines.append((menu._desc_font, desc, 420 - 20))
+            lines.append((menu._desc_font, desc, text_room))
     for font, text, room in lines:
         assert font.size(text)[0] <= room, (text, font.size(text)[0], room)
+    assert hint_row_width(menu.hint_items(), menu._chip_font, menu._hint_font) <= panel_w - 40
     # and the whole thing draws
     menu.draw(pygame.Surface((SCREEN_WIDTH, 640)))
 

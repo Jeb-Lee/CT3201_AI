@@ -61,6 +61,7 @@ from pause import PauseScreen
 import levels
 from levels.tuning import DEFAULT as DEFAULT_TUNING
 from intro import IntroScene
+from hud_icons import BLUE
 from menu import ChoiceMenu, build_menu_background
 from audio import AudioManager
 from ml.policy import model_available, load_policy
@@ -482,8 +483,8 @@ def _build_mode_menu(background=None):
     return ChoiceMenu(
         "Pyro Pete",
         [
-            ("Play vs AI", "play", "Race the AI rescuer yourself"),
-            ("Watch AI Play", "watch", "Sit back and watch the AI solve it alone"),
+            ("Play vs AI", "play", "Race the AI rescuer yourself", "pete"),
+            ("Watch AI Play", "watch", "Sit back and watch the AI solve it alone", "robot"),
         ],
         subtitle="Choose a mode",
         background=background,
@@ -494,11 +495,12 @@ def _build_skin_menu(background=None):
     return ChoiceMenu(
         "Choose the AI's Look",
         [
-            ("Robot", "robot", "The walking rescue robot"),
-            ("Drone", "drone", "The original quadcopter"),
+            ("Robot", "robot", "The walking rescue robot", "robot"),
+            ("Drone", "drone", "The original quadcopter", "drone"),
         ],
         subtitle="How should the AI opponent appear?",
         background=background,
+        accent=BLUE,
     )
 
 
@@ -511,6 +513,7 @@ def _build_brain_menu(background=None):
         ],
         subtitle="How should the AI opponent decide where to go?",
         background=background,
+        accent=BLUE,
     )
 
 
