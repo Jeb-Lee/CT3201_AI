@@ -47,6 +47,7 @@ _GAP = 40             # between the two columns of the race panel
 _HEAD_H = 78          # name + reason + big score, before the first section
 _SECTION_GAP = 10     # blank space between the score and stats sections
 _TOP = 86             # panel top -> first column (below headline + subtitle)
+_TOTAL_PAD = 10       # rule + gap above the Total row (rule is 4px in, row 6px below)
 
 
 def _section(surface, body_font, x, right, y, title):
@@ -71,6 +72,7 @@ def _column_height(body_font, st):
     section = body_font.get_height() + 2 + 8
     return (_HEAD_H
             + section + len(st.score_breakdown()) * _ROW
+            + _TOTAL_PAD + _ROW
             + _SECTION_GAP
             + section + len(st.summary_rows()) * _ROW)
 
@@ -86,8 +88,18 @@ def _draw_column(surface, head_font, body_font, x, top_y, width, st):
 
     y = _section(surface, body_font, x, right, top_y + _HEAD_H, "SCORE")
     for label, pts in st.score_breakdown():
-        y = _row(surface, body_font, x, right, y, label, f"{pts:+d}",
-                 _POS if pts >= 0 else _NEG)
+        # green is for points actually earned and red for penalties; a zero
+        # row ("Occupants led out x0  +0") is neither
+        colour = _POS if pts > 0 else _NEG if pts < 0 else _DIM
+        y = _row(surface, body_font, x, right, y, label, f"{pts:+d}", colour)
+
+    # The rows above are what the total is made of. Rule + Total makes the sum
+    # visible; when damage drove it below zero the score is held at 0, so the
+    # label says so rather than leaving rows that add to -40 above a "0".
+    pygame.draw.line(surface, (60, 62, 70), (x, y + 4), (right, y + 4))
+    y = _row(surface, body_font, x, right, y + _TOTAL_PAD,
+             "Total (min 0)" if st.score_floored else "Total",
+             str(st.score), RESULTS_TEXT_COLOR)
 
     y += _SECTION_GAP
     y = _section(surface, body_font, x, right, y, "RUN STATS")
@@ -100,6 +112,14 @@ def _fit_panel_width(*needed, minimum=420):
     """Width for a panel whose widest content line needs `needed` pixels:
     never narrower than `minimum`, never wider than the screen."""
     return min(max(minimum, *needed), SCREEN_WIDTH - 20)
+
+
+def _draw_heading(surface, title_font, headline, colour, sub_surf, px, py, panel_w):
+    """Headline and subtitle, centred on the panel like the verdict and hint
+    at the bottom -- they used to be left-aligned, so the panel mixed the two."""
+    h = title_font.render(headline, True, colour)
+    surface.blit(h, (px + (panel_w - h.get_width()) // 2, py + 18))
+    surface.blit(sub_surf, (px + (panel_w - sub_surf.get_width()) // 2, py + 54))
 
 
 def _draw_panel(surface, px, py, panel_w, panel_h):
@@ -143,13 +163,16 @@ def draw_results(surface, title_font, head_font, body_font,
 
     headline, headline_colour = _OUTCOME_HEADLINE.get(
         outcome, ("Run complete", RESULTS_TEXT_COLOR))
-    surface.blit(title_font.render(headline, True, headline_colour),
-                 (px + _MARGIN, py + 18))
-    surface.blit(sub_surf, (px + _MARGIN, py + 54))
+    _draw_heading(surface, title_font, headline, headline_colour, sub_surf,
+                  px, py, panel_w)
 
     for i, st in enumerate((player_stats, agent_stats)):
         x = px + _MARGIN + i * (col_w + _GAP)
         _draw_column(surface, head_font, body_font, x, py + _TOP, col_w, st)
+    # a thin rule down the gutter so the two columns read as two blocks
+    mid = px + _MARGIN + col_w + _GAP // 2
+    pygame.draw.line(surface, (60, 62, 70), (mid, py + _TOP + 4),
+                     (mid, py + _TOP + col_h - 4))
 
     vy = py + _TOP + col_h + 16
     surface.blit(v, (px + (panel_w - v.get_width()) // 2, vy))
@@ -190,9 +213,8 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
 
     headline, headline_colour = (
         ("Stage cleared", _POS) if cleared else ("The AI didn't make it", _NEG))
-    surface.blit(title_font.render(headline, True, headline_colour),
-                 (px + _MARGIN, py + 18))
-    surface.blit(sub_surf, (px + _MARGIN, py + 54))
+    _draw_heading(surface, title_font, headline, headline_colour, sub_surf,
+                  px, py, panel_w)
 
     _draw_column(surface, head_font, body_font, px + _MARGIN, py + _TOP,
                  panel_w - 2 * _MARGIN, agent_stats)

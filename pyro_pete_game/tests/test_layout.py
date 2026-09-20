@@ -151,3 +151,80 @@ def test_results_panel_fits_on_screen_even_with_every_row(draw, monkeypatch):
     px, py, w, h = seen[0]
     assert px >= 0 and py >= 0
     assert px + w <= SCREEN_WIDTH and py + h <= results.SCREEN_HEIGHT
+
+
+# --- second tidy-up: died row, Total row, divider, zero rows, centring --------
+def test_pete_gets_a_died_row_like_the_agent_does():
+    """Pete's death is recorded with finish("dead") and never touches
+    `deaths`; only RescueAgent.mark_death() does. Both must show "Died"."""
+    pete, agent = RunStats("You (Pete)"), RunStats("AI robot")
+    pete.finish("dead")
+    agent.mark_death()
+    assert ("Died", "yes") in pete.summary_rows()
+    assert ("Died", "yes") in agent.summary_rows()
+    assert ("Died", "yes") not in _stats().summary_rows()      # survivors: none
+
+
+def test_total_matches_the_rows_unless_the_score_was_floored():
+    ok = _stats(saved=3, dmg=33)
+    assert not ok.score_floored
+    assert sum(p for _, p in ok.score_breakdown()) == ok.score
+
+    floored = _stats(saved=0, dmg=100, reason="dead")      # +0 and -40
+    assert floored.score_floored
+    assert sum(p for _, p in floored.score_breakdown()) == -40
+    assert floored.score == 0                                # held at zero
+
+
+def _row_pixels(st, colour):
+    """Does any pixel of `colour` appear on the first score row?"""
+    surf = pygame.Surface((400, 500))
+    surf.fill((0, 0, 0))
+    results._draw_column(surf, _FONTS[1], _FONTS[2], 20, 0, 360, st)
+    top = results._HEAD_H + _FONTS[2].get_height() + 2 + 8
+    return any(surf.get_at((x, y))[:3] == colour
+               for x in range(20, 380) for y in range(top, top + _FONTS[2].get_height()))
+
+
+def test_a_zero_points_row_is_not_green_but_real_points_are():
+    assert _row_pixels(_stats(saved=3), results._POS)          # +300: green
+    assert not _row_pixels(_stats(saved=0, dmg=0, reason="dead"), results._POS)
+
+
+def test_race_panel_has_a_divider_between_the_columns(monkeypatch):
+    seen = []
+    real = results._draw_panel
+    monkeypatch.setattr(results, "_draw_panel",
+                        lambda s, px, py, w, h: (seen.append((px, py, w, h)),
+                                                 real(s, px, py, w, h))[1])
+    screen = pygame.display.get_surface()
+    results.draw_results(screen, *_FONTS, _stats("You (Pete)"), _stats(), 4,
+                         outcome="cleared", stage_label="Stage 2/10 - Staff Canteen",
+                         has_next_stage=True)
+    px, py, w, h = seen[0]
+    col_w = (w - 2 * results._MARGIN - results._GAP) // 2
+    mid = px + results._MARGIN + col_w + results._GAP // 2
+    assert screen.get_at((mid, py + results._TOP + 20))[:3] == (60, 62, 70)
+
+
+@pytest.mark.parametrize("which", ["watch", "race"])
+def test_headline_is_centred_on_the_panel(which, monkeypatch):
+    seen = []
+    real = results._draw_panel
+    monkeypatch.setattr(results, "_draw_panel",
+                        lambda s, px, py, w, h: (seen.append((px, py, w, h)),
+                                                 real(s, px, py, w, h))[1])
+    screen = pygame.display.get_surface()
+    stage = levels.label(1)
+    if which == "watch":
+        results.draw_watch_results(screen, *_FONTS, _stats(), 3, stage_label=stage,
+                                   cleared=True, has_next_stage=True)
+    else:
+        results.draw_results(screen, *_FONTS, _stats("You (Pete)"), _stats(), 4,
+                             outcome="cleared", stage_label=stage, has_next_stage=True)
+    px, py, w, h = seen[0]
+    bg = tuple(results.RESULTS_PANEL_COLOR[:3])
+    band = range(py + 18, py + 18 + _FONTS[0].get_height() - 8)   # headline text
+    lit = [x for x in range(px + 4, px + w - 4)
+           if any(screen.get_at((x, y))[:3] != bg for y in band)]
+    assert abs((lit[0] + lit[-1]) / 2 - (px + w / 2)) <= 3

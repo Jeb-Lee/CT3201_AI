@@ -69,14 +69,24 @@ class RunStats:
         return round(SCORE_TIME_BONUS_MAX * (1 - self.elapsed / SCORE_TIME_BONUS_PAR))
 
     @property
-    def score(self):
-        """Occupants led out are the objective (bulk of the score); getting
-        yourself out is a bonus; speed adds, damage subtracts. Never < 0."""
+    def _raw_score(self):
         s = self.victims_saved * SCORE_PER_SURVIVOR
         if self.finished_reason == "exit":
             s += SCORE_REACH_EXIT + self.time_bonus
         s -= round(self.damage_taken * SCORE_DAMAGE_PENALTY)
-        return max(0, s)
+        return s
+
+    @property
+    def score(self):
+        """Occupants led out are the objective (bulk of the score); getting
+        yourself out is a bonus; speed adds, damage subtracts. Never < 0."""
+        return max(0, self._raw_score)
+
+    @property
+    def score_floored(self):
+        """True when damage pushed the score below zero and it was held at 0,
+        i.e. the breakdown rows sum to less than the total shown."""
+        return self._raw_score < 0
 
     def score_breakdown(self):
         """(label, points) rows explaining the score on the results panel."""
@@ -105,6 +115,9 @@ class RunStats:
         if self.replans or self.goal_changes:
             rows.append(("Route updates", str(self.replans)))
             rows.append(("Goal switches", str(self.goal_changes)))
-        if self.deaths:
+        # Pete's death arrives via finish("dead") without touching `deaths`
+        # (only RescueAgent calls mark_death), so keying on the counter alone
+        # gave the AI a "Died" row and left Pete's column without one.
+        if self.deaths or self.finished_reason == "dead":
             rows.append(("Died", "yes"))
         return rows
