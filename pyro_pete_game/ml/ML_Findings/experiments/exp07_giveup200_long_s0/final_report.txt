@@ -1,0 +1,19 @@
+HELD-OUT stages (never trained on): stages [4], 10 episodes each, fresh seeds
+agent        stage    n   evac 95% CI      died  gaveup  tmout   occ.out   score (mean)       secs
+--------------------------------------------------------------------------------------------------
+astar          ALL   10    90% [ 60- 98]    10%     0%     0%     90%      431 +/-  94     31.9
+best           ALL   10     0% [  0- 28]     0%     0%   100%      0%        0 +/-   0     90.0
+final          ALL   10     0% [  0- 28]   100%     0%     0%      0%        0 +/-   0      7.1
+Paired comparison against 'astar' (same stage + seed => same occupant layout):
+  best         score -430.8 +/- 94.0 over 10 pairs; evacuated alone: astar 9, best 0  -> clearly worse
+  final        score -430.8 +/- 94.0 over 10 pairs; evacuated alone: astar 9, final 0  -> clearly worse
+
+TRAINING stages: stages [1, 2, 3], 10 episodes each, fresh seeds
+agent        stage    n   evac 95% CI      died  gaveup  tmout   occ.out   score (mean)       secs
+--------------------------------------------------------------------------------------------------
+astar          ALL   30   100% [ 89-100]     0%     0%     0%    100%      415 +/-  16     30.0
+best           ALL   30     0% [  0- 11]    33%    67%     0%      0%        0 +/-   0     25.1
+final          ALL   30     0% [  0- 11]    40%    47%    13%      0%        0 +/-   0     54.8
+Paired comparison against 'astar' (same stage + seed => same occupant layout):
+  best         score -415.5 +/- 16.0 over 30 pairs; evacuated alone: astar 30, best 0  -> clearly worse
+  final        score -415.5 +/- 16.0 over 30 pairs; evacuated alone: astar 30, final 0  -> clearly worse

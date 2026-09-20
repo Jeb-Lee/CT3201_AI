@@ -1,0 +1,50 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Training review - exp05_giveup200_timeout200_s0</title>
+<style>
+ body{font:15px/1.5 system-ui,sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;color:#1f2430}
+ h1{margin-bottom:0} .sub{color:#666;margin-top:4px}
+ table{border-collapse:collapse;margin:8px 0;font-size:13px}
+ td,th{border:1px solid #ddd;padding:3px 8px;text-align:right} th{background:#f3f4f6}
+ td:first-child,th:first-child{text-align:left}
+ .chart{width:100%;max-width:1000px}
+ .videos{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+ figure{margin:0} video,img{width:100%;border-radius:6px;background:#000}
+ figcaption{font-size:12px;color:#555} pre{background:#f6f7f9;padding:10px;overflow:auto;font-size:12px}
+ .note{background:#fff8e1;border-left:4px solid #f5b400;padding:8px 12px;font-size:13px}
+</style></head><body>
+<h1>Training review</h1>
+<p class="sub">ML_Findings/experiments/exp05_giveup200_timeout200_s0</p>
+<p>epoch <b>33</b> &middot; 101,376 steps &middot; train accuracy <b>0%</b> over the last 100 episodes</p>
+<img class="chart" src="epoch_vs_accuracy.png?v=33_12">
+<div class="note"><b>Reading the chart.</b> Accuracy = the share of episodes where the AI
+got everyone still alive out and survived. The grey line is measured on the episodes played
+<i>while learning</i> (noisy: the policy is still exploring). Blue and red points are
+<i>validation</i>: fixed seeded episodes, deterministic policy, on training stages (blue) and on
+stages the model has never trained on (red, the honest one). Dashed lines are the A* AI on the
+same episodes. Bars are 95% intervals; if they overlap, the difference is not established.</div>
+<h2>Validation runs</h2><table><tr><th>epoch</th><th>steps</th><th>agent</th><th>split</th><th>n</th><th>accuracy (95% CI)</th><th>died</th><th>gave up</th><th>timeout</th><th>occupants out</th><th>score</th></tr><tr><td>0</td><td>0</td><td>A* (baseline)</td><td>training stages</td><td>12</td><td><b>100%</b> (76%&ndash;100%)</td><td>0%</td><td>0%</td><td>0%</td><td>100%</td><td>417</td></tr><tr><td>0</td><td>0</td><td>A* (baseline)</td><td>HELD-OUT stages</td><td>4</td><td><b>75%</b> (30%&ndash;95%)</td><td>25%</td><td>0%</td><td>0%</td><td>75%</td><td>355</td></tr><tr><td>0</td><td>0</td><td>model</td><td>training stages</td><td>12</td><td><b>0%</b> (0%&ndash;24%)</td><td>33%</td><td>67%</td><td>0%</td><td>0%</td><td>0</td></tr><tr><td>0</td><td>0</td><td>model</td><td>HELD-OUT stages</td><td>4</td><td><b>0%</b> (0%&ndash;49%)</td><td>0%</td><td>0%</td><td>100%</td><td>0%</td><td>0</td></tr><tr><td>9</td><td>27,648</td><td>model</td><td>training stages</td><td>12</td><td><b>0%</b> (0%&ndash;24%)</td><td>0%</td><td>100%</td><td>0%</td><td>0%</td><td>0</td></tr><tr><td>9</td><td>27,648</td><td>model</td><td>HELD-OUT stages</td><td>4</td><td><b>0%</b> (0%&ndash;49%)</td><td>0%</td><td>100%</td><td>0%</td><td>0%</td><td>0</td></tr><tr><td>17</td><td>52,224</td><td>model</td><td>training stages</td><td>12</td><td><b>0%</b> (0%&ndash;24%)</td><td>0%</td><td>100%</td><td>0%</td><td>0%</td><td>0</td></tr><tr><td>17</td><td>52,224</td><td>model</td><td>HELD-OUT stages</td><td>4</td><td><b>0%</b> (0%&ndash;49%)</td><td>0%</td><td>100%</td><td>0%</td><td>0%</td><td>0</td></tr><tr><td>25</td><td>76,800</td><td>model</td><td>training stages</td><td>12</td><td><b>0%</b> (0%&ndash;24%)</td><td>0%</td><td>100%</td><td>0%</td><td>0%</td><td>0</td></tr><tr><td>25</td><td>76,800</td><td>model</td><td>HELD-OUT stages</td><td>4</td><td><b>0%</b> (0%&ndash;49%)</td><td>0%</td><td>100%</td><td>0%</td><td>0%</td><td>0</td></tr><tr><td>33</td><td>101,376</td><td>model</td><td>training stages</td><td>12</td><td><b>0%</b> (0%&ndash;24%)</td><td>0%</td><td>100%</td><td>0%</td><td>0%</td><td>0</td></tr><tr><td>33</td><td>101,376</td><td>model</td><td>HELD-OUT stages</td><td>4</td><td><b>0%</b> (0%&ndash;49%)</td><td>0%</td><td>100%</td><td>0%</td><td>0%</td><td>0</td></tr></table>
+<h2>Final test (fresh seeds, held-out stages)</h2><pre>HELD-OUT stages (never trained on): stages [4], 6 episodes each, fresh seeds
+agent        stage    n   evac 95% CI      died  gaveup  tmout   occ.out   score (mean)       secs
+--------------------------------------------------------------------------------------------------
+astar          ALL    6   100% [ 61-100]     0%     0%     0%    100%      481 +/-   2     28.4
+best           ALL    6     0% [  0- 39]     0%     0%   100%      0%        0 +/-   0     90.0
+final          ALL    6     0% [  0- 39]     0%   100%     0%      0%        0 +/-   0     12.0
+Paired comparison against &#x27;astar&#x27; (same stage + seed =&gt; same occupant layout):
+  best         score -480.8 +/- 2.3 over 6 pairs; evacuated alone: astar 6, best 0  -&gt; clearly worse
+  final        score -480.8 +/- 2.3 over 6 pairs; evacuated alone: astar 6, final 0  -&gt; clearly worse
+
+TRAINING stages: stages [1, 2, 3], 6 episodes each, fresh seeds
+agent        stage    n   evac 95% CI      died  gaveup  tmout   occ.out   score (mean)       secs
+--------------------------------------------------------------------------------------------------
+astar          ALL   18   100% [ 82-100]     0%     0%     0%    100%      414 +/-  21     31.8
+best           ALL   18     0% [  0- 18]    33%    67%     0%      0%        0 +/-   0     25.1
+final          ALL   18     0% [  0- 18]     0%   100%     0%      0%        0 +/-   0     12.0
+Paired comparison against &#x27;astar&#x27; (same stage + seed =&gt; same occupant layout):
+  best         score -414.1 +/- 21.2 over 18 pairs; evacuated alone: astar 18, best 0  -&gt; clearly worse
+  final        score -414.1 +/- 21.2 over 18 pairs; evacuated alone: astar 18, final 0  -&gt; clearly worse
+</pre>
+<h2>Recordings</h2><p>No recordings yet.</p>
+<h2>Settings</h2><table><tr><td>timesteps</td><td>100000</td></tr><tr><td>name</td><td>exp05_giveup200_timeout200_s0</td></tr><tr><td>runs_dir</td><td>runs</td></tr><tr><td>run_dir</td><td>None</td></tr><tr><td>resume</td><td>None</td></tr><tr><td>algo</td><td>maskable</td></tr><tr><td>train_stages</td><td>1-3</td></tr><tr><td>heldout_stages</td><td>4</td></tr><tr><td>n_envs</td><td>6</td></tr><tr><td>n_steps</td><td>512</td></tr><tr><td>batch_size</td><td>256</td></tr><tr><td>update_epochs</td><td>4</td></tr><tr><td>lr</td><td>0.0003</td></tr><tr><td>gamma</td><td>0.995</td></tr><tr><td>ent_coef</td><td>0.01</td></tr><tr><td>net_arch</td><td>256,256</td></tr><tr><td>abandon_penalty</td><td>0.0</td></tr><tr><td>give_up_penalty</td><td>200.0</td></tr><tr><td>timeout_penalty</td><td>200.0</td></tr><tr><td>seed</td><td>0</td></tr><tr><td>device</td><td>cpu</td></tr><tr><td>max_seconds</td><td>90.0</td></tr><tr><td>window</td><td>100</td></tr><tr><td>eval_every</td><td>25000</td></tr><tr><td>eval_episodes</td><td>4</td></tr><tr><td>record_every</td><td>0</td></tr><tr><td>record_stages</td><td>None</td></tr><tr><td>video_speed</td><td>2.0</td></tr><tr><td>print_every</td><td>4</td></tr><tr><td>max_minutes</td><td>None</td></tr><tr><td>final_episodes</td><td>6</td></tr><tr><td>workers</td><td>3</td></tr><tr><td>install</td><td>False</td></tr><tr><td>train_stages_1based</td><td>[1, 2, 3]</td></tr><tr><td>heldout_stages_1based</td><td>[4]</td></tr><tr><td>stable_baselines3</td><td>2.9.0</td></tr></table>
+<p class="sub">Data: epochs.csv (every epoch), evaluations.csv (every checkpoint).</p>
+</body></html>

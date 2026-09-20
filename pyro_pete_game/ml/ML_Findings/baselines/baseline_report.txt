@@ -1,0 +1,49 @@
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.14)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.14)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.14)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+agent        stage    n   evac 95% CI      died  gaveup  tmout   occ.out   score (mean)       secs
+--------------------------------------------------------------------------------------------------
+astar            1   20   100% [ 84-100]     0%     0%     0%    100%      395 +/-   3     22.2
+astar            2   20    95% [ 76- 99]     5%     0%     0%     95%      361 +/-  38     33.7
+astar            3   20    90% [ 70- 97]    10%     0%     0%     90%      427 +/-  64     33.4
+astar            4   20    90% [ 70- 97]    10%     0%     0%     90%      432 +/-  65     34.1
+astar            5   20    95% [ 76- 99]     5%     0%     0%     99%      565 +/-  22     41.7
+astar            6   20   100% [ 84-100]     0%     0%     0%    100%      577 +/-   6     37.9
+astar            7   20    55% [ 34- 74]    30%    15%     0%     68%      452 +/- 135     50.6
+astar            8   20    80% [ 58- 92]    10%    10%     0%     88%      584 +/-  89     53.3
+astar            9   20    95% [ 76- 99]     0%     5%     0%     99%      662 +/-  14     50.7
+astar           10   20    65% [ 43- 82]    30%     5%     0%     68%      440 +/- 133     70.6
+astar          ALL  200    86% [ 81- 91]    10%     4%     0%     90%      490 +/-  26     42.8
+
+random           1   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0     47.0
+random           2   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0     40.7
+random           3   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0     37.9
+random           4   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0     57.3
+random           5   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0     69.5
+random           6   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0     71.5
+random           7   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0    115.6
+random           8   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0     52.4
+random           9   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0     48.6
+random          10   20     0% [  0- 16]   100%     0%     0%      0%        0 +/-   0    127.9
+random         ALL  200     0% [  0-  2]   100%     0%     0%      0%        0 +/-   0     66.8
+
+stay             1   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay             2   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay             3   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay             4   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay             5   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay             6   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay             7   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay             8   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay             9   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay            10   20     0% [  0- 16]     0%   100%     0%      0%        0 +/-   0     12.0
+stay           ALL  200     0% [  0-  2]     0%   100%     0%      0%        0 +/-   0     12.0
+
+Paired comparison against 'astar' (same stage + seed => same occupant layout):
+  random       score -489.6 +/- 26.2 over 200 pairs; evacuated alone: astar 173, random 0  -> clearly worse
+  stay         score -489.6 +/- 26.2 over 200 pairs; evacuated alone: astar 173, stay 0  -> clearly worse
+
+wrote 600 episodes to pyro_pete_game/ml/ML_Findings/data/baselines_episodes.csv
