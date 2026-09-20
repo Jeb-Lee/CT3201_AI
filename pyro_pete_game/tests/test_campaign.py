@@ -617,4 +617,4 @@ def test_dead_occupant_is_drawn_without_error_and_not_as_a_sprite():
     s = _race()
     s.victims[0].state = STATE_DEAD
     surf = pygame.Surface((960, 640))
-    s.victims[0].draw(surf, (0, 0), font=s.hud_font)   # must not raise
+    s.victims[0].draw(surf, (0, 0), font=s.marker_font)   # must not raise

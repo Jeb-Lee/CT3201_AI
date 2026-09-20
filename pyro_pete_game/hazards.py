@@ -130,6 +130,13 @@ class FireSystem:
             return 0.0
         return max(0.0, self._time_to_exit - self.elapsed)
 
+    @property
+    def seconds_to_exit_total(self):
+        """The countdown's starting value: the estimate at the moment the fire
+        started. seconds_to_exit_fire / this is how far through it we are
+        (the HUD's draining bar)."""
+        return self._time_to_exit
+
     def update(self, dt):
         self._anim_t += dt
         self.elapsed += dt

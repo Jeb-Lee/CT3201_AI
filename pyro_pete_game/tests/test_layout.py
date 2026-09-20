@@ -37,40 +37,6 @@ def test_panel_width_never_drops_below_the_original_design():
     assert _fit_panel_width(10, 10) == 420
 
 
-@pytest.mark.parametrize("spectate,expected_label", [(False, "HEALTH"),
-                                                     (True, "AI HEALTH")])
-def test_status_panel_contains_its_widest_row(spectate, expected_label):
-    session = game.GameSession(levels.get(0), spectate=spectate,
-                               agent_visual="robot")
-    rects = []
-    real = session._blit_panel
-    session._blit_panel = lambda s, layer, r: (rects.append(r.copy()),
-                                               real(s, layer, r))[1]
-    screen = pygame.display.get_surface()
-    session.draw(screen)
-
-    status = rects[-1]                            # drawn last, top-right
-    assert status.right <= SCREEN_WIDTH
-    f = session.hud_font
-    row = f.size(expected_label)[0] + 14 + f.size("Time  99:59")[0]
-    assert status.width - 20 >= row               # 10px padding each side
-
-
-def test_status_panel_width_does_not_twitch_as_the_clock_changes():
-    """Proportional font: "1:11" is narrower than "0:00". The panel must be
-    sized from the widest possible clock, not the current one."""
-    session = game.GameSession(levels.get(0), spectate=True, agent_visual="robot")
-    real = session._blit_panel
-    widths = set()
-    session._blit_panel = lambda s, layer, r: (widths.add(r.width) if r.x > 400
-                                               else None, real(s, layer, r))[1]
-    screen = pygame.display.get_surface()
-    for elapsed in (0.0, 11.0, 71.0, 111.0, 600.0):
-        session.agent_stats.elapsed = elapsed
-        session.draw(screen)
-    assert len(widths) == 1
-
-
 # --- results panel alignment -------------------------------------------------
 import results
 from fonts import ui_font
@@ -362,20 +328,6 @@ def test_every_menu_line_fits_its_panel(build):
         assert font.size(text)[0] <= room, (text, font.size(text)[0], room)
     # and the whole thing draws
     menu.draw(pygame.Surface((SCREEN_WIDTH, 640)))
-
-
-@pytest.mark.parametrize("spectate", [False, True])
-def test_hud_rows_fit_their_fixed_positions(spectate):
-    """The HUD rows sit at fixed y offsets (5, 27, 48, 69, ...): the closest
-    two are 21px apart, so the font's line must not be taller than that, and
-    the widest row must fit the 372px (race) / 320px (watch) panel."""
-    s = game.GameSession(levels.get(0), spectate=spectate, agent_visual="robot")
-    f = s.hud_font
-    assert f.get_linesize() <= 21
-    widest = f.size("Occupants out   99/99    Left 99")[0]
-    assert widest <= (320 if spectate else 372) - 16
-    if not spectate:
-        assert f.size("Score   You 9999    AI 9999")[0] <= 372 - 16
 
 
 def test_waiting_occupant_marker_stays_at_least_as_tall_as_it_was():
