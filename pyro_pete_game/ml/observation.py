@@ -1,17 +1,36 @@
 """What the learned agent sees, and the moves it can make.
 
-Fair-information rules. The A* agent is told the stage head-count and
-finds occupants and layout by walking near them, and the learned agent is
-held to exactly that -- nothing it couldn't legitimately know:
+INFORMATION PARITY WITH A*  (the rule everything here is built to obey)
 
-  * layout: walls/blocked tiles are shown only for cells it has explored;
-    unexplored cells are flagged as such and show nothing else
-  * hazards, occupants and the key: only within its live vision radius
-    (settings.AGENT_VISION_TILES), the same radius the A* agent uses
-  * occupants it has already spotted stay visible while unclaimed
-  * the exit location, the stage head-count and the fire countdown: always
-    known -- the exit is drawn on the HUD's compass for the human, and the
-    other two are on the HUD
+The learner and the A* rescuer must play under the same conditions. If the
+learner sees LESS than A*, it cannot learn A*'s decisions (the teacher's move is
+not a function of what the student sees), and every comparison is unfair to it.
+If it sees MORE, it has God mode. What A* actually knows (read from
+entities/rescue_agent.py, not assumed):
+
+  * the whole real map: it plans with hazard-weighted A* over every tile
+  * the live hazard field EVERYWHERE: fire, smoke, sparking panels, a pending
+    collapse (hazards.entry_cost prices them into every route)
+  * where the exit is, where the key is, and how many occupants there are
+    (the HUD shows a human the exit direction and the head-count)
+  * where an occupant is ONLY once one is within AGENT_VISION_TILES (3.5) of it;
+    after that it remembers them and reads their live state
+  * its "explored" set is used only to choose which unseen area to search next
+
+Observation version 1 gave the learner LESS than that: an 11 x 11 window of tiles
+it had walked near, hazards only within vision, no global layout. Version 2 adds
+route hints computed from exactly A*'s own inputs (see route_hints), so the
+learner has A*'s information and none it lacks. Two things must therefore hold,
+and tests/test_imitation.py checks both:
+
+  * NO GOD MODE: nothing A* cannot see may change the observation -- moving an
+    occupant the agent has not spotted changes no number in it
+  * NOTHING EXTRA: hints read only the map, the hazard field, the spotted
+    occupants, the explored set, the exit and the key -- the same inputs as A*
+
+Both agents also share one body (health, damage, smoke slowdown, speed, vision
+radius), one game (the same GameSession, stage seeds, occupant placement, time
+cap and stage-end rules) and are compared on identical seeded episodes.
 
 Actions are grid steps, not pixel movement: stay, or step to one of the
 four neighbouring tiles. A step walks the agent to the next tile centre
@@ -21,14 +40,14 @@ A* agent), and choosing a wall is simply a wasted step.
 The observation is one flat float32 vector so it works with any
 standard RL library:
 
-    [ window (WINDOW x WINDOW x N_CHANNELS, row-major, channel last) | features ]
+    [ window (WINDOW x WINDOW x N_CHANNELS, row-major, channel last) | features | (v2) route hints ]
 """
 
 import numpy as np
 
 from settings import AGENT_VISION_TILES, HEALTH_MAX
 from entities.victim import STATE_IDLE, STATE_FOLLOWING, STATE_SAVED, STATE_DEAD
-from pathfinding import bfs_distances
+from pathfinding import bfs_distances, weighted_distances
 
 # ---- actions
 ACTION_STAY, ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT = range(5)
@@ -53,7 +72,52 @@ FEATURES = (
     "exit_on_fire", "key_needed", "elapsed",
 )
 N_FEATURES = len(FEATURES)
-OBS_SIZE = WINDOW * WINDOW * N_CHANNELS + N_FEATURES
+OBS_SIZE = WINDOW * WINDOW * N_CHANNELS + N_FEATURES        # observation version 1
+
+# ---- observation version 2 = version 1 + route hints
+# The A* rescuer plans over the WHOLE real map and the live hazard field, and
+# version 1 shows the learner only an 11 x 11 window, so on big mazes the learner
+# cannot see where the goals are. Version 2 adds, for each of A*'s three
+# candidate goals, what A* itself would compute: the hazard-weighted path cost
+# from the agent's position, and how much each of the four moves shortens it.
+# (Goal 1: the exit. Goal 2: the nearest spotted, not-yet-rescued occupant.
+# Goal 3: the nearest unexplored frontier. Goal 4: the key, while a locked door
+# is still in the way -- A* heads for it when the route to its goal is blocked.)
+# The network still has to decide WHICH goal to pursue and when; it is told where
+# each one is.
+HINT_GOALS = ("exit", "occupant", "frontier", "key")
+HINT_FIELDS = ("available", "advance_up", "advance_down", "advance_left", "advance_right",
+               "distance")
+N_HINT = len(HINT_GOALS) * len(HINT_FIELDS)
+OBS_SIZE_V2 = OBS_SIZE + N_HINT
+
+# ---- observation version 3 = version 2 + a short memory of the agent's OWN history
+# A memoryless network cannot tell that it is pacing between two tiles: at A the picture
+# says "go to B", at B "go back to A". Version 3 adds its previous move (one-hot) and the
+# last few tiles it stood on, as offsets from where it is now. It is the agent's own past,
+# not information about the world, so it gives it nothing A* lacks (A* carries a goal and
+# a planned route from one decision to the next).
+N_MEMORY_TILES = 4
+N_MEMORY = N_ACTIONS + 3 * N_MEMORY_TILES          # previous move + (dx, dy, present) per tile
+OBS_SIZE_V3 = OBS_SIZE_V2 + N_MEMORY
+
+# ---- observation version 4 = version 3 + a trail of where it has walked, all episode
+# For every tile in the 11 x 11 window: how many times the agent has stood on it this
+# episode (capped at TRAIL_CAP, scaled to 0-1). Empty at the start of every episode and
+# built only from tiles the agent actually entered. A* records every tile it has walked
+# (`trail_cells`) though it only draws them.
+TRAIL_CAP = 5
+N_TRAIL = WINDOW * WINDOW
+OBS_SIZE_V4 = OBS_SIZE_V3 + N_TRAIL
+OBS_SIZES = {1: OBS_SIZE, 2: OBS_SIZE_V2, 3: OBS_SIZE_V3, 4: OBS_SIZE_V4}
+
+
+def obs_version_of(size):
+    """Which observation version a vector / network input of this size is."""
+    for version, n in OBS_SIZES.items():
+        if n == size:
+            return version
+    raise ValueError(f"no observation version has size {size}")
 
 _FIRE_HORIZON_SECONDS = 300.0
 
@@ -70,8 +134,85 @@ def action_mask(agent):
     return mask
 
 
-def build_observation(agent, victims):
-    """Flat float32 vector for the agent's current state (see module doc)."""
+def route_hints(agent, victims):
+    """The 24 numbers of observation version 2 (see the constants above).
+
+    For each goal: available (1 if the goal exists and is reachable), then for
+    each move up/down/left/right how much closer to the goal that step gets it
+    in hazard-weighted cost (+1 is one clean step of progress, negative is
+    backwards, -1 also for a wall), then the remaining cost, scaled by the map
+    size. Uses the same planner cost as A* (`hazards.entry_cost`) and reads only
+    what A* reads."""
+    tm = agent.tilemap
+    cur = agent.current_cell
+    cost_fn = agent._cost_fn()
+    from_agent = weighted_distances(tm, cur, cost_fn)
+    idle = [v.cell for v in agent.known_victims
+            if v.state == STATE_IDLE and v.cell in from_agent]
+    doors = agent.hazards.doors if agent.hazards is not None else None
+    key_cell = (doors.key_cell if doors is not None and doors.enabled
+                and not doors.key_collected else None)
+    targets = [
+        tm.exit_cell,
+        min(idle, key=lambda c: (from_agent[c], c)) if idle else None,
+        agent._nearest_unexplored(from_agent),
+        key_cell,
+    ]
+    out = np.zeros(N_HINT, dtype=np.float32)
+    scale = float(tm.cols + tm.rows)
+    for i, target in enumerate(targets):
+        if target is None:
+            continue
+        to_target = weighted_distances(tm, target, cost_fn)
+        d0 = to_target.get(cur)
+        if d0 is None:
+            continue
+        base = i * len(HINT_FIELDS)
+        out[base] = 1.0
+        for k, action in enumerate((ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT)):
+            dc, dr = MOVES[action]
+            dn = to_target.get((cur[0] + dc, cur[1] + dr))
+            out[base + 1 + k] = -1.0 if dn is None else max(-1.0, min(1.0, (d0 - dn) / 3.0))
+        out[base + 5] = min(1.0, d0 / scale)
+    return out
+
+
+def memory_features(agent):
+    """The 17 numbers of observation version 3: the last move taken (one-hot over
+    stay/up/down/left/right), then for each of the last four tiles it stood on before
+    this one (most recent first): dx/5, dy/5 relative to here (clipped) and 1 if that
+    slot is filled. Reads only the agent's own history."""
+    out = np.zeros(N_MEMORY, dtype=np.float32)
+    out[getattr(agent, "last_action", ACTION_STAY)] = 1.0
+    history = list(getattr(agent, "cell_history", None) or [])
+    if not history or history[-1] != agent.current_cell:
+        history.append(agent.current_cell)      # the tile it is on now may not be recorded yet
+    cc, cr = agent.current_cell
+    for k, cell in enumerate(reversed(history[:-1][-N_MEMORY_TILES:])):
+        base = N_ACTIONS + 3 * k
+        out[base] = max(-1.0, min(1.0, (cell[0] - cc) / 5.0))
+        out[base + 1] = max(-1.0, min(1.0, (cell[1] - cr) / 5.0))
+        out[base + 2] = 1.0
+    return out
+
+
+def trail_window(agent):
+    """The N_TRAIL numbers of observation version 4: visit counts around the agent."""
+    out = np.zeros((WINDOW, WINDOW), dtype=np.float32)
+    counts = getattr(agent, "visit_counts", None) or {}
+    cc, cr = agent.current_cell
+    for (col, row), n in counts.items():
+        dc, dr = col - cc, row - cr
+        if -WINDOW_RADIUS <= dc <= WINDOW_RADIUS and -WINDOW_RADIUS <= dr <= WINDOW_RADIUS:
+            out[dr + WINDOW_RADIUS, dc + WINDOW_RADIUS] = min(n, TRAIL_CAP) / TRAIL_CAP
+    return out.reshape(-1)
+
+
+def build_observation(agent, victims, version=1):
+    """Flat float32 vector for the agent's current state (see module doc).
+    version 1: the local window and scalars. version 2: plus route hints.
+    version 3: plus a short memory of the agent's own history.
+    version 4: plus how often it has stood on each nearby tile this episode."""
     tm = agent.tilemap
     haz = agent.hazards
     cc, cr = agent.current_cell
@@ -153,4 +294,11 @@ def build_observation(agent, victims):
         elapsed,
     ], dtype=np.float32)
 
-    return np.concatenate([window.reshape(-1), features]).astype(np.float32)
+    parts = [window.reshape(-1), features]
+    if version >= 2:
+        parts.append(route_hints(agent, victims))
+    if version >= 3:
+        parts.append(memory_features(agent))
+    if version == 4:
+        parts.append(trail_window(agent))
+    return np.concatenate(parts).astype(np.float32)

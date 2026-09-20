@@ -78,10 +78,10 @@ Pete is always keyboard-driven, and nothing here changes how A* plays.
 
 - `pyro_pete_game/ml/` -- the pieces:
   - `observation.py`: what the learned agent sees and the five actions
-    (stay / up / down / left / right, one tile per step). It gets the same
-    information A* does and no more: only explored layout, hazards and
-    occupants within its vision radius, plus the exit, head-count and fire
-    countdown that the HUD already shows a human.
+    (stay / up / down / left / right, one tile per step). It gets **less**
+    information than A*, which plans over the whole map and hazard field: only
+    explored layout, hazards and occupants within its vision radius, plus the
+    exit, head-count and fire countdown that the HUD already shows a human.
   - `env.py`: `EvacuationEnv`, a Gymnasium environment that steps the real
     `GameSession` (same fire, collapses, locked door and stage-end rules).
     Reward comes from the game's own score, with no distance shaping. Passes
@@ -92,10 +92,13 @@ Pete is always keyboard-driven, and nothing here changes how A* plays.
 - `entities/learned_agent.py` -- `LearnedAgent` shares the A* agent's body
   (health, hazard damage, smoke slowdown, vision, sprites) so both brains face
   identical rules, and replaces only the decision.
-- **In the game** a "Learned model" entry appears on a brain menu (after the AI
-  skin menu) *only* when a trained model exists at
-  `pyro_pete_game/ml/models/ai_policy.zip` and stable-baselines3 is importable.
-  With no model the game plays exactly as before.
+- **In the game**, Watch AI Play shows "Choose the AI's Brain" (after the AI skin menu; Play vs AI
+  keeps its rival on A\* and has no extra screen) and it lists **A\* planner (the default)**, **Learned v4** and **Learned v5**.
+  A model is offered only when its file is in `pyro_pete_game/ml/models/`
+  (`ai_v4.zip`, `ai_v5.zip`, and optionally `ai_policy.zip` as "Learned model") and
+  stable-baselines3 is importable; the JSON file beside each model records the search
+  order it was trained with, so the game configures the AI body to match. With no model
+  files the game plays exactly as before, and a model that fails to load falls back to A\*.
 
 **Status: the plumbing is built, tested and has run for real; no model that
 plays well exists yet** (see the experiment notes below). Loading a real
@@ -155,18 +158,29 @@ python tools/record_agent.py --agent astar --stage 9 --seed 1000                
 python tools/plot_training.py runs/first_try                                          # rebuild chart + report
 ```
 
-**What the experiments showed.** The plumbing works, and the AI has **not**
-learned to rescue people yet. With the plain game-score reward it learned to
-stand still (74-91% of episodes, three seeds); a penalty for leaving occupants
-inside did not change that, because it lands equally on standing still and on
-dying. With a penalty for giving up, one of two seeds learned over 300,000 steps
-to lead about a fifth of the occupants out, one at a time and only on the stages
-it trained on. In the form the game would use (most likely action) none of the
-12 trained models evacuates anyone, against A* at 86%. The full write-up,
-including the reward-design story, the charts, the recordings and the
-predictions that turned out wrong, is in
-[`pyro_pete_game/ml/ML_Findings/`](pyro_pete_game/ml/ML_Findings/README.md).
-A GPU would not speed training up (87% of the time is the game simulation).
+Imitation learning (the network is trained to copy A*):
+
+```bash
+python tools/train_imitation.py --name imit_b --obs-version 2   # A* demonstrations, cloning, DAgger, final test
+```
+
+Logs one row per epoch (loss, action-match accuracy on held-out episodes and on
+stages never trained on, and how the network actually plays), writes a chart, and tests
+the result against A* on all ten stages. `--obs-version 2` gives the network A*'s own
+information (route hints), which is what makes it work; `1` is the local-window ablation.
+
+**What the experiments showed.** Reinforcement learning from scratch has **not** produced
+an AI that rescues people: with the plain game-score reward it learned to stand still
+(74-91% of episodes, three seeds), and none of the 12 trained models evacuates anyone in
+the form the game uses. Imitation learning works far better: trained to copy A* and given
+the information A* has, plus a memory of its own path, the best network evacuates **80%** of
+300 fresh episodes against A*'s **87%**. It is roughly level with A* on the stages it trained
+on (84% vs 87%) and clearly behind on three it never saw (71% vs 87%); with only a local window
+it managed 20%. It does **not** match A*. The full
+write-up, with the charts, the epoch-vs-accuracy logs, the recordings and the corrections I
+had to make to my own claims, is in
+[`pyro_pete_game/ml/ML_Findings/`](pyro_pete_game/ml/ML_Findings/README.md). A GPU would not
+speed training up (most of the time is the game simulation).
 
 ## Running it
 
@@ -183,7 +197,7 @@ Controls: WASD / arrows move, `P` pause, `R` restart, `M` mute, `Esc` quit.
 On the results panel, Enter goes to the next stage after a clear, or back to
 the menu otherwise.
 Menus: arrow keys or mouse to choose, Enter/click to confirm, `Esc` to back out a screen.
-Tests (160): `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
+Tests (209): `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
 (`tests/test_core.py` also runs standalone with plain `python`).
 
 ## Project layout
@@ -216,6 +230,7 @@ pyro_pete_game/
     rescue_agent.py    # autonomous hazard-weighted A* agent (robot or drone skin)
     learned_agent.py   # same body, decisions from a learned policy (opt-in, AI player only)
   ml/                  # learned-AI option: observation, policy, env (Gymnasium), evaluation,
+                       #   expert (A* as a teacher), imitation (cloning + DAgger),
                        #   training (SB3 callbacks), report (epoch-vs-accuracy), recording (video)
   levels/level_01.py   # first map (size + seed)
   assets/pete/         # Pete sprite frames (hand-picked from clips)
@@ -228,11 +243,14 @@ pyro_pete_game/
   tests/test_campaign.py   # ten stages, stage-end rules, win/lose outcomes, music
   tests/test_ml.py         # observation fairness, learned agent, Gym env, harness statistics
   tests/test_training.py   # run logs, report/chart, recording, a tiny real training run
+  tests/test_imitation.py  # A* as teacher, cloning, DAgger data, information parity with A* (no God mode)
+  tests/test_search_options.py  # far-side / corner-skip search options, model JSON sidecar, the AI-model menu
 tools/
   build_victim_sprites.py  # rebuilds assets/victims/ from the Drive art
   search_comparison.py     # BFS vs Dijkstra vs A* vs Greedy on the maze
   evaluate_agents.py       # compare AI agents on the real game, with confidence intervals
-  train_agent.py           # train the learned AI; logs epoch-vs-accuracy, records videos, final test
+  train_agent.py           # train the learned AI by RL; logs epoch-vs-accuracy, records videos, final test
+  train_imitation.py       # train it to copy A* (cloning + DAgger); epoch-vs-accuracy log, final test vs A*
   record_agent.py          # screen-record any agent on any stage (MP4 via ffmpeg, else GIF)
   plot_training.py         # rebuild a run's chart + report.html from its CSVs
 ```

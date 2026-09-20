@@ -17,18 +17,21 @@ trained model plays exactly as before.
 
 import importlib.util
 import inspect
+import json
 import os
 import random
 
 import numpy as np
 
-from ml.observation import ACTION_STAY, N_ACTIONS
+from ml.observation import ACTION_STAY, N_ACTIONS, obs_version_of
 
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 MODEL_PATH = os.path.join(MODEL_DIR, "ai_policy.zip")
 
 
 class RandomPolicy:
+    obs_version = 1
+
     def __init__(self, seed=None):
         self._rng = random.Random(seed)
 
@@ -38,6 +41,8 @@ class RandomPolicy:
 
 
 class StayPolicy:
+    obs_version = 1
+
     def act(self, observation, action_mask):
         return ACTION_STAY
 
@@ -48,9 +53,16 @@ class SB3Policy:
     otherwise an illegal choice is turned into a stay, which is what the
     agent does with a step into a wall anyway."""
 
-    def __init__(self, model, deterministic=True):
+    def __init__(self, model, deterministic=True, agent_options=None):
         self.model = model
         self.deterministic = deterministic
+        # search-order settings the model was trained with (see RescueAgent); the game
+        # applies them to the agent body so its observation matches the training one
+        self.agent_options = dict(agent_options or {})
+        # which observation the network was trained on, read from its input size,
+        # so the game builds the right one without being told
+        space = getattr(model, "observation_space", None)
+        self.obs_version = obs_version_of(space.shape[0]) if space is not None else 1
         try:
             self._maskable = "action_masks" in inspect.signature(model.predict).parameters
         except (TypeError, ValueError):
@@ -69,10 +81,52 @@ class SB3Policy:
         return action
 
 
+# Models the game menu can offer, in the order shown. A model is offered only when its
+# file exists (and stable-baselines3 is installed), so a checkout without a file simply
+# has a shorter menu. The key is what the menu passes back; the JSON file next to each
+# model (see read_agent_options) tells the game which search-order settings it was trained with.
+MODEL_CHOICES = (
+    ("v4", "Learned v4", "Cloned from A*, with memory of its path", "ai_v4.zip"),
+    ("v5", "Learned v5", "Cloned from a far-side-first searcher", "ai_v5.zip"),
+)
+
+
+def available_models():
+    """[(key, label, description, path)] for every menu model whose file is present."""
+    if importlib.util.find_spec("stable_baselines3") is None:
+        return []
+    found = [(key, label, desc, os.path.join(MODEL_DIR, name))
+             for key, label, desc, name in MODEL_CHOICES
+             if os.path.isfile(os.path.join(MODEL_DIR, name))]
+    if os.path.isfile(MODEL_PATH):      # a model installed with tools/train_*.py --install
+        found.append(("installed", "Learned model", "The model installed as ml/models/ai_policy.zip", MODEL_PATH))
+    return found
+
+
 def model_available(path=MODEL_PATH):
     """True when there is a trained model *and* the library to run it."""
     return (os.path.isfile(path)
             and importlib.util.find_spec("stable_baselines3") is not None)
+
+
+def options_path(model_path):
+    """The small JSON file that sits next to a model (model.zip -> model.json)."""
+    return os.path.splitext(model_path)[0] + ".json"
+
+
+def read_agent_options(model_path):
+    """Search-order settings recorded with a model, or {} (a model without a
+    JSON file was trained against the default agent)."""
+    path = options_path(model_path)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as fh:
+        return dict(json.load(fh).get("agent_options", {}))
+
+
+def write_agent_options(model_path, agent_options, **notes):
+    with open(options_path(model_path), "w", encoding="utf-8") as fh:
+        json.dump(dict(agent_options=dict(agent_options), **notes), fh, indent=2)
 
 
 def load_policy(path=MODEL_PATH):
@@ -87,9 +141,10 @@ def load_policy(path=MODEL_PATH):
         loaders.append(MaskablePPO)
     from stable_baselines3 import PPO
     loaders.append(PPO)
+    options = read_agent_options(path)
     for cls in loaders:
         try:
-            return SB3Policy(cls.load(path, device="cpu"))
+            return SB3Policy(cls.load(path, device="cpu"), agent_options=options)
         except Exception as exc:          # wrong algorithm for this file: try the next
             errors.append(f"{cls.__name__}: {exc}")
     raise RuntimeError("could not load " + path + " -- " + "; ".join(errors))

@@ -43,7 +43,7 @@ RECORD_SEED = 7
 
 
 # ------------------------------------------------------------------ building
-def make_train_env(stages, n_envs, seed, max_seconds, gamma=0.995, reward=None):
+def make_train_env(stages, n_envs, seed, max_seconds, gamma=0.995, reward=None, obs_version=1):
     """Parallel game processes. Rewards are scaled for the optimiser (an
     episode is worth hundreds of points, which makes the value network's
     targets huge); observations are already ~unit range and are left alone,
@@ -55,7 +55,7 @@ def make_train_env(stages, n_envs, seed, max_seconds, gamma=0.995, reward=None):
     env = make_vec_env(EvacuationEnv, n_envs=n_envs, seed=seed,
                        vec_env_cls=SubprocVecEnv if n_envs > 1 else DummyVecEnv,
                        env_kwargs=dict(stages=list(stages), max_sim_seconds=max_seconds,
-                                       reward=reward))
+                                       reward=reward, obs_version=obs_version))
     return VecNormalize(env, norm_obs=False, norm_reward=True, gamma=gamma)
 
 

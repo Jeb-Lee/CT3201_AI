@@ -44,6 +44,18 @@ class LearnedAgent(RescueAgent):
         self._pending_action = None
         self._next_decision_at = 0.0
         self._last_move_at = 0.0
+        # the tiles it has stood on, in order (memory for observation version 3);
+        # the agent's own past, which A* also carries in its goal and planned route
+        self.cell_history = [start_cell]
+        self.visit_counts = {start_cell: 1}     # times it has entered each tile (observation version 4)
+
+    def _remember_cell(self):
+        """Note the tile it is standing on (at each decision, every tile it enters is one)."""
+        if self.current_cell != self.cell_history[-1]:
+            self.visit_counts[self.current_cell] = self.visit_counts.get(self.current_cell, 0) + 1
+            self.cell_history.append(self.current_cell)
+            if len(self.cell_history) > 64:
+                del self.cell_history[:-64]
 
     # ------------------------------------------------------------ control
     def command(self, action):
@@ -54,6 +66,7 @@ class LearnedAgent(RescueAgent):
     # ----------------------------------------------- overridden decisions
     def _replan(self, victims):
         """The A* agent plans a route here. This asks for one step."""
+        self._remember_cell()
         if self._waypoints:
             return   # mid-step: finish walking to the next tile first
 
@@ -79,7 +92,8 @@ class LearnedAgent(RescueAgent):
             return action
         if self.policy is None or self._anim_t < self._next_decision_at:
             return None
-        return self.policy.act(build_observation(self, victims), action_mask(self))
+        version = getattr(self.policy, "obs_version", 1)
+        return self.policy.act(build_observation(self, victims, version), action_mask(self))
 
     def _apply(self, action):
         self.last_action = action

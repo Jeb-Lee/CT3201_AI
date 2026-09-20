@@ -66,7 +66,7 @@ from settings import (                         # noqa: E402
     SCORE_PER_SURVIVOR, SCORE_REACH_EXIT, SCORE_DAMAGE_PENALTY,
 )
 from ml.observation import (                   # noqa: E402
-    OBS_SIZE, N_ACTIONS, ACTION_STAY, action_mask, build_observation,
+    OBS_SIZES, N_ACTIONS, ACTION_STAY, action_mask, build_observation,
 )
 from ml.outcome import summarise, classify      # noqa: E402
 
@@ -116,7 +116,7 @@ def _ensure_pygame():
 class EvacuationEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, stages=None, max_sim_seconds=240.0, reward=None):
+    def __init__(self, stages=None, max_sim_seconds=240.0, reward=None, obs_version=1, agent_options=None):
         """stages: 0-based stage indices to sample from each episode
         (default: all ten). Train on some and evaluate on others -- a
         policy that has only ever seen the training maps can memorise them."""
@@ -130,7 +130,9 @@ class EvacuationEnv(gym.Env):
 
         self.action_space = spaces.Discrete(N_ACTIONS)
         self.observation_space = spaces.Box(
-            low=-1.0, high=2.0, shape=(OBS_SIZE,), dtype=np.float32)
+            low=-1.0, high=2.0, shape=(OBS_SIZES[obs_version],), dtype=np.float32)
+        self.obs_version = obs_version
+        self.agent_options = dict(agent_options or {})   # search-order settings, see RescueAgent
 
         self._sessions = {}
         self._session = None
@@ -154,7 +156,8 @@ class EvacuationEnv(gym.Env):
         session = self._sessions.get(idx)
         if session is None:
             session = GameSession(levels.get(idx), spectate=True, agent_visual="drone",
-                                  stage_index=idx, agent_brain="learned", policy=None)
+                                  stage_index=idx, agent_brain="learned", policy=None,
+                                  agent_options=self.agent_options)
             self._sessions[idx] = session
         else:
             session.reset()
@@ -226,7 +229,7 @@ class EvacuationEnv(gym.Env):
 
     # ------------------------------------------------------------ internals
     def _observe(self):
-        return build_observation(self._session.agent, self._session.victims)
+        return build_observation(self._session.agent, self._session.victims, self.obs_version)
 
     def _info(self):
         return {"stage": self._stage_index,

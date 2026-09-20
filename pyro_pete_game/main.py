@@ -63,7 +63,7 @@ from levels.tuning import DEFAULT as DEFAULT_TUNING
 from intro import IntroScene
 from menu import ChoiceMenu, build_menu_background
 from audio import AudioManager
-from ml.policy import model_available, load_policy
+from ml.policy import available_models, load_policy
 
 FONT_COLOR = (230, 230, 230)
 
@@ -128,6 +128,10 @@ def _mark_saved(follow_order):
 
 
 # ---------------------------------------------------------------- game session
+# search-order settings a run may switch on for the AI body (RescueAgent)
+AGENT_OPTION_NAMES = ("frontier_lean", "frontier_min_reveal", "frontier_defer_small")
+
+
 class GameSession:
     """All the per-run state, so restarting is just reset() and main()
     stays a thin pygame shell around update()/draw().
@@ -142,7 +146,7 @@ class GameSession:
     so different runs in the same session can look different."""
 
     def __init__(self, stage, spectate=False, agent_visual=None, stage_index=0,
-                 agent_brain="astar", policy=None):
+                 agent_brain="astar", policy=None, agent_options=None):
         """stage is a module from levels.STAGES -- it carries the map
         (build()), its fixed SEED, and the per-stage difficulty TUNING.
         Taking the module rather than a bare TileMap is what lets one
@@ -157,6 +161,11 @@ class GameSession:
         self.stage = stage
         self.agent_brain = agent_brain
         self.policy = policy
+        # optional search-order settings for the AI body (see RescueAgent); a
+        # policy can carry its own (a model trained to copy a variant needs the
+        # same variant in its observation), explicit ones win
+        self.agent_options = dict(getattr(policy, "agent_options", None) or {})
+        self.agent_options.update(agent_options or {})
         self.stage_index = stage_index
         self.tuning = getattr(stage, "TUNING", DEFAULT_TUNING)
         self.tilemap = stage.build()
@@ -183,7 +192,7 @@ class GameSession:
         self.player_stats = RunStats("You (Pete)")
         label = "AI drone" if self.agent_visual != "robot" else "AI robot"
         if self.agent_brain == "learned":
-            label += " (learned)"
+            label += f" ({getattr(self.policy, 'label', None) or 'learned'})"
         self.agent_stats = RunStats(label)
 
         self.hazards = HazardField(
@@ -210,6 +219,10 @@ class GameSession:
             self.agent = LearnedAgent(tm, tm.spawn_cell, policy=self.policy, **agent_args)
         else:
             self.agent = RescueAgent(tm, tm.spawn_cell, **agent_args)
+        for name, value in self.agent_options.items():
+            if name not in AGENT_OPTION_NAMES:
+                raise ValueError(f"unknown agent option {name!r}")
+            setattr(self.agent, name, value)
         self.agent_trail = deque(maxlen=AGENT_TRAIL_MAXLEN)
         self.agent_follow_order = []
 
@@ -631,32 +644,51 @@ def _build_skin_menu(background=None):
     )
 
 
-def _build_brain_menu(background=None):
+def _build_brain_menu(models=None, background=None):
+    """A* first (the default, highlighted when the menu opens), then every
+    learned model whose file is present (ml.policy.available_models)."""
+    if models is None:
+        models = available_models()
+    options = [("A* planner", "astar", "The original hazard-aware route planner")]
+    options += [(label, "model:" + key, desc) for key, label, desc, _path in models]
     return ChoiceMenu(
         "Choose the AI's Brain",
-        [
-            ("A* planner", "astar", "The original hazard-aware route planner"),
-            ("Learned model", "learned", "A neural-network policy trained by reinforcement learning"),
-        ],
+        options,
         subtitle="How should the AI opponent decide where to go?",
         background=background,
     )
 
 
+def _brain_choices(mode, models):
+    """The models to offer on the brain menu, or [] for no menu. Watch AI Play always
+    offers them; Play vs AI (Pete against an A* rival) only when a model was installed
+    as ml/models/ai_policy.zip, as before, so an ordinary checkout's Play flow has no
+    extra screen."""
+    if mode == "watch" or any(key == "installed" for key, *_ in models):
+        return list(models)
+    return []
+
+
 def _new_session(stage_index, mode, visual, brain):
-    """Build a session for the chosen options. A learned brain needs its
+    """Build a session for the chosen options. `brain` is "astar" or
+    "model:<key>" (ml.policy.available_models). A learned brain needs its
     model loaded; if that fails for any reason the run falls back to the
     A* planner rather than refusing to start."""
     policy = None
-    if brain == "learned":
+    agent_brain = "astar"
+    if brain.startswith("model:"):
+        key = brain.split(":", 1)[1]
         try:
-            policy = load_policy()
+            path = next(p for k, _label, _desc, p in available_models() if k == key)
+            policy = load_policy(path)
+            policy.label = next(label for k, label, _d, _p in available_models() if k == key)
+            agent_brain = "learned"
         except Exception as exc:
-            print(f"Could not load the learned model ({exc}); using the A* planner instead.")
-            brain = "astar"
+            print(f"Could not load the learned model {key!r} ({exc}); using the A* planner instead.")
+            policy = None
     return GameSession(levels.get(stage_index), spectate=(mode == "watch"),
                        agent_visual=visual, stage_index=stage_index,
-                       agent_brain=brain, policy=policy)
+                       agent_brain=agent_brain, policy=policy)
 
 
 def main():
@@ -736,10 +768,11 @@ def main():
             skin_menu.update(dt, events)
             if skin_menu.result is not None:
                 chosen_visual = skin_menu.result
-                if model_available():
+                models = _brain_choices(chosen_mode, available_models())
+                if models:
                     # only offered once a trained model exists, so a
                     # checkout without one never sees this screen
-                    brain_menu = _build_brain_menu(menu_background)
+                    brain_menu = _build_brain_menu(models, menu_background)
                     app_state = "menu_brain"
                 else:
                     chosen_brain = "astar"

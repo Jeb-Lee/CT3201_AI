@@ -48,7 +48,9 @@ from settings import (
     HEALTH_MAX, TILE_SIZE,
 )
 from entities.victim import STATE_IDLE
-from pathfinding import astar_path, weighted_distances
+from collections import deque
+
+from pathfinding import NEIGHBOR_STEPS, astar_path, weighted_distances
 
 OUTLINE_COLOR = (255, 255, 255)
 CORE_COLOR = (20, 20, 24)
@@ -125,7 +127,47 @@ def _get_robot_sprites():
     return _ROBOT_SPRITES_CACHE
 
 
+def _distances_from_exit(tilemap):
+    """Walking distance from the exit to every floor cell of the building, over the
+    STATIC floor plan (walls only). A locked door or a fallen ceiling does not change
+    "which side of the building is far from the exit", and taking them into account would
+    leave the whole spawn side (behind the door) with no distance at all. The floor plan
+    never changes during a run, so it is computed once per map."""
+    cached = getattr(tilemap, "_exit_distance_cache", None)
+    if cached is not None:
+        return cached
+    start = tilemap.exit_cell
+    dist = {start: 0}
+    queue = deque([start])
+    while queue:
+        col, row = queue.popleft()
+        for dc, dr in NEIGHBOR_STEPS:
+            cell = (col + dc, row + dr)
+            if cell not in dist and tilemap.tile_at(*cell) != "#":
+                dist[cell] = dist[(col, row)] + 1
+                queue.append(cell)
+    tilemap._exit_distance_cache = dist
+    return dist
+
+
 class RescueAgent:
+    # Search-order options. Both are OFF by default, which is the original
+    # planner exactly (the benchmark). They exist so an experiment, or a model
+    # trained to copy a variant, can ask for a different search without
+    # touching how the default agent behaves; see GameSession(agent_options=...).
+    #   frontier_lean        > 0 leans the search towards the far side of the map
+    #                        (relative to the exit): it picks the frontier that
+    #                        minimises  distance_from_agent - lean * distance_to_exit.
+    #   frontier_min_reveal  > 0 makes it skip a frontier that would reveal fewer
+    #                        than this many unseen floor tiles: no special trip into
+    #                        a corner just to finish looking at its last few tiles.
+    #   frontier_defer_small True turns the skip into a deferral: a small corner is only
+    #                        visited when nothing bigger is left to search (someone is still
+    #                        missing, the corner is the only place left), never before.
+    frontier_lean = 0.0
+    frontier_min_reveal = 0
+    frontier_defer_small = False
+
     def __init__(self, tilemap, start_cell, hazard_field=None, stats=None,
                  visual=None, speed_scale=1.0):
         """speed_scale multiplies AGENT_SPEED for this run -- later
@@ -214,7 +256,10 @@ class RescueAgent:
     def _nearest_unexplored(self, dist):
         """Closest reachable cell (by weighted distance) that the agent
         hasn't seen yet -- its exploration target when it has no known
-        victim to chase."""
+        victim to chase. (With the optional search-order settings above
+        it is the best-scoring frontier instead of the nearest.)"""
+        if self.frontier_lean or self.frontier_min_reveal:
+            return self._preferred_unexplored(dist)
         best, best_d = None, float("inf")
         for cell, d in dist.items():
             if cell in self.explored:
@@ -224,6 +269,40 @@ class RescueAgent:
                    for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                 if d < best_d:
                     best, best_d = cell, d
+        return best
+
+    def _preferred_unexplored(self, dist):
+        """The frontier chosen when a search-order setting is on. Uses only
+        what the default rule uses (the layout, the exit, its own explored
+        set): the fog of war is unchanged. A frontier is an unseen floor cell
+        next to a seen one."""
+        tm = self.tilemap
+        d_exit = _distances_from_exit(tm)
+        unseen = None
+        if self.frontier_min_reveal:
+            unseen = {c for c in dist if c not in self.explored}
+            radius = int(AGENT_VISION_TILES)
+            offsets = [(dc, dr) for dc in range(-radius, radius + 1) for dr in range(-radius, radius + 1)
+                       if dc * dc + dr * dr <= AGENT_VISION_TILES * AGENT_VISION_TILES]
+        best, best_key = None, (math.inf, (0, 0))
+        fallback, fallback_key = None, (math.inf, (0, 0))
+        for cell, d in dist.items():
+            if cell in self.explored:
+                continue
+            if not any((cell[0] + dc, cell[1] + dr) in self.explored
+                       for dc, dr in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                continue
+            key = (d - self.frontier_lean * d_exit.get(cell, 0), cell)
+            if key < fallback_key:
+                fallback, fallback_key = cell, key
+            if unseen is not None:
+                reveal = sum(1 for dc, dr in offsets if (cell[0] + dc, cell[1] + dr) in unseen)
+                if reveal < self.frontier_min_reveal:
+                    continue
+            if key < best_key:
+                best, best_key = cell, key
+        if best is None and self.frontier_defer_small:
+            return fallback
         return best
 
     # ------------------------------------------------------------------ goal

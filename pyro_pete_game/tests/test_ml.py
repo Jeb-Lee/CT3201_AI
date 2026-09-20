@@ -2,7 +2,7 @@
 
 The learned brain is an opt-in alternative to the A* rescuer, so the most
 important checks here are (a) the default game is untouched and (b) the
-learned agent is held to the same information limits as A*.
+learned agent never sees more than A* does (observation version 1 sees less; see ml/observation.py).
 
 Needs pygame (dummy drivers) and, for the environment tests, gymnasium;
 those skip cleanly if it isn't installed. Torch / stable-baselines3 are
@@ -150,7 +150,8 @@ def test_observation_size_matches_layout():
 
 
 def test_unexplored_cells_reveal_nothing_but_the_exit():
-    """Fair information: an unexplored cell shows no walls, fire or occupants."""
+    """Version 1 hides what it has not explored: an unexplored cell shows no walls, fire or
+    occupants (stricter than A*, which plans over the whole map)."""
     s = _session()
     agent = s.agent
     agent.explored = {agent.current_cell}          # forget everything else

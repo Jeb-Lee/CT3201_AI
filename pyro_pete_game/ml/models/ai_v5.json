@@ -1,0 +1,7 @@
+{
+  "agent_options": {
+    "frontier_lean": 0.5,
+    "frontier_min_reveal": 4
+  },
+  "obs_version": 4
+}

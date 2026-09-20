@@ -86,6 +86,9 @@ def main():
                     help="extra penalty when the AI stands still until it gives up (experimental)")
     ap.add_argument("--timeout-penalty", type=float, default=0.0,
                     help="extra penalty when the time limit runs out (experimental)")
+    ap.add_argument("--obs-version", type=int, choices=(1, 2, 3, 4), default=1,
+                    help="observation version (2 = with A*-equivalent route hints, 3 = plus a short memory; "
+                         "must match the model)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--max-seconds", type=float, default=180.0,
@@ -152,7 +155,8 @@ def main():
     env = training.make_train_env(
         train_stages, args.n_envs, args.seed, args.max_seconds, gamma=args.gamma,
         reward=RewardConfig(abandon=args.abandon_penalty, give_up=args.give_up_penalty,
-                             timeout=args.timeout_penalty))
+                             timeout=args.timeout_penalty),
+        obs_version=args.obs_version)
     net_arch = tuple(int(x) for x in args.net_arch.split(",") if x.strip())
     if args.resume:
         model = training.load_for_training(args.algo, args.resume, env, args.device)
