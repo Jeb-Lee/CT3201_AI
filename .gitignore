@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 .idea/
 *.egg-info/
+
+# training runs (logs, checkpoints, recordings) -- regenerate with tools/train_agent.py
+runs/
+# trained models kept locally under ML_Findings (12 x 8 MB); add them to git (or Git LFS) deliberately if wanted
+pyro_pete_game/ml/ML_Findings/experiments/*/final_model.zip

@@ -296,7 +296,11 @@ class RescueAgent:
         idle = [v.cell for v in self.known_victims
                 if v.state == STATE_IDLE and v.cell in dist]
         if idle:
-            target = min(idle, key=lambda c: dist[c])
+            # Ties on distance are broken by cell, not by whatever order
+            # the set of spotted occupants happens to iterate in (that
+            # follows memory addresses), so the same situation always
+            # gets the same decision -- evaluation runs depend on it.
+            target = min(idle, key=lambda c: (dist[c], c))
         elif self._all_occupants_accounted(victims):
             target = self.tilemap.exit_cell
         else:
@@ -346,21 +350,23 @@ class RescueAgent:
             # knows of no idle victim, and has nothing left to explore
             at_exit = self.current_cell == self.tilemap.exit_cell
             no_known = not any(v.state == STATE_IDLE for v in self.known_victims)
-            # Done means everyone is accounted for, or nothing is left to
-            # look at, or nothing is left worth the health it would cost
-            # to go and look.
-            if self._all_occupants_accounted(victims):
-                search_over = True
-            else:
-                unexplored = self._nearest_unexplored(
-                    weighted_distances(self.tilemap, self.current_cell, self._cost_fn())
-                )
-                search_over = unexplored is None or not self._worth_exploring(unexplored)
-            if at_exit and no_known and search_over:
+            if at_exit and no_known and self._search_over(victims):
                 self._finished = True
             return
 
         self._advance_along_path(dt)
+
+    def _search_over(self, victims):
+        """Nothing left to look for: everyone is accounted for, or nothing
+        is left to look at, or nothing is left worth the health it would
+        cost to go and look. Its own method so an alternative brain
+        (entities/learned_agent.py) can define "over" differently."""
+        if self._all_occupants_accounted(victims):
+            return True
+        unexplored = self._nearest_unexplored(
+            weighted_distances(self.tilemap, self.current_cell, self._cost_fn())
+        )
+        return unexplored is None or not self._worth_exploring(unexplored)
 
     def _replan(self, victims):
         goal = self._choose_goal_cell(victims)

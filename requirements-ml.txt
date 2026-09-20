@@ -1,0 +1,15 @@
+# Only needed to TRAIN a learned AI rescuer (and to run a trained one in the
+# game). The game, the tests and the evaluation harness for A*/random/stay
+# agents run on requirements.txt. Screen recordings also want ffmpeg on PATH
+# (without it they fall back to GIFs).
+#
+#   pip install -r requirements.txt -r requirements-ml.txt
+#
+# Versions are the ones pip resolved on this project's Python 3.13 venv; the
+# torch wheel is large (CPU-only is enough: pip install torch --index-url
+# https://download.pytorch.org/whl/cpu).
+gymnasium>=1.3
+stable-baselines3>=2.9
+sb3-contrib>=2.9        # MaskablePPO -- lets the agent skip walls via an action mask
+torch>=2.14
+matplotlib>=3.8      # the epoch-vs-accuracy chart (report.html works without it)

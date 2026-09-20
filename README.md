@@ -67,7 +67,106 @@ than wandering an emptied building.
 - [x] Shared occupant pool: `out / left / lost` counter, stage ends when everyone left alive is out (or found and someone reaches the exit); a dead rescuer loses its escort
 - [x] Outcome-aware results panel -- Enter advances a stage after a clear
 - [x] The AI knows the stage head-count, so it stops searching once nobody is left to find
+- [x] Optional learned-AI option (opt-in, AI player only): Gymnasium environment, evaluation harness with confidence intervals, `LearnedAgent` -- **no model trained yet**, see "Learned AI (optional)"
 - [x] Music for the title, menus, gameplay and both endings -- synthesised at runtime (`audio.py`), no audio assets, mute with `M`
+
+## Learned AI (optional)
+
+The default AI is the hazard-weighted A* rescuer above, and it stays the
+default. There is also an **opt-in learned brain** for the AI player only --
+Pete is always keyboard-driven, and nothing here changes how A* plays.
+
+- `pyro_pete_game/ml/` -- the pieces:
+  - `observation.py`: what the learned agent sees and the five actions
+    (stay / up / down / left / right, one tile per step). It gets the same
+    information A* does and no more: only explored layout, hazards and
+    occupants within its vision radius, plus the exit, head-count and fire
+    countdown that the HUD already shows a human.
+  - `env.py`: `EvacuationEnv`, a Gymnasium environment that steps the real
+    `GameSession` (same fire, collapses, locked door and stage-end rules).
+    Reward comes from the game's own score, with no distance shaping. Passes
+    `gymnasium.utils.env_checker.check_env`; `env.action_masks()` is there
+    for `sb3_contrib.MaskablePPO`.
+  - `policy.py`, `outcome.py`, `evaluation.py`: the policy interface, one
+    shared definition of how an AI-only episode ended, and the harness.
+- `entities/learned_agent.py` -- `LearnedAgent` shares the A* agent's body
+  (health, hazard damage, smoke slowdown, vision, sprites) so both brains face
+  identical rules, and replaces only the decision.
+- **In the game** a "Learned model" entry appears on a brain menu (after the AI
+  skin menu) *only* when a trained model exists at
+  `pyro_pete_game/ml/models/ai_policy.zip` and stable-baselines3 is importable.
+  With no model the game plays exactly as before.
+
+**Status: the plumbing is built, tested and has run for real; no model that
+plays well exists yet** (see the experiment notes below). Loading a real
+stable-baselines3 model through the game's menu has been verified.
+
+Compare agents (works today; needs only `requirements.txt`, not gymnasium or torch):
+
+```bash
+python tools/evaluate_agents.py --agents astar,random,stay --stages 1-3 --episodes 20 --workers 4
+```
+
+Every agent plays the same stages with the same seeds, and the report gives
+Wilson intervals for rates and a paired score comparison. Use plenty of
+episodes: an earlier 9-vs-7-deaths difference over 80 runs turned out to be
+noise, which is why the intervals are printed. To judge a trained model
+fairly, train on stages 1-7 and evaluate on 8-10, which it has never seen.
+
+### Training, and reviewing how it went
+
+```bash
+pip install -r requirements.txt -r requirements-ml.txt
+python tools/train_agent.py --timesteps 500000 --name first_try
+```
+
+Trains MaskablePPO on stages 1-7 and validates on stages 8-10, which it never
+trains on. About 550 steps/s with 6 parallel envs on the dev machine (100k
+steps in ~3 minutes). Everything is kept in `runs/<name>/` (git-ignored):
+
+| file | what it is |
+|---|---|
+| `epochs.csv` | **the epoch-vs-accuracy log**: one row per epoch with steps, accuracy over the last 100 training episodes, died / gave-up / timeout rates, game score, reward, policy loss, value loss, entropy, KL, steps/s |
+| `evaluations.csv` | at each checkpoint, fixed seeded episodes with the deterministic policy on training stages and held-out stages, with 95% intervals, next to A* on the *same* episodes |
+| `epoch_vs_accuracy.png` | chart of the two files above (accuracy, game score, loss/entropy vs epoch) |
+| `report.html` | chart + tables + the recordings in one page; auto-refreshes every 30 s while training so it can stay open in a browser |
+| `videos/` | screen recordings of the model playing at each checkpoint, and A* once for comparison |
+| `checkpoints/`, `best_model.zip`, `final_model.zip` | saved models |
+| `final_report.txt` | fresh-seed test at the end: best and final model vs A*, paired |
+
+*Epoch* = one iteration: collect a batch of play with the current policy, then
+update the network. *Accuracy* = the share of episodes in which the AI got
+every occupant still alive out and survived itself. RL has no fixed dataset, so
+there are two accuracies: the noisy rolling **train accuracy** while learning,
+and the **validation accuracy** at checkpoints (the honest one, especially on
+held-out stages). Choosing the best checkpoint on held-out episodes makes that
+number slightly optimistic, which is why the final test uses fresh seeds.
+
+Useful options: `--max-minutes N` (stop gracefully), `--resume MODEL.zip`
+(continue; `--run-dir` to keep logging in the same folder), `--install` (copy
+the best model to `pyro_pete_game/ml/models/ai_policy.zip` so the game offers
+"Learned model" -- only use this on a model that beats or matches A*),
+`--record-stages 1,9`, `--eval-every`, `--eval-episodes`, and
+`--abandon-penalty` (see below). Ctrl+C saves and still produces the report.
+
+```bash
+python tools/record_agent.py --agent model:runs/first_try/best_model.zip --stage 9   # record any agent, any stage
+python tools/record_agent.py --agent astar --stage 9 --seed 1000                     # same seed => compare side by side
+python tools/plot_training.py runs/first_try                                          # rebuild chart + report
+```
+
+**What the experiments showed.** The plumbing works, and the AI has **not**
+learned to rescue people yet. With the plain game-score reward it learned to
+stand still (74-91% of episodes, three seeds); a penalty for leaving occupants
+inside did not change that, because it lands equally on standing still and on
+dying. With a penalty for giving up, one of two seeds learned over 300,000 steps
+to lead about a fifth of the occupants out, one at a time and only on the stages
+it trained on. In the form the game would use (most likely action) none of the
+12 trained models evacuates anyone, against A* at 86%. The full write-up,
+including the reward-design story, the charts, the recordings and the
+predictions that turned out wrong, is in
+[`pyro_pete_game/ml/ML_Findings/`](pyro_pete_game/ml/ML_Findings/README.md).
+A GPU would not speed training up (87% of the time is the game simulation).
 
 ## Running it
 
@@ -84,7 +183,7 @@ Controls: WASD / arrows move, `P` pause, `R` restart, `M` mute, `Esc` quit.
 On the results panel, Enter goes to the next stage after a clear, or back to
 the menu otherwise.
 Menus: arrow keys or mouse to choose, Enter/click to confirm, `Esc` to back out a screen.
-Tests: `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
+Tests (160): `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
 (`tests/test_core.py` also runs standalone with plain `python`).
 
 ## Project layout
@@ -115,6 +214,9 @@ pyro_pete_game/
     victim.py          # trapped occupants: 4-dir sprites + circle fallback, escort;
                        #   states idle / following / saved / dead
     rescue_agent.py    # autonomous hazard-weighted A* agent (robot or drone skin)
+    learned_agent.py   # same body, decisions from a learned policy (opt-in, AI player only)
+  ml/                  # learned-AI option: observation, policy, env (Gymnasium), evaluation,
+                       #   training (SB3 callbacks), report (epoch-vs-accuracy), recording (video)
   levels/level_01.py   # first map (size + seed)
   assets/pete/         # Pete sprite frames (hand-picked from clips)
   assets/robot/        # walking-robot AI skin (idle + walk, 4 directions)
@@ -124,9 +226,15 @@ pyro_pete_game/
   docs/ai_critique.md  # "what AI got wrong" write-up for the report
   tests/test_core.py   # maze / search / hazard-placement checks
   tests/test_campaign.py   # ten stages, stage-end rules, win/lose outcomes, music
+  tests/test_ml.py         # observation fairness, learned agent, Gym env, harness statistics
+  tests/test_training.py   # run logs, report/chart, recording, a tiny real training run
 tools/
   build_victim_sprites.py  # rebuilds assets/victims/ from the Drive art
   search_comparison.py     # BFS vs Dijkstra vs A* vs Greedy on the maze
+  evaluate_agents.py       # compare AI agents on the real game, with confidence intervals
+  train_agent.py           # train the learned AI; logs epoch-vs-accuracy, records videos, final test
+  record_agent.py          # screen-record any agent on any stage (MP4 via ffmpeg, else GIF)
+  plot_training.py         # rebuild a run's chart + report.html from its CSVs
 ```
 
 ## Asset notes

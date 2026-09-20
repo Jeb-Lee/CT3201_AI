@@ -27,6 +27,7 @@ each single pose rather than hand-drawn footwork -- a deliberate
 low-effort choice for an NPC that only ever trails the player.
 """
 
+import functools
 import os
 import random
 from collections import deque
@@ -82,6 +83,7 @@ def _load_sprite(path, target_height):
     return image
 
 
+@functools.lru_cache(maxsize=None)
 def _load_sprite_set(sprite_name):
     """Load {idle,walk} frames for one victim sprite folder.
 
@@ -90,6 +92,11 @@ def _load_sprite_set(sprite_name):
     draws the circle fallback). Any direction whose files are missing
     reuses the 'down' frames, so shipping only a down-facing set is a
     supported, deliberate configuration -- not a broken one.
+
+    Cached per folder: every stage reset places victims again, and reading the
+    same PNGs from disk each time was ~40% of a training run's time. The
+    frames are only ever blitted (the one tint copies first), so sharing
+    them between victims is safe.
     """
     if not sprite_name:
         return None

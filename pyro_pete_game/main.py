@@ -52,6 +52,7 @@ from entities.victim import (
     place_victims, STATE_IDLE, STATE_FOLLOWING, STATE_SAVED, STATE_DEAD,
 )
 from entities.rescue_agent import RescueAgent
+from entities.learned_agent import LearnedAgent
 from camera import Camera
 from hazard_field import HazardField
 from visibility import VisibilitySystem
@@ -62,6 +63,7 @@ from levels.tuning import DEFAULT as DEFAULT_TUNING
 from intro import IntroScene
 from menu import ChoiceMenu, build_menu_background
 from audio import AudioManager
+from ml.policy import model_available, load_policy
 
 FONT_COLOR = (230, 230, 230)
 
@@ -139,12 +141,22 @@ class GameSession:
     an explicit menu choice rather than always reading settings.AGENT_VISUAL,
     so different runs in the same session can look different."""
 
-    def __init__(self, stage, spectate=False, agent_visual=None, stage_index=0):
+    def __init__(self, stage, spectate=False, agent_visual=None, stage_index=0,
+                 agent_brain="astar", policy=None):
         """stage is a module from levels.STAGES -- it carries the map
         (build()), its fixed SEED, and the per-stage difficulty TUNING.
         Taking the module rather than a bare TileMap is what lets one
-        GameSession serve all ten stages unchanged."""
+        GameSession serve all ten stages unchanged.
+
+        agent_brain picks how the AI decides: "astar" (the default -- the
+        hazard-weighted route planner) or "learned" (a trained policy,
+        see ml/). It only ever affects the AI player; Pete is always
+        human. `policy` is the object a learned brain asks for its moves
+        (ml.policy); it may be None when something else is stepping the
+        agent from outside, as the training environment does."""
         self.stage = stage
+        self.agent_brain = agent_brain
+        self.policy = policy
         self.stage_index = stage_index
         self.tuning = getattr(stage, "TUNING", DEFAULT_TUNING)
         self.tilemap = stage.build()
@@ -169,7 +181,10 @@ class GameSession:
         # below.
         self.player = Player(spawn_x, spawn_y)
         self.player_stats = RunStats("You (Pete)")
-        self.agent_stats = RunStats("AI drone" if self.agent_visual != "robot" else "AI robot")
+        label = "AI drone" if self.agent_visual != "robot" else "AI robot"
+        if self.agent_brain == "learned":
+            label += " (learned)"
+        self.agent_stats = RunStats(label)
 
         self.hazards = HazardField(
             tm, seed=self.stage.SEED,
@@ -188,9 +203,13 @@ class GameSession:
         self.player_done = None  # "exit" | "dead" | None
         self.player_walked = {tm.spawn_cell}  # every cell Pete has stepped on
 
-        self.agent = RescueAgent(tm, tm.spawn_cell, hazard_field=self.hazards,
-                                 stats=self.agent_stats, visual=self.agent_visual,
-                                 speed_scale=self.tuning.agent_speed_scale)
+        agent_args = dict(hazard_field=self.hazards, stats=self.agent_stats,
+                          visual=self.agent_visual,
+                          speed_scale=self.tuning.agent_speed_scale)
+        if self.agent_brain == "learned":
+            self.agent = LearnedAgent(tm, tm.spawn_cell, policy=self.policy, **agent_args)
+        else:
+            self.agent = RescueAgent(tm, tm.spawn_cell, **agent_args)
         self.agent_trail = deque(maxlen=AGENT_TRAIL_MAXLEN)
         self.agent_follow_order = []
 
@@ -612,10 +631,40 @@ def _build_skin_menu(background=None):
     )
 
 
+def _build_brain_menu(background=None):
+    return ChoiceMenu(
+        "Choose the AI's Brain",
+        [
+            ("A* planner", "astar", "The original hazard-aware route planner"),
+            ("Learned model", "learned", "A neural-network policy trained by reinforcement learning"),
+        ],
+        subtitle="How should the AI opponent decide where to go?",
+        background=background,
+    )
+
+
+def _new_session(stage_index, mode, visual, brain):
+    """Build a session for the chosen options. A learned brain needs its
+    model loaded; if that fails for any reason the run falls back to the
+    A* planner rather than refusing to start."""
+    policy = None
+    if brain == "learned":
+        try:
+            policy = load_policy()
+        except Exception as exc:
+            print(f"Could not load the learned model ({exc}); using the A* planner instead.")
+            brain = "astar"
+    return GameSession(levels.get(stage_index), spectate=(mode == "watch"),
+                       agent_visual=visual, stage_index=stage_index,
+                       agent_brain=brain, policy=policy)
+
+
 def main():
     """Thin pygame shell that steps through the run's screens in order:
 
-        intro -> menu_mode -> menu_skin -> playing/watching -> results
+        intro -> menu_mode -> menu_skin -> [menu_brain] -> playing/watching -> results
+
+    (menu_brain only appears when a trained model exists -- see ml/policy.py)
                     ^________________________________________|
                           (Enter on the results panel)
 
@@ -647,8 +696,10 @@ def main():
     intro_scene = IntroScene()
     mode_menu = _build_mode_menu(menu_background)
     skin_menu = None
+    brain_menu = None
     chosen_mode = None
     chosen_visual = "robot"
+    chosen_brain = "astar"
     session = None
     stage_index = 0  # 0-based position in levels.STAGES for this campaign run
 
@@ -685,15 +736,30 @@ def main():
             skin_menu.update(dt, events)
             if skin_menu.result is not None:
                 chosen_visual = skin_menu.result
-                stage_index = 0  # every campaign starts at stage 1
-                session = GameSession(levels.get(stage_index),
-                                      spectate=(chosen_mode == "watch"),
-                                      agent_visual=chosen_visual,
-                                      stage_index=stage_index)
-                app_state = "playing" if chosen_mode == "play" else "watching"
+                if model_available():
+                    # only offered once a trained model exists, so a
+                    # checkout without one never sees this screen
+                    brain_menu = _build_brain_menu(menu_background)
+                    app_state = "menu_brain"
+                else:
+                    chosen_brain = "astar"
+                    stage_index = 0  # every campaign starts at stage 1
+                    session = _new_session(stage_index, chosen_mode, chosen_visual, chosen_brain)
+                    app_state = "playing" if chosen_mode == "play" else "watching"
             elif skin_menu.cancelled:
                 app_state = "menu_mode"
                 mode_menu = _build_mode_menu(menu_background)
+
+        elif app_state == "menu_brain":
+            brain_menu.update(dt, events)
+            if brain_menu.result is not None:
+                chosen_brain = brain_menu.result
+                stage_index = 0
+                session = _new_session(stage_index, chosen_mode, chosen_visual, chosen_brain)
+                app_state = "playing" if chosen_mode == "play" else "watching"
+            elif brain_menu.cancelled:
+                skin_menu = _build_skin_menu(menu_background)
+                app_state = "menu_skin"
 
         elif app_state in ("playing", "watching"):
             for event in events:
@@ -709,10 +775,14 @@ def main():
                     # it (or finishing the campaign) drops back to the menu.
                     if session.cleared and session.has_next_stage:
                         stage_index = session.stage_index + 1
+                        # same AI brain (and already-loaded model) for the
+                        # whole campaign run
                         session = GameSession(levels.get(stage_index),
                                               spectate=session.spectate,
                                               agent_visual=chosen_visual,
-                                              stage_index=stage_index)
+                                              stage_index=stage_index,
+                                              agent_brain=session.agent_brain,
+                                              policy=session.policy)
                     else:
                         app_state = "menu_mode"
                         mode_menu = _build_mode_menu(menu_background)
@@ -725,7 +795,7 @@ def main():
         # simple per-frame statement instead of transition bookkeeping.
         if app_state == "intro":
             audio.play("title")
-        elif app_state in ("menu_mode", "menu_skin"):
+        elif app_state in ("menu_mode", "menu_skin", "menu_brain"):
             audio.play("menu")
         elif session is not None and session.state == "results":
             audio.play("win" if session.cleared else "loss")
@@ -740,6 +810,8 @@ def main():
             mode_menu.draw(screen)
         elif app_state == "menu_skin":
             skin_menu.draw(screen)
+        elif app_state == "menu_brain":
+            brain_menu.draw(screen)
         elif app_state in ("playing", "watching"):
             session.draw(screen)
             if session.state == "results":
