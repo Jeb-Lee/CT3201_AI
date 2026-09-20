@@ -69,3 +69,85 @@ def test_status_panel_width_does_not_twitch_as_the_clock_changes():
         session.agent_stats.elapsed = elapsed
         session.draw(screen)
     assert len(widths) == 1
+
+
+# --- results panel alignment -------------------------------------------------
+import results
+from stats import RunStats
+
+_FONTS = tuple(pygame.font.SysFont(None, s) for s in (44, 30, 24))
+
+
+def _stats(label="AI robot", **kw):
+    s = RunStats(label)
+    s.victims_saved = kw.get("saved", 3)
+    s.elapsed = kw.get("secs", 43.0)
+    s.distance = kw.get("tiles", 110.4) * 64
+    s.damage_taken = kw.get("dmg", 33)
+    s.replans, s.goal_changes = kw.get("replans", 114), kw.get("goals", 24)
+    s.finished_reason = kw.get("reason", "exit")
+    if kw.get("died"):
+        s.deaths = 1
+    return s
+
+
+def test_summary_values_are_not_space_padded():
+    """Space-padding never lined up in a proportional font, and it left
+    "0" sitting further right than "58". Alignment is the renderer's job."""
+    for label, value in _stats(dmg=0).summary_rows():
+        assert value == value.strip(), (label, value)
+
+
+def test_summary_health_lost_is_not_confused_with_the_damage_penalty():
+    labels = [l for l, _ in _stats().summary_rows()]
+    assert "Health lost" in labels and "Damage taken" not in labels
+    assert "Damage taken" in [l for l, _ in _stats().score_breakdown()]
+
+
+@pytest.mark.parametrize("kw", [dict(), dict(dmg=0), dict(died=True, reason="dead")])
+def test_draw_column_uses_exactly_the_height_it_reports(kw):
+    """The panel is sized from _column_height, so it must match what
+    _draw_column really uses or rows overrun the panel again."""
+    st = _stats(**kw)
+    surf = pygame.Surface((600, 700), pygame.SRCALPHA)
+    end = results._draw_column(surf, _FONTS[1], _FONTS[2], 0, 10, 300, st)
+    assert end - 10 == results._column_height(_FONTS[2], st)
+
+
+def test_values_end_on_the_shared_right_edge():
+    """A number is right-aligned to the column edge: it touches it and never
+    pokes past it. (Left-aligned values left the right edges ragged.)"""
+    st = _stats()
+    surf = pygame.Surface((400, 500))
+    surf.fill((0, 0, 0))
+    right = 380
+    results._draw_column(surf, _FONTS[1], _FONTS[2], 20, 0, right - 20, st)
+    # first score row: y = section heading + rule, then one row of text
+    row_top = results._HEAD_H + _FONTS[2].get_height() + 2 + 8
+    band = range(row_top, row_top + _FONTS[2].get_height())
+    lit = [x for x in range(399, 20, -1)
+           if any(surf.get_at((x, yy))[:3] != (0, 0, 0) for yy in band)]
+    assert lit, "no text drawn on the first score row"
+    assert right - 3 <= lit[0] <= right       # value ends on the edge, not past it
+
+
+@pytest.mark.parametrize("draw", ["watch", "race"])
+def test_results_panel_fits_on_screen_even_with_every_row(draw, monkeypatch):
+    seen = []
+    real = results._draw_panel
+    monkeypatch.setattr(results, "_draw_panel",
+                        lambda s, px, py, w, h: (seen.append((px, py, w, h)),
+                                                 real(s, px, py, w, h))[1])
+    screen = pygame.display.get_surface()
+    worst = _stats(dmg=200, died=True, reason="dead")
+    label = levels.label(levels.STAGE_COUNT - 1)
+    if draw == "watch":
+        results.draw_watch_results(screen, *_FONTS, worst, 12, stage_label=label,
+                                   cleared=False, has_next_stage=True)
+    else:
+        results.draw_results(screen, *_FONTS, _stats("You (Pete)", dmg=200,
+                             died=True, reason="dead"), worst, 12,
+                             outcome="died", stage_label=label, has_next_stage=True)
+    px, py, w, h = seen[0]
+    assert px >= 0 and py >= 0
+    assert px + w <= SCREEN_WIDTH and py + h <= results.SCREEN_HEIGHT

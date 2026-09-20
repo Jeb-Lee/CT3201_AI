@@ -35,63 +35,92 @@ _OUTCOME_HEADLINE = {
 }
 
 
-def _draw_column(surface, head_font, body_font, x, top_y, st):
+# --- layout -----------------------------------------------------------
+# One left margin and one right edge for everything in a column, so labels
+# line up on the left and every number lines up on the right. (Previously the
+# title, subtitle and column each started at a different x, the points and
+# stats numbers sat at different distances, and the values were left-aligned
+# so their right edges were ragged.)
+_MARGIN = 32          # panel edge -> content, both sides
+_ROW = 22             # height of one label/value row
+_GAP = 40             # between the two columns of the race panel
+_HEAD_H = 78          # name + reason + big score, before the first section
+_SECTION_GAP = 10     # blank space between the score and stats sections
+_TOP = 86             # panel top -> first column (below headline + subtitle)
+
+
+def _section(surface, body_font, x, right, y, title):
+    """A dim heading with a full-width rule under it. Returns the next y."""
+    surface.blit(body_font.render(title, True, _DIM), (x, y))
+    rule_y = y + body_font.get_height() + 2
+    pygame.draw.line(surface, (60, 62, 70), (x, rule_y), (right, rule_y))
+    return rule_y + 8
+
+
+def _row(surface, body_font, x, right, y, label, value, value_colour):
+    """Label at the left edge, value right-aligned to the shared right edge."""
+    surface.blit(body_font.render(label, True, _DIM), (x, y))
+    v = body_font.render(value, True, value_colour)
+    surface.blit(v, (right - v.get_width(), y))
+    return y + _ROW
+
+
+def _column_height(body_font, st):
+    """Height _draw_column will use, so a panel can be sized to its content
+    instead of a fixed 470px with a dead strip at the bottom."""
+    section = body_font.get_height() + 2 + 8
+    return (_HEAD_H
+            + section + len(st.score_breakdown()) * _ROW
+            + _SECTION_GAP
+            + section + len(st.summary_rows()) * _ROW)
+
+
+def _draw_column(surface, head_font, body_font, x, top_y, width, st):
+    right = x + width
     surface.blit(head_font.render(st.label, True, RESULTS_ACCENT_COLOR), (x, top_y))
     reason = _REASON_TEXT.get(st.finished_reason, "")
     if reason:
         surface.blit(body_font.render(reason, True, _DIM), (x, top_y + 26))
+    surface.blit(head_font.render(str(st.score), True, RESULTS_TEXT_COLOR),
+                 (x, top_y + 46))
 
-    surface.blit(head_font.render(str(st.score), True, RESULTS_TEXT_COLOR), (x, top_y + 46))
-    surface.blit(body_font.render("SCORE", True, _DIM), (x + 4, top_y + 88))
-
-    y = top_y + 114
+    y = _section(surface, body_font, x, right, top_y + _HEAD_H, "SCORE")
     for label, pts in st.score_breakdown():
-        col = _POS if pts >= 0 else _NEG
-        surface.blit(body_font.render(label, True, _DIM), (x, y))
-        surface.blit(body_font.render(f"{pts:+d}", True, col), (x + 190, y))
-        y += 22
+        y = _row(surface, body_font, x, right, y, label, f"{pts:+d}",
+                 _POS if pts >= 0 else _NEG)
 
-    y += 6
-    pygame.draw.line(surface, (60, 62, 70), (x, y), (x + 250, y))
-    y += 8
+    y += _SECTION_GAP
+    y = _section(surface, body_font, x, right, y, "RUN STATS")
     for label, value in st.summary_rows():
-        surface.blit(body_font.render(label, True, _DIM), (x, y))
-        surface.blit(body_font.render(value, True, RESULTS_TEXT_COLOR), (x + 150, y))
-        y += 22
+        y = _row(surface, body_font, x, right, y, label, value, RESULTS_TEXT_COLOR)
     return y
+
+
+def _fit_panel_width(*needed, minimum=420):
+    """Width for a panel whose widest content line needs `needed` pixels:
+    never narrower than `minimum`, never wider than the screen."""
+    return min(max(minimum, *needed), SCREEN_WIDTH - 20)
+
+
+def _draw_panel(surface, px, py, panel_w, panel_h):
+    shade = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    shade.fill((0, 0, 0, 160))
+    surface.blit(shade, (0, 0))
+    panel = pygame.Rect(px, py, panel_w, panel_h)
+    pygame.draw.rect(surface, RESULTS_PANEL_COLOR, panel, border_radius=10)
+    pygame.draw.rect(surface, RESULTS_ACCENT_COLOR, panel, 2, border_radius=10)
 
 
 def draw_results(surface, title_font, head_font, body_font,
                  player_stats, agent_stats, total_victims,
                  outcome=None, stage_label=None, has_next_stage=False):
-    panel_w, panel_h = 660, 470
-    px = (SCREEN_WIDTH - panel_w) // 2
-    py = (SCREEN_HEIGHT - panel_h) // 2
-
-    shade = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    shade.fill((0, 0, 0, 160))
-    surface.blit(shade, (0, 0))
-
-    panel = pygame.Rect(px, py, panel_w, panel_h)
-    pygame.draw.rect(surface, RESULTS_PANEL_COLOR, panel, border_radius=10)
-    pygame.draw.rect(surface, RESULTS_ACCENT_COLOR, panel, 2, border_radius=10)
-
-    headline, headline_colour = _OUTCOME_HEADLINE.get(
-        outcome, ("Run complete", RESULTS_TEXT_COLOR))
-    surface.blit(title_font.render(headline, True, headline_colour),
-                 (px + 28, py + 18))
     sub = f"{total_victims} occupants in the building"
     if stage_label:
         sub = f"{stage_label}  --  {sub}"
-    surface.blit(body_font.render(sub, True, _DIM), (px + 30, py + 54))
-
-    col_x = [px + 40, px + 360]
-    for x, st in zip(col_x, (player_stats, agent_stats)):
-        _draw_column(surface, head_font, body_font, x, py + 86, st)
+    sub_surf = body_font.render(sub, True, _DIM)
 
     verdict = _verdict(player_stats, agent_stats)
     v = head_font.render(verdict, True, RESULTS_TEXT_COLOR)
-    surface.blit(v, (px + (panel_w - v.get_width()) // 2, py + panel_h - 62))
     if outcome == "cleared" and has_next_stage:
         hint_text = "Enter for the next stage     R to replay     Esc to quit"
     elif outcome == "cleared":
@@ -99,13 +128,33 @@ def draw_results(surface, title_font, head_font, body_font,
     else:
         hint_text = "R to try again     Enter for menu     Esc to quit"
     hint = body_font.render(hint_text, True, (150, 150, 155))
-    surface.blit(hint, (px + (panel_w - hint.get_width()) // 2, py + panel_h - 32))
 
+    panel_w = _fit_panel_width(sub_surf.get_width() + 2 * _MARGIN,
+                               v.get_width() + 2 * _MARGIN,
+                               hint.get_width() + 40, minimum=660)
+    col_w = (panel_w - 2 * _MARGIN - _GAP) // 2
+    col_h = max(_column_height(body_font, player_stats),
+                _column_height(body_font, agent_stats))
+    # columns, then the verdict, then the hint -- panel is as tall as that
+    panel_h = _TOP + col_h + 16 + v.get_height() + 14 + hint.get_height() + 18
+    px = (SCREEN_WIDTH - panel_w) // 2
+    py = (SCREEN_HEIGHT - panel_h) // 2
+    _draw_panel(surface, px, py, panel_w, panel_h)
 
-def _fit_panel_width(*needed, minimum=420):
-    """Width for a panel whose widest content line needs `needed` pixels:
-    never narrower than `minimum`, never wider than the screen."""
-    return min(max(minimum, *needed), SCREEN_WIDTH - 20)
+    headline, headline_colour = _OUTCOME_HEADLINE.get(
+        outcome, ("Run complete", RESULTS_TEXT_COLOR))
+    surface.blit(title_font.render(headline, True, headline_colour),
+                 (px + _MARGIN, py + 18))
+    surface.blit(sub_surf, (px + _MARGIN, py + 54))
+
+    for i, st in enumerate((player_stats, agent_stats)):
+        x = px + _MARGIN + i * (col_w + _GAP)
+        _draw_column(surface, head_font, body_font, x, py + _TOP, col_w, st)
+
+    vy = py + _TOP + col_h + 16
+    surface.blit(v, (px + (panel_w - v.get_width()) // 2, vy))
+    surface.blit(hint, (px + (panel_w - hint.get_width()) // 2,
+                        vy + v.get_height() + 14))
 
 
 def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
@@ -128,31 +177,28 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
     hint = body_font.render(hint_text, True, (150, 150, 155))
 
     # The subtitle carries the stage name, so its length varies per stage
-    # ("Turbine Hall" vs "Staff Canteen"). A fixed 420px panel let it spill
-    # out the right-hand side; size the panel to the widest line instead,
-    # never narrower than the original design and never wider than the screen.
-    panel_w = _fit_panel_width(sub_surf.get_width() + 60, hint.get_width() + 40)
-    panel_h = 470
+    # ("Turbine Hall" vs "Staff Canteen"). A fixed panel let it spill out the
+    # right-hand side; size the panel to the widest line instead, never
+    # narrower than the original design and never wider than the screen.
+    panel_w = _fit_panel_width(sub_surf.get_width() + 2 * _MARGIN,
+                               hint.get_width() + 40)
+    col_h = _column_height(body_font, agent_stats)
+    panel_h = _TOP + col_h + 16 + hint.get_height() + 18
     px = (SCREEN_WIDTH - panel_w) // 2
     py = (SCREEN_HEIGHT - panel_h) // 2
-
-    shade = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    shade.fill((0, 0, 0, 160))
-    surface.blit(shade, (0, 0))
-
-    panel = pygame.Rect(px, py, panel_w, panel_h)
-    pygame.draw.rect(surface, RESULTS_PANEL_COLOR, panel, border_radius=10)
-    pygame.draw.rect(surface, RESULTS_ACCENT_COLOR, panel, 2, border_radius=10)
+    _draw_panel(surface, px, py, panel_w, panel_h)
 
     headline, headline_colour = (
         ("Stage cleared", _POS) if cleared else ("The AI didn't make it", _NEG))
     surface.blit(title_font.render(headline, True, headline_colour),
-                 (px + 28, py + 18))
-    surface.blit(sub_surf, (px + 30, py + 54))
+                 (px + _MARGIN, py + 18))
+    surface.blit(sub_surf, (px + _MARGIN, py + 54))
 
-    _draw_column(surface, head_font, body_font, px + 40, py + 86, agent_stats)
+    _draw_column(surface, head_font, body_font, px + _MARGIN, py + _TOP,
+                 panel_w - 2 * _MARGIN, agent_stats)
 
-    surface.blit(hint, (px + (panel_w - hint.get_width()) // 2, py + panel_h - 32))
+    surface.blit(hint, (px + (panel_w - hint.get_width()) // 2,
+                        py + _TOP + col_h + 16))
 
 
 def _verdict(p, a):

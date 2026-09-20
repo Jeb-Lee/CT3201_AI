@@ -93,10 +93,14 @@ class RunStats:
 
     def summary_rows(self):
         """(label, value-string) pairs for the results panel."""
+        # No space-padding to line the numbers up: the game font is
+        # proportional, so padding never aligned. results.py right-aligns
+        # the values instead. "Health lost" (raw health) is named apart from
+        # the "Damage taken" points penalty in score_breakdown.
         rows = [
-            ("Time", f"{self.elapsed:5.1f}s"),
-            ("Distance", f"{self.distance / 64:5.1f} tiles"),
-            ("Damage taken", f"{self.damage_taken:5.0f}"),
+            ("Time", f"{self.elapsed:.1f}s"),
+            ("Distance", f"{self.distance / 64:.1f} tiles"),
+            ("Health lost", f"{self.damage_taken:.0f}"),
         ]
         if self.replans or self.goal_changes:
             rows.append(("Route updates", str(self.replans)))
