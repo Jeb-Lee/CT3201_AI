@@ -221,9 +221,10 @@ def test_verdict_wording():
     assert _verdict(nobody_p, nobody_a) == "Nobody got out"
     # a real tie still reads as one
     assert "Dead heat" in _verdict(pete_out, stats("AI robot", 3, "exit"))
-    # and the opponent is named by its own label, drone or robot
-    assert "AI robot" in _verdict(nobody_p, ai_out)
-    assert "AI drone" in _verdict(nobody_p, stats("AI drone", 3, "exit"))
+    # and the opponent is named the way its heading is, drone or robot
+    assert _verdict(nobody_p, ai_out).startswith("AI Robot beat you")
+    assert _verdict(nobody_p, stats("AI drone", 3, "exit")).startswith("AI Drone beat you")
+    assert _verdict(pete_out, stats("AI robot", 0, "dead")).startswith("You beat AI Robot")
 
 
 # ------------------------------------------------------------------- music

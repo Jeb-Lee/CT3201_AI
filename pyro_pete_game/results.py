@@ -321,12 +321,13 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
 
 
 def _verdict(p, a):
-    """Names the opponent from its own stats label, so a run with the
-    robot skin doesn't report being beaten by the drone."""
+    """Names the opponent the way its heading does ("AI Robot", "AI Drone"),
+    so a run with the robot skin doesn't report being beaten by the drone and
+    the panel never spells the same rescuer two ways."""
     if p.score > a.score:
-        return f"You beat the {a.label}  ({p.score} vs {a.score})"
+        return f"You beat {a.display_name}  ({p.score} vs {a.score})"
     if a.score > p.score:
-        return f"The {a.label} beat you  ({a.score} vs {p.score})"
+        return f"{a.display_name} beat you  ({a.score} vs {p.score})"
     if p.score == 0:
         # Both on nothing is a tie only arithmetically. Calling it a dead
         # heat reads as a photo finish, and sits directly under a

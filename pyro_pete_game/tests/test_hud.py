@@ -429,4 +429,5 @@ def test_a_bottom_edge_tooltip_opens_above_so_it_does_not_cover_what_it_describe
     assert tip.bottom <= strip_part.top                         # entirely above the strip
     card = next(r for r, k in h.hot if k == "you")
     tip = h._draw_hover(SCREEN, s, card.center)
-    assert tip.top >= card.centery                              # top-edge elements: below the cursor
+    assert tip.top >= card.bottom                               # top-edge elements: below the element,
+                                                                # so a card's score is not hidden by its tooltip

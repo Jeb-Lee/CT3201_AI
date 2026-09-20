@@ -175,7 +175,8 @@ class Hud:
 
     def _events(self, prev, now, s):
         """Turn changes in the game into toasts."""
-        for who, name, colour in (("you", "Pete", GOLD), ("ai", s.agent_stats.label, BLUE)):
+        for who, name, colour in (("you", s.player_stats.display_name, GOLD),
+                                  ("ai", s.agent_stats.display_name, BLUE)):
             gained = now[f"saved_{who}"] - prev[f"saved_{who}"]
             if gained > 0:
                 what = "an occupant" if gained == 1 else f"{gained} occupants"
@@ -188,7 +189,7 @@ class Hud:
         if now["you_dead"] and not prev["you_dead"]:
             self._toast("Pete is down!", FIRE_HOT)
         if now["ai_dead"] and not prev["ai_dead"]:
-            self._toast(f"{s.agent_stats.label} is down", FIRE_HOT)
+            self._toast(f"{s.agent_stats.display_name} is down", FIRE_HOT)
         # zone 3 (exit on fire) has no toast: the clock plate itself becomes an
         # "EXIT ON FIRE" banner, and saying it twice a few pixels apart is noise
         if now["zone"] > prev["zone"] and now["zone"] in (1, 2):
@@ -331,7 +332,8 @@ class Hud:
 
         # name, health bar and number
         x0 = pr.right + 12
-        name = "YOU  ·  PETE" if you else stats.label.upper().replace("AI ", "AI  ·  ", 1)
+        name = ("YOU  ·  PETE" if you
+                else stats.display_name.upper().replace("AI ", "AI  ·  ", 1))
         shadowed_text(card, self.f_small, name, accent, (x0, 9))
         bar = pygame.Rect(x0, 30, rest.w - x0 - 52, 14)
         self._health_bar(card, bar, health / HEALTH_MAX,
@@ -557,7 +559,8 @@ class Hud:
             you = kind == "you"
             stats = s.player_stats if you else s.agent_stats
             health = s.player.health if you else s.agent.health
-            rows = [Row("PETE" if you else stats.label.upper(), GOLD if you else BLUE, head=True),
+            rows = [Row(stats.display_name.upper(), GOLD if you else BLUE, head=True),
+                    Row("Controlled by", DIM, stats.role),
                     Row("Health", DIM, f"{max(0, round(health))} / {HEALTH_MAX}",
                         health_colour(health / HEALTH_MAX))]
             for label, pts in stats.score_breakdown():
@@ -630,9 +633,10 @@ class Hud:
                 v = self.f_small.render(r.value, True, r.vcolour)
                 tip.blit(v, (w - 14 - v.get_width(), y + 2))
             y += line + (8 if r.head else 0)
-        # Below-right of the cursor -- but a bottom-edge element (the mission
-        # strip) would be covered by its own tooltip, so there it opens above.
-        top = rect.top - h - 8 if mouse[1] > SCREEN_HEIGHT // 2 else mouse[1] + 18
+        # Beside the element, never over it: a bottom-edge element (the mission
+        # strip) gets its tooltip above; a top-edge one (a card, the clock)
+        # gets it below, so the card's own score is not hidden by its tooltip.
+        top = rect.top - h - 8 if mouse[1] > SCREEN_HEIGHT // 2 else rect.bottom + 8
         pos = pygame.Rect(mouse[0] + 16, top, w, h).clamp(surface.get_rect().inflate(-8, -8))
         surface.blit(tip, pos.topleft)
         return pos                                            # where it went (tests check it is on screen)
