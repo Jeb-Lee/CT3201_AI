@@ -17,9 +17,11 @@ The AI already had a working player: a hazard-weighted A* planner
 policy can do the same job, as an optional second brain that never replaces
 A*:
 
-> Can a neural network trained by reinforcement learning, seeing only what the
-> A* agent is allowed to see, learn to lead occupants out of the burning
-> building?
+> Can a neural network trained by reinforcement learning, from a local view of
+> the building, learn to lead occupants out of it?
+>
+> (This was first written as "seeing only what the A* agent is allowed to see".
+> That was wrong; see the correction in section 2.)
 
 A stage ends when everyone still alive is out, or nobody alive can act (the
 game's own rules, unchanged). An episode of the environment is one stage played
@@ -31,15 +33,27 @@ by the AI alone.
 |---|---|---|
 | decides | plans a route with hazard-weighted A*, replans every 0.25 s | asks a neural network which way to step |
 | body | health, fire damage, smoke slowdown, vision, sprites | **the same class**, so identical rules |
-| knows the map | only tiles it has explored | only tiles it has explored |
-| knows hazards / occupants | within vision radius (3.5 tiles) | within vision radius (3.5 tiles) |
+| knows the map | **the whole real layout** (it plans over every tile) | only tiles it has walked near |
+| knows hazards | **every fire, smoke, panel and pending collapse, everywhere** (its route costs use the live hazard field) | only within vision radius (3.5 tiles) |
+| knows where occupants are | only within vision radius (3.5 tiles) | only within vision radius (3.5 tiles) |
 | knows head-count, exit, fire countdown | yes (all on the human's HUD) | yes |
 | gives up | when its search is not worth the risk | after 12 s without a successful step |
 
-**Fair information.** The learned agent is held to what A* is allowed to know.
-Unexplored tiles are flagged as unexplored and show nothing else (a test checks
-this, `tests/test_ml.py`). Only Pete is human-driven; the learned brain never
-controls Pete.
+**Correction: the information is not equal, and the learned agent has less.**
+This section originally said the learned agent was "held to what A* is allowed to
+know". That was wrong, and was found only after the first push. A* runs
+hazard-weighted A* over the *whole real map* using the *live hazard field
+everywhere* (`pathfinding.astar_path`, `hazard_field.entry_cost`); the only thing
+hidden from it is where the occupants are. It uses its "explored" set solely to
+choose which unseen area to search next. The learned agent's original
+observation (below, "version 1") shows only an 11 x 11 window of tiles it has
+walked near, with hazards visible only within 3.5 tiles, and no global layout.
+So every comparison of the learned agent against A* in these documents is a
+comparison of a **local-view learner against a global-view planner**. A
+"version 2" observation that adds A*-equivalent route information is described
+in [IMITATION.md](IMITATION.md). Unexplored tiles are still hidden in version 1
+(a test checks it, `tests/test_ml.py`), which is why it is stricter than A*, not
+equal to it. Only Pete is human-driven; the learned brain never controls Pete.
 
 ## 3. Observation and actions
 
@@ -56,12 +70,20 @@ to the adjacent tile with the game's own movement (about 12 simulation frames;
 smoke slows it); "stay" lasts 8 frames. Choosing a wall is a wasted step and
 costs a little reward. Illegal moves are masked out for `MaskablePPO`.
 
+**Observation version 2** adds 24 route hints (path cost and the
+improvement each move gives, toward A*'s four candidate goals: the exit, the nearest
+spotted occupant, the nearest unexplored area, the key) computed from A*'s own inputs.
+It exists so the learner has the information A* has; see [IMITATION.md](IMITATION.md)
+sections 2.1-2.2 and the parity tests. The RL runs in this document used version 1.
+
 ## 4. Environment
 
 `ml/env.py`: a Gymnasium environment stepping the real `GameSession` (nothing
 is re-implemented). It passes `gymnasium.utils.env_checker.check_env`, and the
 same seed gives the same episode. Simulation step 1/30 s. Episode cap: 90 s of
-game time in these experiments (the default in the code is 240 s).
+game time in the RL experiments (the default in the code is 240 s). **The real game has
+no hard time limit**, so a short cap penalises slower agents; the imitation study
+compares at 240 s (IMITATION.md section 2.3).
 
 The reward function is the subject of its own document,
 [REWARD_EVOLUTION.md](REWARD_EVOLUTION.md).

@@ -1,0 +1,30 @@
+{
+  "seen_evac": 0.7857142857142857,
+  "unseen_evac": 0.9166666666666666,
+  "teacher": {
+    "train": {
+      "evacuated": 0.8452380952380952,
+      "died": 0.125,
+      "gave_up": 0.02976190476190476,
+      "timeout": 0.0,
+      "episodes": 840,
+      "occupants_out": 0.8636111111111111
+    },
+    "val": {
+      "evacuated": 0.8428571428571429,
+      "died": 0.1357142857142857,
+      "gave_up": 0.02142857142857143,
+      "timeout": 0.0,
+      "episodes": 140,
+      "occupants_out": 0.8566666666666667
+    },
+    "unseen": {
+      "evacuated": 0.7222222222222222,
+      "died": 0.1,
+      "gave_up": 0.1111111111111111,
+      "timeout": 0.06666666666666667,
+      "episodes": 90,
+      "occupants_out": 0.8111111111111111
+    }
+  }
+}

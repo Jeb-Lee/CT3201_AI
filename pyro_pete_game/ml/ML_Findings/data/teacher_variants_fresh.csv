@@ -1,0 +1,601 @@
+variant,stage,seed,outcome,out,total,score,seconds
+A* (benchmark),0,290000,evacuated,3,3,383,41.2
+A* (benchmark),0,290001,evacuated,3,3,386,35.3
+A* (benchmark),0,290002,evacuated,3,3,389,32.1
+A* (benchmark),0,290003,died,2,3,160,34.5
+A* (benchmark),0,290004,evacuated,3,3,397,18.8
+A* (benchmark),0,290005,evacuated,3,3,394,24.1
+A* (benchmark),0,290006,evacuated,3,3,397,18.8
+A* (benchmark),0,290007,evacuated,3,3,400,15.0
+A* (benchmark),0,290008,evacuated,3,3,392,27.3
+A* (benchmark),0,290009,evacuated,3,3,379,29.2
+A* (benchmark),0,290010,died,1,3,60,35.3
+A* (benchmark),0,290011,died,0,3,0,31.3
+A* (benchmark),0,290012,evacuated,3,3,392,26.8
+A* (benchmark),0,290013,evacuated,3,3,389,32.1
+A* (benchmark),0,290014,evacuated,3,3,397,18.8
+A* (benchmark),0,290015,evacuated,3,3,390,29.4
+A* (benchmark),0,290016,evacuated,3,3,399,16.6
+A* (benchmark),0,290017,evacuated,3,3,358,24.4
+A* (benchmark),0,290018,evacuated,3,3,396,21.4
+A* (benchmark),0,290019,evacuated,3,3,398,17.7
+A* (benchmark),1,291000,died,0,3,0,17.0
+A* (benchmark),1,291001,evacuated,3,3,389,32.2
+A* (benchmark),1,291002,evacuated,3,3,382,31.7
+A* (benchmark),1,291003,evacuated,3,3,388,32.2
+A* (benchmark),1,291004,evacuated,3,3,383,40.9
+A* (benchmark),1,291005,evacuated,3,3,379,24.8
+A* (benchmark),1,291006,evacuated,3,3,385,37.4
+A* (benchmark),1,291007,evacuated,3,3,389,32.2
+A* (benchmark),1,291008,evacuated,3,3,373,35.6
+A* (benchmark),1,291009,evacuated,3,3,387,34.9
+A* (benchmark),1,291010,died,0,3,0,21.7
+A* (benchmark),1,291011,evacuated,3,3,385,36.9
+A* (benchmark),1,291012,evacuated,3,3,390,30.6
+A* (benchmark),1,291013,gave_up,2,3,290,29.9
+A* (benchmark),1,291014,evacuated,3,3,371,39.3
+A* (benchmark),1,291015,evacuated,3,3,368,39.7
+A* (benchmark),1,291016,evacuated,3,3,386,36.6
+A* (benchmark),1,291017,evacuated,3,3,385,37.7
+A* (benchmark),1,291018,evacuated,3,3,392,27.6
+A* (benchmark),1,291019,evacuated,3,3,394,23.3
+A* (benchmark),2,292000,evacuated,4,4,465,42.2
+A* (benchmark),2,292001,evacuated,4,4,483,31.9
+A* (benchmark),2,292002,evacuated,4,4,470,31.1
+A* (benchmark),2,292003,gave_up,3,4,354,43.1
+A* (benchmark),2,292004,evacuated,4,4,466,43.2
+A* (benchmark),2,292005,evacuated,4,4,480,33.9
+A* (benchmark),2,292006,evacuated,4,4,472,27.9
+A* (benchmark),2,292007,evacuated,4,4,477,29.1
+A* (benchmark),2,292008,evacuated,4,4,459,40.7
+A* (benchmark),2,292009,evacuated,4,4,475,32.5
+A* (benchmark),2,292010,evacuated,4,4,478,27.2
+A* (benchmark),2,292011,evacuated,4,4,475,32.5
+A* (benchmark),2,292012,evacuated,4,4,476,30.2
+A* (benchmark),2,292013,evacuated,4,4,474,34.5
+A* (benchmark),2,292014,evacuated,4,4,465,38.5
+A* (benchmark),2,292015,evacuated,4,4,479,37.7
+A* (benchmark),2,292016,evacuated,4,4,483,33.7
+A* (benchmark),2,292017,evacuated,4,4,472,30.0
+A* (benchmark),2,292018,evacuated,4,4,479,25.4
+A* (benchmark),2,292019,evacuated,4,4,481,23.3
+A* (benchmark),3,293000,evacuated,4,4,483,31.0
+A* (benchmark),3,293001,evacuated,4,4,441,51.3
+A* (benchmark),3,293002,evacuated,4,4,485,25.4
+A* (benchmark),3,293003,evacuated,4,4,473,40.1
+A* (benchmark),3,293004,evacuated,4,4,486,27.5
+A* (benchmark),3,293005,evacuated,4,4,484,27.0
+A* (benchmark),3,293006,evacuated,4,4,480,30.5
+A* (benchmark),3,293007,evacuated,4,4,478,35.8
+A* (benchmark),3,293008,evacuated,4,4,474,45.4
+A* (benchmark),3,293009,evacuated,4,4,465,47.6
+A* (benchmark),3,293010,evacuated,4,4,480,24.8
+A* (benchmark),3,293011,evacuated,4,4,477,34.5
+A* (benchmark),3,293012,evacuated,4,4,470,39.8
+A* (benchmark),3,293013,evacuated,4,4,442,49.4
+A* (benchmark),3,293014,evacuated,4,4,477,42.7
+A* (benchmark),3,293015,evacuated,4,4,479,34.0
+A* (benchmark),3,293016,evacuated,4,4,477,39.8
+A* (benchmark),3,293017,evacuated,4,4,478,33.4
+A* (benchmark),3,293018,evacuated,4,4,480,30.5
+A* (benchmark),3,293019,evacuated,4,4,479,31.0
+A* (benchmark),4,294000,evacuated,5,5,592,27.2
+A* (benchmark),4,294001,gave_up,4,5,450,72.0
+A* (benchmark),4,294002,evacuated,5,5,567,46.9
+A* (benchmark),4,294003,evacuated,5,5,568,54.4
+A* (benchmark),4,294004,evacuated,5,5,571,59.2
+A* (benchmark),4,294005,evacuated,5,5,563,53.1
+A* (benchmark),4,294006,evacuated,5,5,557,44.5
+A* (benchmark),4,294007,evacuated,5,5,570,40.5
+A* (benchmark),4,294008,evacuated,5,5,585,38.1
+A* (benchmark),4,294009,evacuated,5,5,581,25.8
+A* (benchmark),4,294010,died,0,5,0,86.9
+A* (benchmark),4,294011,evacuated,5,5,571,57.8
+A* (benchmark),4,294012,evacuated,5,5,592,27.0
+A* (benchmark),4,294013,died,0,5,0,48.7
+A* (benchmark),4,294014,gave_up,4,5,467,56.8
+A* (benchmark),4,294015,evacuated,5,5,560,46.9
+A* (benchmark),4,294016,evacuated,5,5,588,32.6
+A* (benchmark),4,294017,evacuated,5,5,556,52.5
+A* (benchmark),4,294018,evacuated,5,5,595,22.6
+A* (benchmark),4,294019,evacuated,5,5,571,50.1
+A* (benchmark),5,295000,evacuated,5,5,574,47.2
+A* (benchmark),5,295001,evacuated,5,5,594,23.5
+A* (benchmark),5,295002,evacuated,5,5,557,68.0
+A* (benchmark),5,295003,evacuated,5,5,583,35.5
+A* (benchmark),5,295004,evacuated,5,5,583,33.0
+A* (benchmark),5,295005,evacuated,5,5,575,44.0
+A* (benchmark),5,295006,evacuated,5,5,578,47.6
+A* (benchmark),5,295007,evacuated,5,5,583,40.6
+A* (benchmark),5,295008,evacuated,5,5,575,44.0
+A* (benchmark),5,295009,evacuated,5,5,586,36.0
+A* (benchmark),5,295010,evacuated,5,5,595,23.2
+A* (benchmark),5,295011,evacuated,5,5,550,53.7
+A* (benchmark),5,295012,evacuated,5,5,594,24.6
+A* (benchmark),5,295013,evacuated,5,5,590,30.7
+A* (benchmark),5,295014,evacuated,5,5,581,43.6
+A* (benchmark),5,295015,evacuated,5,5,594,23.8
+A* (benchmark),5,295016,evacuated,5,5,580,35.7
+A* (benchmark),5,295017,gave_up,4,5,465,43.5
+A* (benchmark),5,295018,evacuated,5,5,592,26.8
+A* (benchmark),5,295019,evacuated,5,5,535,59.8
+A* (benchmark),6,296000,evacuated,6,6,648,67.5
+A* (benchmark),6,296001,evacuated,6,6,663,61.0
+A* (benchmark),6,296002,died,0,6,0,36.7
+A* (benchmark),6,296003,gave_up,4,6,421,94.4
+A* (benchmark),6,296004,died,0,6,0,54.0
+A* (benchmark),6,296005,died,0,6,0,34.4
+A* (benchmark),6,296006,died,0,6,0,47.6
+A* (benchmark),6,296007,evacuated,6,6,670,41.3
+A* (benchmark),6,296008,evacuated,6,6,684,32.9
+A* (benchmark),6,296009,evacuated,6,6,666,65.8
+A* (benchmark),6,296010,died,3,6,260,64.5
+A* (benchmark),6,296011,evacuated,6,6,662,44.4
+A* (benchmark),6,296012,evacuated,6,6,673,55.2
+A* (benchmark),6,296013,evacuated,6,6,679,46.4
+A* (benchmark),6,296014,evacuated,6,6,682,42.3
+A* (benchmark),6,296015,evacuated,6,6,686,36.0
+A* (benchmark),6,296016,evacuated,6,6,682,42.0
+A* (benchmark),6,296017,died,5,6,460,58.9
+A* (benchmark),6,296018,died,0,6,0,46.3
+A* (benchmark),6,296019,died,0,6,0,33.0
+A* (benchmark),7,297000,evacuated,6,6,664,50.9
+A* (benchmark),7,297001,evacuated,6,6,645,62.1
+A* (benchmark),7,297002,evacuated,6,6,665,49.6
+A* (benchmark),7,297003,evacuated,6,6,641,69.0
+A* (benchmark),7,297004,evacuated,6,6,629,85.3
+A* (benchmark),7,297005,evacuated,6,6,662,56.2
+A* (benchmark),7,297006,evacuated,6,6,670,42.6
+A* (benchmark),7,297007,evacuated,6,6,653,52.8
+A* (benchmark),7,297008,evacuated,6,6,665,48.8
+A* (benchmark),7,297009,evacuated,6,6,671,41.0
+A* (benchmark),7,297010,evacuated,6,6,679,39.4
+A* (benchmark),7,297011,died,0,6,0,33.4
+A* (benchmark),7,297012,evacuated,6,6,696,21.6
+A* (benchmark),7,297013,died,0,6,0,62.0
+A* (benchmark),7,297014,gave_up,5,6,529,71.5
+A* (benchmark),7,297015,evacuated,6,6,657,47.4
+A* (benchmark),7,297016,evacuated,6,6,642,58.8
+A* (benchmark),7,297017,evacuated,6,6,630,77.0
+A* (benchmark),7,297018,evacuated,6,6,642,48.5
+A* (benchmark),7,297019,evacuated,6,6,646,71.7
+A* (benchmark),8,298000,died,0,6,0,51.7
+A* (benchmark),8,298001,evacuated,6,6,675,36.0
+A* (benchmark),8,298002,gave_up,5,6,550,38.4
+A* (benchmark),8,298003,evacuated,6,6,662,63.5
+A* (benchmark),8,298004,evacuated,6,6,668,53.7
+A* (benchmark),8,298005,evacuated,6,6,658,69.1
+A* (benchmark),8,298006,evacuated,6,6,681,26.2
+A* (benchmark),8,298007,evacuated,6,6,684,38.7
+A* (benchmark),8,298008,died,0,6,0,64.0
+A* (benchmark),8,298009,evacuated,6,6,671,51.2
+A* (benchmark),8,298010,evacuated,6,6,678,38.7
+A* (benchmark),8,298011,evacuated,6,6,677,41.9
+A* (benchmark),8,298012,evacuated,6,6,666,57.4
+A* (benchmark),8,298013,evacuated,6,6,656,54.7
+A* (benchmark),8,298014,evacuated,6,6,673,55.5
+A* (benchmark),8,298015,evacuated,6,6,678,38.5
+A* (benchmark),8,298016,evacuated,6,6,684,39.5
+A* (benchmark),8,298017,evacuated,6,6,684,30.7
+A* (benchmark),8,298018,evacuated,6,6,642,60.3
+A* (benchmark),8,298019,evacuated,6,6,669,62.2
+A* (benchmark),9,299000,evacuated,6,6,675,52.5
+A* (benchmark),9,299001,evacuated,6,6,646,80.2
+A* (benchmark),9,299002,evacuated,6,6,638,72.9
+A* (benchmark),9,299003,evacuated,6,6,658,62.0
+A* (benchmark),9,299004,evacuated,6,6,634,81.7
+A* (benchmark),9,299005,evacuated,6,6,637,96.6
+A* (benchmark),9,299006,gave_up,5,6,528,70.2
+A* (benchmark),9,299007,evacuated,6,6,673,47.6
+A* (benchmark),9,299008,evacuated,6,6,675,42.8
+A* (benchmark),9,299009,evacuated,6,6,638,76.3
+A* (benchmark),9,299010,evacuated,6,6,670,60.7
+A* (benchmark),9,299011,evacuated,6,6,626,94.0
+A* (benchmark),9,299012,evacuated,6,6,654,66.3
+A* (benchmark),9,299013,died,0,6,0,77.5
+A* (benchmark),9,299014,evacuated,6,6,667,54.8
+A* (benchmark),9,299015,evacuated,6,6,653,69.3
+A* (benchmark),9,299016,evacuated,6,6,652,69.0
+A* (benchmark),9,299017,died,0,6,0,73.0
+A* (benchmark),9,299018,evacuated,6,6,660,54.6
+A* (benchmark),9,299019,gave_up,4,6,438,65.1
+far side (lean 0.5),0,290000,evacuated,3,3,393,25.2
+far side (lean 0.5),0,290001,died,0,3,0,29.1
+far side (lean 0.5),0,290002,evacuated,3,3,389,32.1
+far side (lean 0.5),0,290003,evacuated,3,3,394,24.6
+far side (lean 0.5),0,290004,evacuated,3,3,395,22.5
+far side (lean 0.5),0,290005,evacuated,3,3,394,24.6
+far side (lean 0.5),0,290006,evacuated,3,3,374,29.7
+far side (lean 0.5),0,290007,evacuated,3,3,399,16.6
+far side (lean 0.5),0,290008,evacuated,3,3,385,28.9
+far side (lean 0.5),0,290009,evacuated,3,3,394,23.6
+far side (lean 0.5),0,290010,evacuated,3,3,382,33.4
+far side (lean 0.5),0,290011,evacuated,3,3,387,34.8
+far side (lean 0.5),0,290012,evacuated,3,3,398,17.7
+far side (lean 0.5),0,290013,evacuated,3,3,395,23.0
+far side (lean 0.5),0,290014,evacuated,3,3,394,23.6
+far side (lean 0.5),0,290015,evacuated,3,3,389,31.0
+far side (lean 0.5),0,290016,evacuated,3,3,388,33.2
+far side (lean 0.5),0,290017,evacuated,3,3,358,24.4
+far side (lean 0.5),0,290018,evacuated,3,3,399,16.6
+far side (lean 0.5),0,290019,evacuated,3,3,386,26.5
+far side (lean 0.5),1,291000,evacuated,3,3,375,30.4
+far side (lean 0.5),1,291001,evacuated,3,3,392,27.4
+far side (lean 0.5),1,291002,evacuated,3,3,392,26.4
+far side (lean 0.5),1,291003,evacuated,3,3,388,32.2
+far side (lean 0.5),1,291004,evacuated,3,3,386,36.6
+far side (lean 0.5),1,291005,evacuated,3,3,379,24.8
+far side (lean 0.5),1,291006,evacuated,3,3,390,30.1
+far side (lean 0.5),1,291007,evacuated,3,3,392,26.6
+far side (lean 0.5),1,291008,evacuated,3,3,373,35.6
+far side (lean 0.5),1,291009,evacuated,3,3,389,32.2
+far side (lean 0.5),1,291010,evacuated,3,3,351,33.6
+far side (lean 0.5),1,291011,evacuated,3,3,385,38.0
+far side (lean 0.5),1,291012,evacuated,3,3,392,26.4
+far side (lean 0.5),1,291013,died,0,3,0,22.1
+far side (lean 0.5),1,291014,evacuated,3,3,374,34.0
+far side (lean 0.5),1,291015,evacuated,3,3,387,34.5
+far side (lean 0.5),1,291016,evacuated,3,3,389,31.6
+far side (lean 0.5),1,291017,evacuated,3,3,389,31.3
+far side (lean 0.5),1,291018,evacuated,3,3,375,31.3
+far side (lean 0.5),1,291019,died,0,3,0,16.1
+far side (lean 0.5),2,292000,evacuated,4,4,480,30.3
+far side (lean 0.5),2,292001,evacuated,4,4,486,26.8
+far side (lean 0.5),2,292002,evacuated,4,4,486,26.3
+far side (lean 0.5),2,292003,died,0,4,0,23.4
+far side (lean 0.5),2,292004,evacuated,4,4,490,21.9
+far side (lean 0.5),2,292005,evacuated,4,4,481,33.4
+far side (lean 0.5),2,292006,evacuated,4,4,471,30.6
+far side (lean 0.5),2,292007,evacuated,4,4,476,40.3
+far side (lean 0.5),2,292008,evacuated,4,4,466,30.3
+far side (lean 0.5),2,292009,evacuated,4,4,492,17.4
+far side (lean 0.5),2,292010,evacuated,4,4,470,39.0
+far side (lean 0.5),2,292011,evacuated,4,4,487,25.3
+far side (lean 0.5),2,292012,evacuated,4,4,477,39.2
+far side (lean 0.5),2,292013,evacuated,4,4,476,41.5
+far side (lean 0.5),2,292014,evacuated,4,4,469,36.1
+far side (lean 0.5),2,292015,evacuated,4,4,480,35.6
+far side (lean 0.5),2,292016,evacuated,4,4,480,35.1
+far side (lean 0.5),2,292017,evacuated,4,4,472,40.5
+far side (lean 0.5),2,292018,evacuated,4,4,483,22.2
+far side (lean 0.5),2,292019,evacuated,4,4,473,34.7
+far side (lean 0.5),3,293000,evacuated,4,4,471,46.2
+far side (lean 0.5),3,293001,died,0,4,0,41.5
+far side (lean 0.5),3,293002,evacuated,4,4,476,36.4
+far side (lean 0.5),3,293003,evacuated,4,4,458,53.7
+far side (lean 0.5),3,293004,evacuated,4,4,466,50.8
+far side (lean 0.5),3,293005,evacuated,4,4,475,40.4
+far side (lean 0.5),3,293006,evacuated,4,4,480,30.5
+far side (lean 0.5),3,293007,evacuated,4,4,487,25.1
+far side (lean 0.5),3,293008,evacuated,4,4,479,37.6
+far side (lean 0.5),3,293009,evacuated,4,4,460,47.3
+far side (lean 0.5),3,293010,evacuated,4,4,486,27.5
+far side (lean 0.5),3,293011,evacuated,4,4,468,48.6
+far side (lean 0.5),3,293012,evacuated,4,4,477,37.4
+far side (lean 0.5),3,293013,evacuated,4,4,461,43.6
+far side (lean 0.5),3,293014,evacuated,4,4,472,42.8
+far side (lean 0.5),3,293015,evacuated,4,4,468,51.3
+far side (lean 0.5),3,293016,evacuated,4,4,474,46.2
+far side (lean 0.5),3,293017,evacuated,4,4,483,31.0
+far side (lean 0.5),3,293018,evacuated,4,4,475,37.7
+far side (lean 0.5),3,293019,evacuated,4,4,478,42.1
+far side (lean 0.5),4,294000,evacuated,5,5,592,27.2
+far side (lean 0.5),4,294001,gave_up,4,5,449,73.6
+far side (lean 0.5),4,294002,evacuated,5,5,564,50.9
+far side (lean 0.5),4,294003,evacuated,5,5,577,40.5
+far side (lean 0.5),4,294004,evacuated,5,5,579,46.9
+far side (lean 0.5),4,294005,evacuated,5,5,569,43.5
+far side (lean 0.5),4,294006,evacuated,5,5,587,33.8
+far side (lean 0.5),4,294007,evacuated,5,5,577,48.8
+far side (lean 0.5),4,294008,evacuated,5,5,588,32.8
+far side (lean 0.5),4,294009,evacuated,5,5,572,39.5
+far side (lean 0.5),4,294010,evacuated,5,5,569,52.6
+far side (lean 0.5),4,294011,evacuated,5,5,567,47.2
+far side (lean 0.5),4,294012,evacuated,5,5,576,41.3
+far side (lean 0.5),4,294013,died,0,5,0,48.7
+far side (lean 0.5),4,294014,evacuated,5,5,574,39.2
+far side (lean 0.5),4,294015,evacuated,5,5,548,56.0
+far side (lean 0.5),4,294016,evacuated,5,5,588,32.6
+far side (lean 0.5),4,294017,evacuated,5,5,557,50.4
+far side (lean 0.5),4,294018,evacuated,5,5,578,39.7
+far side (lean 0.5),4,294019,evacuated,5,5,571,41.1
+far side (lean 0.5),5,295000,evacuated,5,5,575,43.9
+far side (lean 0.5),5,295001,evacuated,5,5,590,29.9
+far side (lean 0.5),5,295002,evacuated,5,5,565,68.0
+far side (lean 0.5),5,295003,evacuated,5,5,587,34.2
+far side (lean 0.5),5,295004,evacuated,5,5,582,34.6
+far side (lean 0.5),5,295005,evacuated,5,5,580,36.2
+far side (lean 0.5),5,295006,evacuated,5,5,586,35.8
+far side (lean 0.5),5,295007,evacuated,5,5,587,34.2
+far side (lean 0.5),5,295008,evacuated,5,5,572,38.3
+far side (lean 0.5),5,295009,evacuated,5,5,581,44.0
+far side (lean 0.5),5,295010,evacuated,5,5,595,23.2
+far side (lean 0.5),5,295011,evacuated,5,5,553,48.9
+far side (lean 0.5),5,295012,evacuated,5,5,585,29.1
+far side (lean 0.5),5,295013,evacuated,5,5,576,50.9
+far side (lean 0.5),5,295014,evacuated,5,5,586,35.5
+far side (lean 0.5),5,295015,evacuated,5,5,593,25.6
+far side (lean 0.5),5,295016,evacuated,5,5,565,43.3
+far side (lean 0.5),5,295017,evacuated,5,5,537,55.2
+far side (lean 0.5),5,295018,evacuated,5,5,586,27.8
+far side (lean 0.5),5,295019,evacuated,5,5,521,80.3
+far side (lean 0.5),6,296000,evacuated,6,6,648,68.1
+far side (lean 0.5),6,296001,died,5,6,460,63.6
+far side (lean 0.5),6,296002,died,0,6,0,36.4
+far side (lean 0.5),6,296003,evacuated,6,6,675,41.8
+far side (lean 0.5),6,296004,died,0,6,0,52.9
+far side (lean 0.5),6,296005,died,0,6,0,34.4
+far side (lean 0.5),6,296006,died,0,6,0,47.6
+far side (lean 0.5),6,296007,evacuated,6,6,671,41.0
+far side (lean 0.5),6,296008,evacuated,6,6,682,36.1
+far side (lean 0.5),6,296009,evacuated,6,6,665,66.8
+far side (lean 0.5),6,296010,died,3,6,260,62.9
+far side (lean 0.5),6,296011,evacuated,6,6,662,45.5
+far side (lean 0.5),6,296012,evacuated,6,6,672,56.8
+far side (lean 0.5),6,296013,evacuated,6,6,679,46.4
+far side (lean 0.5),6,296014,evacuated,6,6,676,50.3
+far side (lean 0.5),6,296015,evacuated,6,6,686,36.5
+far side (lean 0.5),6,296016,evacuated,6,6,682,42.0
+far side (lean 0.5),6,296017,died,5,6,460,58.7
+far side (lean 0.5),6,296018,died,0,6,0,41.7
+far side (lean 0.5),6,296019,died,0,6,0,31.9
+far side (lean 0.5),7,297000,evacuated,6,6,646,60.5
+far side (lean 0.5),7,297001,evacuated,6,6,663,52.8
+far side (lean 0.5),7,297002,evacuated,6,6,663,52.8
+far side (lean 0.5),7,297003,evacuated,6,6,657,61.3
+far side (lean 0.5),7,297004,evacuated,6,6,644,66.1
+far side (lean 0.5),7,297005,evacuated,6,6,646,59.7
+far side (lean 0.5),7,297006,evacuated,6,6,656,51.7
+far side (lean 0.5),7,297007,evacuated,6,6,653,52.0
+far side (lean 0.5),7,297008,evacuated,6,6,644,62.1
+far side (lean 0.5),7,297009,evacuated,6,6,642,65.6
+far side (lean 0.5),7,297010,evacuated,6,6,677,41.0
+far side (lean 0.5),7,297011,died,0,6,0,33.4
+far side (lean 0.5),7,297012,evacuated,6,6,694,23.4
+far side (lean 0.5),7,297013,evacuated,6,6,637,75.4
+far side (lean 0.5),7,297014,evacuated,6,6,626,73.3
+far side (lean 0.5),7,297015,evacuated,6,6,649,56.9
+far side (lean 0.5),7,297016,evacuated,6,6,643,55.9
+far side (lean 0.5),7,297017,evacuated,6,6,635,70.9
+far side (lean 0.5),7,297018,evacuated,6,6,638,54.1
+far side (lean 0.5),7,297019,evacuated,6,6,644,73.1
+far side (lean 0.5),8,298000,evacuated,6,6,655,58.2
+far side (lean 0.5),8,298001,evacuated,6,6,667,55.2
+far side (lean 0.5),8,298002,gave_up,5,6,545,46.9
+far side (lean 0.5),8,298003,evacuated,6,6,651,69.4
+far side (lean 0.5),8,298004,evacuated,6,6,660,56.6
+far side (lean 0.5),8,298005,evacuated,6,6,660,65.4
+far side (lean 0.5),8,298006,evacuated,6,6,658,52.6
+far side (lean 0.5),8,298007,evacuated,6,6,651,71.0
+far side (lean 0.5),8,298008,evacuated,6,6,680,35.5
+far side (lean 0.5),8,298009,evacuated,6,6,677,49.6
+far side (lean 0.5),8,298010,evacuated,6,6,678,38.7
+far side (lean 0.5),8,298011,evacuated,6,6,671,41.9
+far side (lean 0.5),8,298012,evacuated,6,6,672,38.7
+far side (lean 0.5),8,298013,evacuated,6,6,653,59.0
+far side (lean 0.5),8,298014,evacuated,6,6,646,67.3
+far side (lean 0.5),8,298015,evacuated,6,6,675,43.8
+far side (lean 0.5),8,298016,evacuated,6,6,672,48.0
+far side (lean 0.5),8,298017,evacuated,6,6,684,30.7
+far side (lean 0.5),8,298018,evacuated,6,6,641,60.1
+far side (lean 0.5),8,298019,evacuated,6,6,626,86.2
+far side (lean 0.5),9,299000,evacuated,6,6,675,34.2
+far side (lean 0.5),9,299001,evacuated,6,6,651,69.9
+far side (lean 0.5),9,299002,evacuated,6,6,637,74.3
+far side (lean 0.5),9,299003,evacuated,6,6,663,52.7
+far side (lean 0.5),9,299004,evacuated,6,6,632,83.3
+far side (lean 0.5),9,299005,evacuated,6,6,637,97.1
+far side (lean 0.5),9,299006,evacuated,6,6,630,87.1
+far side (lean 0.5),9,299007,evacuated,6,6,667,56.4
+far side (lean 0.5),9,299008,evacuated,6,6,650,80.5
+far side (lean 0.5),9,299009,evacuated,6,6,638,76.0
+far side (lean 0.5),9,299010,evacuated,6,6,668,63.6
+far side (lean 0.5),9,299011,evacuated,6,6,626,94.0
+far side (lean 0.5),9,299012,evacuated,6,6,653,67.3
+far side (lean 0.5),9,299013,died,0,6,0,77.2
+far side (lean 0.5),9,299014,evacuated,6,6,667,54.8
+far side (lean 0.5),9,299015,evacuated,6,6,652,70.3
+far side (lean 0.5),9,299016,evacuated,6,6,622,73.2
+far side (lean 0.5),9,299017,gave_up,5,6,529,95.5
+far side (lean 0.5),9,299018,evacuated,6,6,659,55.1
+far side (lean 0.5),9,299019,evacuated,6,6,630,82.8
+far side + skip corners < 4 tiles,0,290000,evacuated,3,3,393,25.2
+far side + skip corners < 4 tiles,0,290001,died,0,3,0,29.1
+far side + skip corners < 4 tiles,0,290002,gave_up,2,3,292,27.0
+far side + skip corners < 4 tiles,0,290003,evacuated,3,3,394,24.6
+far side + skip corners < 4 tiles,0,290004,evacuated,3,3,395,22.5
+far side + skip corners < 4 tiles,0,290005,evacuated,3,3,394,24.6
+far side + skip corners < 4 tiles,0,290006,evacuated,3,3,374,29.7
+far side + skip corners < 4 tiles,0,290007,evacuated,3,3,399,16.6
+far side + skip corners < 4 tiles,0,290008,evacuated,3,3,385,28.9
+far side + skip corners < 4 tiles,0,290009,evacuated,3,3,394,23.6
+far side + skip corners < 4 tiles,0,290010,evacuated,3,3,382,33.4
+far side + skip corners < 4 tiles,0,290011,evacuated,3,3,387,34.8
+far side + skip corners < 4 tiles,0,290012,evacuated,3,3,398,17.7
+far side + skip corners < 4 tiles,0,290013,evacuated,3,3,395,23.0
+far side + skip corners < 4 tiles,0,290014,evacuated,3,3,394,23.6
+far side + skip corners < 4 tiles,0,290015,evacuated,3,3,391,28.9
+far side + skip corners < 4 tiles,0,290016,evacuated,3,3,389,31.0
+far side + skip corners < 4 tiles,0,290017,evacuated,3,3,358,24.4
+far side + skip corners < 4 tiles,0,290018,evacuated,3,3,399,16.6
+far side + skip corners < 4 tiles,0,290019,evacuated,3,3,386,26.5
+far side + skip corners < 4 tiles,1,291000,evacuated,3,3,375,30.4
+far side + skip corners < 4 tiles,1,291001,evacuated,3,3,394,24.2
+far side + skip corners < 4 tiles,1,291002,evacuated,3,3,393,24.8
+far side + skip corners < 4 tiles,1,291003,evacuated,3,3,390,30.6
+far side + skip corners < 4 tiles,1,291004,evacuated,3,3,387,35.0
+far side + skip corners < 4 tiles,1,291005,evacuated,3,3,379,24.8
+far side + skip corners < 4 tiles,1,291006,evacuated,3,3,391,28.5
+far side + skip corners < 4 tiles,1,291007,evacuated,3,3,393,25.0
+far side + skip corners < 4 tiles,1,291008,evacuated,3,3,374,34.0
+far side + skip corners < 4 tiles,1,291009,evacuated,3,3,389,32.2
+far side + skip corners < 4 tiles,1,291010,evacuated,3,3,351,33.6
+far side + skip corners < 4 tiles,1,291011,evacuated,3,3,386,36.4
+far side + skip corners < 4 tiles,1,291012,evacuated,3,3,393,24.8
+far side + skip corners < 4 tiles,1,291013,died,0,3,0,22.1
+far side + skip corners < 4 tiles,1,291014,evacuated,3,3,375,32.4
+far side + skip corners < 4 tiles,1,291015,evacuated,3,3,389,31.8
+far side + skip corners < 4 tiles,1,291016,evacuated,3,3,390,30.0
+far side + skip corners < 4 tiles,1,291017,evacuated,3,3,390,29.7
+far side + skip corners < 4 tiles,1,291018,evacuated,3,3,375,31.3
+far side + skip corners < 4 tiles,1,291019,died,0,3,0,16.1
+far side + skip corners < 4 tiles,2,292000,evacuated,4,4,480,30.3
+far side + skip corners < 4 tiles,2,292001,evacuated,4,4,488,24.7
+far side + skip corners < 4 tiles,2,292002,evacuated,4,4,486,26.3
+far side + skip corners < 4 tiles,2,292003,died,0,4,0,23.4
+far side + skip corners < 4 tiles,2,292004,evacuated,4,4,490,21.9
+far side + skip corners < 4 tiles,2,292005,evacuated,4,4,482,31.5
+far side + skip corners < 4 tiles,2,292006,evacuated,4,4,472,27.9
+far side + skip corners < 4 tiles,2,292007,evacuated,4,4,477,39.7
+far side + skip corners < 4 tiles,2,292008,evacuated,4,4,467,28.2
+far side + skip corners < 4 tiles,2,292009,evacuated,4,4,492,17.4
+far side + skip corners < 4 tiles,2,292010,evacuated,4,4,471,38.2
+far side + skip corners < 4 tiles,2,292011,evacuated,4,4,488,24.5
+far side + skip corners < 4 tiles,2,292012,evacuated,4,4,479,38.2
+far side + skip corners < 4 tiles,2,292013,evacuated,4,4,476,41.5
+far side + skip corners < 4 tiles,2,292014,evacuated,4,4,471,32.9
+far side + skip corners < 4 tiles,2,292015,evacuated,4,4,480,35.6
+far side + skip corners < 4 tiles,2,292016,evacuated,4,4,480,35.1
+far side + skip corners < 4 tiles,2,292017,evacuated,4,4,472,40.5
+far side + skip corners < 4 tiles,2,292018,evacuated,4,4,483,22.2
+far side + skip corners < 4 tiles,2,292019,evacuated,4,4,473,34.7
+far side + skip corners < 4 tiles,3,293000,evacuated,4,4,471,46.2
+far side + skip corners < 4 tiles,3,293001,died,0,4,0,41.5
+far side + skip corners < 4 tiles,3,293002,evacuated,4,4,476,36.4
+far side + skip corners < 4 tiles,3,293003,evacuated,4,4,458,53.7
+far side + skip corners < 4 tiles,3,293004,evacuated,4,4,466,50.8
+far side + skip corners < 4 tiles,3,293005,evacuated,4,4,475,40.4
+far side + skip corners < 4 tiles,3,293006,evacuated,4,4,480,30.5
+far side + skip corners < 4 tiles,3,293007,evacuated,4,4,487,25.1
+far side + skip corners < 4 tiles,3,293008,evacuated,4,4,482,35.0
+far side + skip corners < 4 tiles,3,293009,evacuated,4,4,460,47.3
+far side + skip corners < 4 tiles,3,293010,evacuated,4,4,486,27.5
+far side + skip corners < 4 tiles,3,293011,evacuated,4,4,468,48.6
+far side + skip corners < 4 tiles,3,293012,evacuated,4,4,477,37.4
+far side + skip corners < 4 tiles,3,293013,evacuated,4,4,461,43.6
+far side + skip corners < 4 tiles,3,293014,evacuated,4,4,472,42.8
+far side + skip corners < 4 tiles,3,293015,evacuated,4,4,468,51.3
+far side + skip corners < 4 tiles,3,293016,evacuated,4,4,475,44.3
+far side + skip corners < 4 tiles,3,293017,evacuated,4,4,483,31.0
+far side + skip corners < 4 tiles,3,293018,evacuated,4,4,475,37.7
+far side + skip corners < 4 tiles,3,293019,evacuated,4,4,478,42.1
+far side + skip corners < 4 tiles,4,294000,evacuated,5,5,592,27.2
+far side + skip corners < 4 tiles,4,294001,gave_up,4,5,453,68.0
+far side + skip corners < 4 tiles,4,294002,evacuated,5,5,566,48.3
+far side + skip corners < 4 tiles,4,294003,evacuated,5,5,577,40.5
+far side + skip corners < 4 tiles,4,294004,evacuated,5,5,579,46.9
+far side + skip corners < 4 tiles,4,294005,evacuated,5,5,569,43.5
+far side + skip corners < 4 tiles,4,294006,evacuated,5,5,587,33.8
+far side + skip corners < 4 tiles,4,294007,evacuated,5,5,577,48.8
+far side + skip corners < 4 tiles,4,294008,evacuated,5,5,588,32.3
+far side + skip corners < 4 tiles,4,294009,evacuated,5,5,572,39.5
+far side + skip corners < 4 tiles,4,294010,evacuated,5,5,569,52.6
+far side + skip corners < 4 tiles,4,294011,evacuated,5,5,567,47.2
+far side + skip corners < 4 tiles,4,294012,evacuated,5,5,576,41.3
+far side + skip corners < 4 tiles,4,294013,died,0,5,0,48.7
+far side + skip corners < 4 tiles,4,294014,evacuated,5,5,574,39.2
+far side + skip corners < 4 tiles,4,294015,evacuated,5,5,548,53.9
+far side + skip corners < 4 tiles,4,294016,evacuated,5,5,588,32.6
+far side + skip corners < 4 tiles,4,294017,evacuated,5,5,558,49.6
+far side + skip corners < 4 tiles,4,294018,evacuated,5,5,578,39.7
+far side + skip corners < 4 tiles,4,294019,evacuated,5,5,572,39.7
+far side + skip corners < 4 tiles,5,295000,evacuated,5,5,575,43.9
+far side + skip corners < 4 tiles,5,295001,evacuated,5,5,591,28.3
+far side + skip corners < 4 tiles,5,295002,gave_up,4,5,468,63.7
+far side + skip corners < 4 tiles,5,295003,evacuated,5,5,587,34.2
+far side + skip corners < 4 tiles,5,295004,evacuated,5,5,588,33.0
+far side + skip corners < 4 tiles,5,295005,evacuated,5,5,582,33.0
+far side + skip corners < 4 tiles,5,295006,evacuated,5,5,587,34.2
+far side + skip corners < 4 tiles,5,295007,evacuated,5,5,589,32.2
+far side + skip corners < 4 tiles,5,295008,evacuated,5,5,575,34.5
+far side + skip corners < 4 tiles,5,295009,evacuated,5,5,583,40.0
+far side + skip corners < 4 tiles,5,295010,evacuated,5,5,595,23.2
+far side + skip corners < 4 tiles,5,295011,evacuated,5,5,554,47.5
+far side + skip corners < 4 tiles,5,295012,evacuated,5,5,584,30.4
+far side + skip corners < 4 tiles,5,295013,evacuated,5,5,576,50.9
+far side + skip corners < 4 tiles,5,295014,evacuated,5,5,587,34.5
+far side + skip corners < 4 tiles,5,295015,evacuated,5,5,593,25.6
+far side + skip corners < 4 tiles,5,295016,evacuated,5,5,568,44.9
+far side + skip corners < 4 tiles,5,295017,evacuated,5,5,537,55.2
+far side + skip corners < 4 tiles,5,295018,evacuated,5,5,586,27.8
+far side + skip corners < 4 tiles,5,295019,evacuated,5,5,536,57.9
+far side + skip corners < 4 tiles,6,296000,evacuated,6,6,652,62.0
+far side + skip corners < 4 tiles,6,296001,died,5,6,460,63.6
+far side + skip corners < 4 tiles,6,296002,died,0,6,0,36.4
+far side + skip corners < 4 tiles,6,296003,evacuated,6,6,675,41.8
+far side + skip corners < 4 tiles,6,296004,died,0,6,0,52.9
+far side + skip corners < 4 tiles,6,296005,died,0,6,0,34.4
+far side + skip corners < 4 tiles,6,296006,died,0,6,0,47.6
+far side + skip corners < 4 tiles,6,296007,evacuated,6,6,671,41.0
+far side + skip corners < 4 tiles,6,296008,evacuated,6,6,684,32.9
+far side + skip corners < 4 tiles,6,296009,evacuated,6,6,673,56.2
+far side + skip corners < 4 tiles,6,296010,died,3,6,260,62.4
+far side + skip corners < 4 tiles,6,296011,evacuated,6,6,662,45.5
+far side + skip corners < 4 tiles,6,296012,evacuated,6,6,672,56.8
+far side + skip corners < 4 tiles,6,296013,evacuated,6,6,679,46.4
+far side + skip corners < 4 tiles,6,296014,evacuated,6,6,676,50.3
+far side + skip corners < 4 tiles,6,296015,evacuated,6,6,686,36.5
+far side + skip corners < 4 tiles,6,296016,evacuated,6,6,682,42.0
+far side + skip corners < 4 tiles,6,296017,died,5,6,460,58.7
+far side + skip corners < 4 tiles,6,296018,died,0,6,0,41.7
+far side + skip corners < 4 tiles,6,296019,died,0,6,0,31.9
+far side + skip corners < 4 tiles,7,297000,evacuated,6,6,646,59.4
+far side + skip corners < 4 tiles,7,297001,evacuated,6,6,663,52.8
+far side + skip corners < 4 tiles,7,297002,evacuated,6,6,677,49.0
+far side + skip corners < 4 tiles,7,297003,evacuated,6,6,659,58.9
+far side + skip corners < 4 tiles,7,297004,evacuated,6,6,644,64.8
+far side + skip corners < 4 tiles,7,297005,evacuated,6,6,649,56.2
+far side + skip corners < 4 tiles,7,297006,evacuated,6,6,657,49.8
+far side + skip corners < 4 tiles,7,297007,evacuated,6,6,650,57.0
+far side + skip corners < 4 tiles,7,297008,evacuated,6,6,648,57.0
+far side + skip corners < 4 tiles,7,297009,evacuated,6,6,642,65.6
+far side + skip corners < 4 tiles,7,297010,evacuated,6,6,677,41.0
+far side + skip corners < 4 tiles,7,297011,died,0,6,0,33.4
+far side + skip corners < 4 tiles,7,297012,evacuated,6,6,694,23.4
+far side + skip corners < 4 tiles,7,297013,evacuated,6,6,639,72.2
+far side + skip corners < 4 tiles,7,297014,evacuated,6,6,626,73.3
+far side + skip corners < 4 tiles,7,297015,evacuated,6,6,649,56.9
+far side + skip corners < 4 tiles,7,297016,evacuated,6,6,652,51.1
+far side + skip corners < 4 tiles,7,297017,evacuated,6,6,635,70.9
+far side + skip corners < 4 tiles,7,297018,evacuated,6,6,644,48.5
+far side + skip corners < 4 tiles,7,297019,evacuated,6,6,645,72.6
+far side + skip corners < 4 tiles,8,298000,evacuated,6,6,656,56.6
+far side + skip corners < 4 tiles,8,298001,evacuated,6,6,668,53.4
+far side + skip corners < 4 tiles,8,298002,gave_up,5,6,545,46.9
+far side + skip corners < 4 tiles,8,298003,evacuated,6,6,652,67.0
+far side + skip corners < 4 tiles,8,298004,evacuated,6,6,661,55.0
+far side + skip corners < 4 tiles,8,298005,evacuated,6,6,652,68.8
+far side + skip corners < 4 tiles,8,298006,evacuated,6,6,658,52.6
+far side + skip corners < 4 tiles,8,298007,evacuated,6,6,657,61.4
+far side + skip corners < 4 tiles,8,298008,evacuated,6,6,680,35.5
+far side + skip corners < 4 tiles,8,298009,evacuated,6,6,677,49.6
+far side + skip corners < 4 tiles,8,298010,evacuated,6,6,678,38.7
+far side + skip corners < 4 tiles,8,298011,evacuated,6,6,671,41.9
+far side + skip corners < 4 tiles,8,298012,evacuated,6,6,672,38.7
+far side + skip corners < 4 tiles,8,298013,evacuated,6,6,653,59.0
+far side + skip corners < 4 tiles,8,298014,evacuated,6,6,649,62.5
+far side + skip corners < 4 tiles,8,298015,evacuated,6,6,675,43.8
+far side + skip corners < 4 tiles,8,298016,evacuated,6,6,673,46.4
+far side + skip corners < 4 tiles,8,298017,evacuated,6,6,684,30.7
+far side + skip corners < 4 tiles,8,298018,evacuated,6,6,641,60.1
+far side + skip corners < 4 tiles,8,298019,evacuated,6,6,662,53.4
+far side + skip corners < 4 tiles,9,299000,evacuated,6,6,675,34.2
+far side + skip corners < 4 tiles,9,299001,evacuated,6,6,651,69.9
+far side + skip corners < 4 tiles,9,299002,evacuated,6,6,637,74.3
+far side + skip corners < 4 tiles,9,299003,evacuated,6,6,663,52.7
+far side + skip corners < 4 tiles,9,299004,evacuated,6,6,633,82.8
+far side + skip corners < 4 tiles,9,299005,evacuated,6,6,637,97.9
+far side + skip corners < 4 tiles,9,299006,evacuated,6,6,631,86.0
+far side + skip corners < 4 tiles,9,299007,evacuated,6,6,668,55.9
+far side + skip corners < 4 tiles,9,299008,evacuated,6,6,655,73.6
+far side + skip corners < 4 tiles,9,299009,evacuated,6,6,640,73.3
+far side + skip corners < 4 tiles,9,299010,evacuated,6,6,668,63.6
+far side + skip corners < 4 tiles,9,299011,evacuated,6,6,629,89.5
+far side + skip corners < 4 tiles,9,299012,evacuated,6,6,654,66.3
+far side + skip corners < 4 tiles,9,299013,evacuated,6,6,616,94.8
+far side + skip corners < 4 tiles,9,299014,evacuated,6,6,628,95.3
+far side + skip corners < 4 tiles,9,299015,evacuated,6,6,655,65.3
+far side + skip corners < 4 tiles,9,299016,evacuated,6,6,622,73.2
+far side + skip corners < 4 tiles,9,299017,died,0,6,0,57.1
+far side + skip corners < 4 tiles,9,299018,evacuated,6,6,659,55.1
+far side + skip corners < 4 tiles,9,299019,evacuated,6,6,628,85.5

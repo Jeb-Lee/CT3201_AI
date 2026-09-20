@@ -572,7 +572,7 @@ chosen deliberately.
 
 | idea | mechanism | testable prediction |
 |---|---|---|
-| **Imitation warm start from A\*** | A* sees the same information, so its moves can be recorded and the network trained on them first (behaviour cloning, then PPO). | A cloned network evacuates a large share of training-stage episodes *before* any reinforcement learning, and PPO fine-tuning does not lose it. Also yields a genuine supervised epochs-vs-accuracy curve. |
+| **Imitation warm start from A\*** | **Done: see [IMITATION.md](IMITATION.md).** A* sees more than the learner, so it needs A*'s own route information to follow it. | Result: with that information the clone evacuates 80% of fresh episodes (A* 91%), 89% on trained stages, and both deterministic and sampled policies work; with only a local window, 20%. It does not beat A*. |
 | **Curriculum** | Start with a fire-free, one-occupant map so random exploration can succeed, then add hazards. | Full evacuation appears within the first 100k steps on the easy map; the difficulty steps then keep it. |
 | **Potential-based shaping** | Pay for progress (for example, path distance to the exit or to the nearest unexplored frontier) in a form that provably does not change which policy is optimal (Ng, Harada and Russell, 1999). | Rescues appear without the standing-still collapse, because getting closer is now rewarded. Risk: a poor potential can still be exploited. |
 | **Exploration bonus** | Reward visiting new tiles. | The AI leaves the spawn and finds occupants; the standing-still share falls. Risk: pacing the map forever. |

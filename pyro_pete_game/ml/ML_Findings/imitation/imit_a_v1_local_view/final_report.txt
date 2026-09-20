@@ -1,0 +1,62 @@
+TRAINED stages [1, 2, 3, 4, 5, 6, 7]
+agent        stage    n   evac 95% CI      died  gaveup  tmout   occ.out   score (mean)       secs
+--------------------------------------------------------------------------------------------------
+astar          ALL   70    94% [ 86- 98]     6%     0%     0%     94%      473 +/-  35     35.4
+cloned (deterministic)   ALL   70    29% [ 19- 40]    39%     3%    30%     32%      147 +/-  52     61.7
+cloned (sampled)   ALL   70    36% [ 26- 47]    27%     0%    37%     43%      194 +/-  52     61.9
+Paired comparison against 'astar' (same stage + seed => same occupant layout):
+  cloned (deterministic) score -325.9 +/- 59.8 over 70 pairs; evacuated alone: astar 46, cloned (deterministic) 0  -> clearly worse
+  cloned (sampled) score -278.7 +/- 60.1 over 70 pairs; evacuated alone: astar 41, cloned (sampled) 0  -> clearly worse
+
+UNSEEN stages [8, 9, 10]
+agent        stage    n   evac 95% CI      died  gaveup  tmout   occ.out   score (mean)       secs
+--------------------------------------------------------------------------------------------------
+astar          ALL   30    83% [ 66- 93]    13%     3%     0%     86%      568 +/-  82     55.0
+cloned (deterministic)   ALL   30     0% [  0- 11]    40%     0%    60%      3%       17 +/-  33     74.0
+cloned (sampled)   ALL   30     0% [  0- 11]    60%     0%    40%      0%        0 +/-   0     70.4
+Paired comparison against 'astar' (same stage + seed => same occupant layout):
+  cloned (deterministic) score -551.8 +/- 85.3 over 30 pairs; evacuated alone: astar 25, cloned (deterministic) 0  -> clearly worse
+  cloned (sampled) score -568.5 +/- 81.8 over 30 pairs; evacuated alone: astar 25, cloned (sampled) 0  -> clearly worse
+
+ALL ten stages
+agent        stage    n   evac 95% CI      died  gaveup  tmout   occ.out   score (mean)       secs
+--------------------------------------------------------------------------------------------------
+astar            1   10   100% [ 72-100]     0%     0%     0%    100%      390 +/-   8     23.1
+astar            2   10   100% [ 72-100]     0%     0%     0%    100%      381 +/-   7     35.0
+astar            3   10   100% [ 72-100]     0%     0%     0%    100%      476 +/-   6     31.8
+astar            4   10    90% [ 60- 98]    10%     0%     0%     90%      431 +/-  94     31.9
+astar            5   10    90% [ 60- 98]    10%     0%     0%     90%      522 +/- 114     39.0
+astar            6   10   100% [ 72-100]     0%     0%     0%    100%      575 +/-  14     39.0
+astar            7   10    80% [ 49- 94]    20%     0%     0%     80%      536 +/- 175     48.0
+astar            8   10    90% [ 60- 98]     0%    10%     0%     98%      648 +/-  27     54.0
+astar            9   10    90% [ 60- 98]    10%     0%     0%     90%      601 +/- 131     51.2
+astar           10   10    70% [ 40- 89]    30%     0%     0%     70%      456 +/- 195     59.8
+astar          ALL  100    91% [ 84- 95]     8%     1%     0%     92%      502 +/-  36     41.3
+
+cloned (deterministic)     1   10    40% [ 17- 69]    60%     0%     0%     47%      170 +/- 119     48.5
+cloned (deterministic)     2   10    70% [ 40- 89]     0%     0%    30%     70%      270 +/- 116     50.0
+cloned (deterministic)     3   10    20% [  6- 51]    70%     0%    10%     20%       96 +/- 126     52.5
+cloned (deterministic)     4   10    20% [  6- 51]    40%     0%    40%     20%       96 +/- 125     69.4
+cloned (deterministic)     5   10    10% [  2- 40]    30%    10%    50%     24%      134 +/- 138     71.4
+cloned (deterministic)     6   10    10% [  2- 40]    40%    10%    40%     10%       59 +/- 116     67.8
+cloned (deterministic)     7   10    30% [ 11- 60]    30%     0%    40%     30%      203 +/- 202     72.2
+cloned (deterministic)     8   10     0% [  0- 28]    60%     0%    40%      0%        0 +/-   0     70.5
+cloned (deterministic)     9   10     0% [  0- 28]    60%     0%    40%      8%       50 +/-  98     61.4
+cloned (deterministic)    10   10     0% [  0- 28]     0%     0%   100%      0%        0 +/-   0     90.0
+cloned (deterministic)   ALL  100    20% [ 13- 29]    39%     2%    39%     23%      108 +/-  39     65.4
+
+cloned (sampled)     1   10    60% [ 31- 83]    40%     0%     0%     67%      254 +/- 118     31.1
+cloned (sampled)     2   10    80% [ 49- 94]    10%     0%    10%     83%      314 +/-  88     47.0
+cloned (sampled)     3   10    30% [ 11- 60]    60%     0%    10%     30%      145 +/- 145     52.8
+cloned (sampled)     4   10    30% [ 11- 60]    40%     0%    30%     30%      143 +/- 143     68.6
+cloned (sampled)     5   10    20% [  6- 51]    20%     0%    60%     48%      251 +/- 149     72.5
+cloned (sampled)     6   10    20% [  6- 51]     0%     0%    80%     20%      116 +/- 151     80.6
+cloned (sampled)     7   10    10% [  2- 40]    20%     0%    70%     22%      137 +/- 154     80.8
+cloned (sampled)     8   10     0% [  0- 28]    60%     0%    40%      0%        0 +/-   0     78.4
+cloned (sampled)     9   10     0% [  0- 28]    80%     0%    20%      0%        0 +/-   0     58.1
+cloned (sampled)    10   10     0% [  0- 28]    40%     0%    60%      0%        0 +/-   0     74.8
+cloned (sampled)   ALL  100    25% [ 18- 34]    37%     0%    38%     30%      136 +/-  41     64.5
+
+Paired comparison against 'astar' (same stage + seed => same occupant layout):
+  cloned (deterministic) score -393.7 +/- 52.9 over 100 pairs; evacuated alone: astar 71, cloned (deterministic) 0  -> clearly worse
+  cloned (sampled) score -365.6 +/- 55.1 over 100 pairs; evacuated alone: astar 66, cloned (sampled) 0  -> clearly worse

@@ -150,3 +150,147 @@ contradicted by anything here, but it is a claim about this setup and 100k-300k
 steps, and one run (v3 long) shows a rescue skill growing under a failure
 penalty, which the original wording ("cannot create a rescue") did not allow
 for.
+
+---
+
+## Imitation follow-ups (registered 2026-09-20, before any run)
+
+*What I had seen when writing this: the two imitation runs, the 240 s comparison, the
+recordings, and the back-and-forth measurement in
+[IMITATION.md](IMITATION.md) 4.6. Nothing from any experiment below.*
+
+Both proposed changes obey the information-parity rule: a memory of the agent's own
+past tiles is not more than A* has (A* itself carries a goal and a planned route
+between decisions), and the route-damage figure is one A* computes.
+
+**P7 - a short memory removes the pacing.** Version 3a = version 2 + the last four
+tiles visited and the previous move as extra inputs. Same data, network, training and
+test as `imit_b`.
+*Prediction:* flagged (6+ reversals in a row) episodes fall from **19 of 100** to
+**6 or fewer**, and all-ten deterministic evacuation at 240 s rises from **80%** to
+**85% or more**, mostly on the unseen stages (from 60%).
+*Falsified if:* flagged episodes stay above 10, or evacuation does not rise. If
+pacing disappears but evacuation does not rise, then pacing was a symptom and not the
+cause.
+
+**P8 - the route damage fixes the endgame.** Version 3b = version 2 + the estimated
+round-trip fire damage to the nearest unexplored area and the ratio to health (what A*
+uses in `_worth_exploring`).
+*Prediction:* the give-ups that end one occupant short fall from **9 of 100** to
+**4 or fewer**, without changing the pacing count.
+*Falsified if:* they stay at 7 or more, which would mean the endgame decision is not
+what is missing.
+
+**Interaction, stated in advance:** if both are true, version 3a+3b should reach the
+A* level (about 91%) on the trained stages and within one interval of it on the unseen
+ones. I do not expect it to *exceed* A*; nothing here suggests copying can.
+
+---
+
+## Amendment: a fuller memory (registered 2026-09-20, before any memory run)
+
+*Prompted by the project owner asking whether it is fair for the model to remember
+everything it walked and saw on the current map, starting empty and accumulating.
+Answer, from A*'s code: yes, provided the memory starts empty each episode, holds only
+the agent's own experience, and is nothing A* does not also hold. A* records the tiles it
+has seen (`explored`), the occupants it has spotted (`known_victims`) and every tile it
+has walked (`trail_cells`); it uses the first two to decide and only draws the third. So a
+walked-tiles memory is within parity, and the learner already receives the first two
+through the map window and the route hints.*
+
+Two memory levels, both compared against `imit_b` (v2) with identical data, network,
+seeds, DAgger schedule and test:
+
+* **v3, short memory (P7 above, unchanged):** the last move and the last four tiles stood on.
+* **v4, full trail:** v3 plus, for every tile in the 11 x 11 window, how many times the
+  agent has stood on it this episode (capped at 5, scaled to 0-1), empty at the start.
+
+**P9 - the full trail does at least as well as the short memory and removes the pacing.**
+*Prediction:* flagged episodes (6+ reversals in a row) for v4 are **no more than for v3**
+and at most **6 of 100**; all-ten deterministic evacuation at 240 s for v4 is **within 5
+points of v3** (I do not expect a large extra gain, because the pacing is a short-horizon
+loop that the last few tiles already reveal). *Falsified if:* v4 is worse than v3 by more
+than 5 points (extra inputs hurting), or v4 flags more episodes than v3.
+
+**Risk registered in advance:** A* almost never revisits tiles, so the demonstrations show
+the network almost no looping states. The memory inputs will be nearly uninformative in the
+cloning phase; whatever it learns to do with them has to come from the DAgger rounds, where
+the network's own loops are labelled by A*. If memory helps at all, I expect it to be there.
+
+*Unchanged from before:* I do not expect either version to exceed A*.
+
+---
+
+## Outcomes of P7 and P9, and a confirmation test (registered before it runs)
+
+**Outcomes** (`data/memory_summary.md`, computed by code from the 240 s test, same 100
+episodes): **P7 falsified on both clauses** (v3: 10 pacing episodes against a predicted
+6 or fewer; evacuation 84% against a predicted 85% or more; the direction was right, the
+size was not). **P9 held** (v4: 5 pacing episodes, no more than v3's 10 and at most 6; 87%
+evacuation, within 5 points of v3's 84%). One thing the criteria did not capture: I
+expected no *large* extra gain from the full trail, and on the unseen stages it gained 10
+points over v3 (80% against 70%), more than I expected.
+
+**Why a confirmation test.** Four network variants (v1 to v4) have now been evaluated on
+the same 100 test episodes. The more variants tried on one test set, the more the
+best-looking one is flattered by chance. So the final candidate is checked once more on
+episodes nobody has used: 20 fresh episodes on each of the ten stages (seeds 190,000 and
+up), for A*, v2 and v4.
+
+**P10 (registered now, before running).** v4's all-ten deterministic evacuation on the
+fresh episodes lies **inside the 95% interval it already had, 79-92%**; A* lies inside its
+own earlier interval, 84-95%; and in the paired counts v4 wins **at least as many
+episodes as v2 wins over it** (only-v4 >= only-v2).
+*Falsified if:* v4 falls below 79%, or v2 beats v4 in the paired counts. If v4 falls below
+79%, the memory gain was mostly the test set being reused.
+
+**Outcome of P10 (fresh episodes, 200 per agent, seeds 190,000+).** **Falsified.** v4 scored
+**76%** (70-82), below the 79% floor I set. A* scored 85% (79-89), inside its interval; in the
+paired counts v4 won 8 episodes v2 lost and lost 5 (that clause held). By my own pre-stated
+rule, the first test's memory gain was mostly the test set being reused: v4 beat v2 by 1
+point on fresh episodes. Pooled over both sets (300 episodes) the gain is 3 points (77% to 80%,
+paired p ~ 0.04). What did replicate is the reduction in back-and-forth pacing (v2 39 episodes,
+v4 15, out of 200; A* 0) and the drop in deaths (12% to 8%). (`data/confirmation_240s.md`,
+`data/pooled_300.md`, `data/oscillation_fresh.md`.)
+
+**P11 (the project owner's hypothesis, tested after the fact, NOT registered in advance).**
+After watching the v4 clips the owner said: the failures are mainly stalling; it is either
+undecided between two paths or does not know what to do; it is mainly a higher-stage problem;
+and removing it would raise success significantly. The test code was written before the results
+were seen but the definition of "stall" (at most 3 different tiles among the last 16 entered,
+10+ moments) is mine, so this is exploratory, not confirmatory.
+
+**Outcome of P11 (300 episodes per agent).** *Mostly* supported, with two corrections.
+(1) "Mainly stalling": v2 47% of failures contain a stall, v4 27%; v4's biggest failure class
+is the non-stalling endgame give-up. (2) "Higher stages": stalling is 4% (v2) and 1% (v4) of
+trained-stage episodes but 47% and 23% of stages 8-10; higher and unseen are confounded.
+(3) "Undecided between paths": supported (77% of stalled moves change goal against 7% otherwise),
+with a minority of lost moments. (4) "Significantly": +7 to +8 points for v2, only +2 to +3 for v4
+(upper bound, borrowing A*). (`IMITATION.md` 4.9, `data/stall_analysis.md`,
+`data/stall_counterfactual_{10,40,200}.md`.)
+
+**P12 (registered now, before running).** On 200 episodes nobody has used (seeds 290,000+, 20 per
+stage), A* with a mild far-side lean in its search order (`far_soft`: minimise distance-from-agent
+minus 0.5 x distance-from-exit) **evacuates at least 2 points more than A*'s own nearest-frontier rule
+and gives up less often**. It was 91% against 87% and 2% against 5% give-ups on the 300 episodes
+where it was found, after four variants were tried there (forking paths).
+*Falsified if:* far_soft evacuates less than nearest + 2 points on the fresh episodes, or its give-up
+rate is not lower. The mean game score is *not* predicted to move (it was +2 points, indistinguishable
+from 0). `far_hard` is tested too but only `far_soft` is the registered claim.
+
+**Outcome of P12 (fresh episodes, 200, seeds 290,000+).** **Held.** far_soft evacuated **90%**
+against nearest's **84%** (+6, needed +2) and gave up 2% against 5%; it won 13 episodes nearest lost
+and lost 2. Pooled over both sets (500 episodes) 90.6% against 86.0%, won 31 / lost 8, sign test
+p ~ 0.0003. Not predicted, and on the fresh set the other way from the first: far_soft's mean game
+score was +18 (+2 to +34) higher there but +2 on the first set (pooled +8), so the score gain is
+small and not settled. far_hard was 86% against 84% on the fresh set (not distinguishable; pooled
+p ~ 0.05, mean score -3). Caveat: far_soft was picked as the best of four variants on the first set,
+then confirmed once. (`IMITATION.md` 4.11, `data/frontier_variants*.md`.)
+
+**P12 re-check with the corrected rule.** The far-side rule originally measured "distance from the
+exit" with the locked door closed (spawn side missing, treated as 0). With the rule corrected to use the
+static floor plan and run as a real agent option, on the same 200 fresh episodes: **90% against 84%**,
+give-ups 2% against 5%, mean score 505 against 488. P12 still holds. (`data/teacher_variants_fresh.md`)
+
+**Scorecard for the imitation follow-ups:** P7 falsified, P9 held on the first test set,
+P10 falsified, P11 mostly supported (exploratory), P12 held. P8 (route damage) is still untested.

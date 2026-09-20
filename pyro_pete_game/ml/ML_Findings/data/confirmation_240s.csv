@@ -1,0 +1,801 @@
+agent,stage,seed,outcome,victims_out,victims_total,score,seconds
+astar,0,190000,evacuated,3,3,390,30.0
+astar,0,190001,evacuated,3,3,394,23.6
+astar,0,190002,evacuated,3,3,399,16.6
+astar,0,190003,evacuated,3,3,400,15.0
+astar,0,190004,died,2,3,160,40.3
+astar,0,190005,evacuated,3,3,381,43.3
+astar,0,190006,evacuated,3,3,400,14.5
+astar,0,190007,evacuated,3,3,393,26.2
+astar,0,190008,evacuated,3,3,389,32.1
+astar,0,190009,evacuated,3,3,390,29.4
+astar,0,190010,evacuated,3,3,393,26.0
+astar,0,190011,evacuated,3,3,396,21.2
+astar,0,190012,evacuated,3,3,399,16.6
+astar,0,190013,evacuated,3,3,399,16.1
+astar,0,190014,evacuated,3,3,377,22.5
+astar,0,190015,evacuated,3,3,397,19.3
+astar,0,190016,evacuated,3,3,389,31.0
+astar,0,190017,evacuated,3,3,401,13.4
+astar,0,190018,evacuated,3,3,386,35.3
+astar,0,190019,evacuated,3,3,386,36.4
+astar,1,191000,evacuated,3,3,386,36.1
+astar,1,191001,evacuated,3,3,386,36.1
+astar,1,191002,evacuated,3,3,375,32.2
+astar,1,191003,evacuated,3,3,389,31.6
+astar,1,191004,evacuated,3,3,393,25.3
+astar,1,191005,evacuated,3,3,374,35.0
+astar,1,191006,evacuated,3,3,381,42.9
+astar,1,191007,evacuated,3,3,389,31.7
+astar,1,191008,evacuated,3,3,393,24.8
+astar,1,191009,evacuated,3,3,390,29.4
+astar,1,191010,died,0,3,0,17.0
+astar,1,191011,evacuated,3,3,368,39.3
+astar,1,191012,evacuated,3,3,390,30.1
+astar,1,191013,evacuated,3,3,376,39.8
+astar,1,191014,evacuated,3,3,391,28.5
+astar,1,191015,evacuated,3,3,385,38.2
+astar,1,191016,evacuated,3,3,383,40.1
+astar,1,191017,evacuated,3,3,389,31.6
+astar,1,191018,evacuated,3,3,389,31.7
+astar,1,191019,evacuated,3,3,371,37.3
+astar,2,192000,evacuated,4,4,484,19.1
+astar,2,192001,evacuated,4,4,480,25.0
+astar,2,192002,evacuated,4,4,483,31.8
+astar,2,192003,evacuated,4,4,484,29.7
+astar,2,192004,evacuated,4,4,478,27.0
+astar,2,192005,evacuated,4,4,465,30.8
+astar,2,192006,evacuated,4,4,475,32.0
+astar,2,192007,evacuated,4,4,464,28.0
+astar,2,192008,evacuated,4,4,474,33.4
+astar,2,192009,evacuated,4,4,474,34.5
+astar,2,192010,evacuated,4,4,472,35.6
+astar,2,192011,died,0,4,0,48.7
+astar,2,192012,evacuated,4,4,477,28.6
+astar,2,192013,evacuated,4,4,476,29.9
+astar,2,192014,evacuated,4,4,499,16.4
+astar,2,192015,evacuated,4,4,492,16.9
+astar,2,192016,evacuated,4,4,479,24.8
+astar,2,192017,evacuated,4,4,473,34.7
+astar,2,192018,evacuated,4,4,481,23.4
+astar,2,192019,evacuated,4,4,438,49.3
+astar,3,193000,died,0,4,0,51.5
+astar,3,193001,evacuated,4,4,483,26.0
+astar,3,193002,gave_up,3,4,374,44.3
+astar,3,193003,evacuated,4,4,484,30.7
+astar,3,193004,evacuated,4,4,488,24.9
+astar,3,193005,evacuated,4,4,479,34.0
+astar,3,193006,evacuated,4,4,482,26.4
+astar,3,193007,evacuated,4,4,485,23.3
+astar,3,193008,evacuated,4,4,484,31.8
+astar,3,193009,evacuated,4,4,480,37.4
+astar,3,193010,evacuated,4,4,475,30.2
+astar,3,193011,evacuated,4,4,480,36.0
+astar,3,193012,evacuated,4,4,479,31.3
+astar,3,193013,evacuated,4,4,459,46.2
+astar,3,193014,evacuated,4,4,481,29.2
+astar,3,193015,evacuated,4,4,481,34.8
+astar,3,193016,evacuated,4,4,478,34.5
+astar,3,193017,evacuated,4,4,475,28.6
+astar,3,193018,evacuated,4,4,486,26.7
+astar,3,193019,evacuated,4,4,479,34.2
+astar,4,194000,gave_up,3,5,364,40.8
+astar,4,194001,gave_up,4,5,456,53.1
+astar,4,194002,died,4,5,360,64.6
+astar,4,194003,evacuated,5,5,570,41.5
+astar,4,194004,gave_up,4,5,458,70.7
+astar,4,194005,gave_up,4,5,466,57.3
+astar,4,194006,evacuated,5,5,578,38.4
+astar,4,194007,gave_up,4,5,460,66.4
+astar,4,194008,evacuated,5,5,535,67.7
+astar,4,194009,gave_up,4,5,467,45.6
+astar,4,194010,evacuated,5,5,557,52.3
+astar,4,194011,evacuated,5,5,575,34.4
+astar,4,194012,evacuated,5,5,575,30.6
+astar,4,194013,died,0,5,0,38.0
+astar,4,194014,evacuated,5,5,587,34.1
+astar,4,194015,evacuated,5,5,597,18.9
+astar,4,194016,gave_up,4,5,451,63.2
+astar,4,194017,evacuated,5,5,583,40.0
+astar,4,194018,evacuated,5,5,569,61.1
+astar,4,194019,evacuated,5,5,587,34.9
+astar,5,195000,evacuated,5,5,567,56.1
+astar,5,195001,evacuated,5,5,593,24.8
+astar,5,195002,evacuated,5,5,586,26.9
+astar,5,195003,evacuated,5,5,575,37.0
+astar,5,195004,evacuated,5,5,585,32.8
+astar,5,195005,evacuated,5,5,585,38.2
+astar,5,195006,evacuated,5,5,587,26.4
+astar,5,195007,evacuated,5,5,572,57.5
+astar,5,195008,evacuated,5,5,553,59.3
+astar,5,195009,evacuated,5,5,542,57.9
+astar,5,195010,evacuated,5,5,566,33.3
+astar,5,195011,evacuated,5,5,581,35.8
+astar,5,195012,evacuated,5,5,573,35.4
+astar,5,195013,evacuated,5,5,584,38.7
+astar,5,195014,evacuated,5,5,588,32.8
+astar,5,195015,evacuated,5,5,587,34.0
+astar,5,195016,evacuated,5,5,593,25.9
+astar,5,195017,evacuated,5,5,554,55.5
+astar,5,195018,evacuated,5,5,579,46.3
+astar,5,195019,evacuated,5,5,585,37.7
+astar,6,196000,evacuated,6,6,648,52.0
+astar,6,196001,died,0,6,0,34.3
+astar,6,196002,died,0,6,0,24.1
+astar,6,196003,evacuated,6,6,671,49.5
+astar,6,196004,evacuated,6,6,642,53.0
+astar,6,196005,evacuated,6,6,651,57.1
+astar,6,196006,died,5,6,460,57.2
+astar,6,196007,gave_up,5,6,549,68.5
+astar,6,196008,gave_up,5,6,559,63.1
+astar,6,196009,evacuated,6,6,688,33.3
+astar,6,196010,died,0,6,0,71.4
+astar,6,196011,evacuated,6,6,682,42.4
+astar,6,196012,died,0,6,0,51.5
+astar,6,196013,evacuated,6,6,636,63.1
+astar,6,196014,evacuated,6,6,691,28.5
+astar,6,196015,died,4,6,360,57.9
+astar,6,196016,gave_up,5,6,538,99.4
+astar,6,196017,evacuated,6,6,672,47.4
+astar,6,196018,evacuated,6,6,657,61.2
+astar,6,196019,evacuated,6,6,643,45.9
+astar,7,197000,evacuated,6,6,649,56.0
+astar,7,197001,evacuated,6,6,672,38.4
+astar,7,197002,evacuated,6,6,655,53.3
+astar,7,197003,evacuated,6,6,690,30.4
+astar,7,197004,evacuated,6,6,623,86.9
+astar,7,197005,evacuated,6,6,692,27.7
+astar,7,197006,evacuated,6,6,648,60.0
+astar,7,197007,evacuated,6,6,634,78.6
+astar,7,197008,evacuated,6,6,665,43.2
+astar,7,197009,evacuated,6,6,653,50.4
+astar,7,197010,evacuated,6,6,663,62.7
+astar,7,197011,evacuated,6,6,641,66.9
+astar,7,197012,evacuated,6,6,645,61.8
+astar,7,197013,evacuated,6,6,645,61.6
+astar,7,197014,gave_up,5,6,524,79.5
+astar,7,197015,evacuated,6,6,651,55.4
+astar,7,197016,evacuated,6,6,652,52.8
+astar,7,197017,evacuated,6,6,690,29.8
+astar,7,197018,died,0,6,0,89.1
+astar,7,197019,evacuated,6,6,659,61.0
+astar,8,198000,evacuated,6,6,671,50.2
+astar,8,198001,evacuated,6,6,650,56.9
+astar,8,198002,evacuated,6,6,671,48.9
+astar,8,198003,evacuated,6,6,650,81.4
+astar,8,198004,evacuated,6,6,678,47.8
+astar,8,198005,evacuated,6,6,678,48.6
+astar,8,198006,evacuated,6,6,646,68.3
+astar,8,198007,evacuated,6,6,679,38.7
+astar,8,198008,died,0,6,0,52.6
+astar,8,198009,evacuated,6,6,666,55.8
+astar,8,198010,evacuated,6,6,660,65.9
+astar,8,198011,evacuated,6,6,684,39.5
+astar,8,198012,evacuated,6,6,670,44.3
+astar,8,198013,evacuated,6,6,670,50.5
+astar,8,198014,evacuated,6,6,639,72.3
+astar,8,198015,evacuated,6,6,664,42.2
+astar,8,198016,evacuated,6,6,679,36.9
+astar,8,198017,evacuated,6,6,661,64.3
+astar,8,198018,gave_up,5,6,563,61.4
+astar,8,198019,evacuated,6,6,675,53.1
+astar,9,199000,evacuated,6,6,654,66.4
+astar,9,199001,evacuated,6,6,651,69.8
+astar,9,199002,evacuated,6,6,638,97.4
+astar,9,199003,evacuated,6,6,681,34.7
+astar,9,199004,evacuated,6,6,666,50.1
+astar,9,199005,evacuated,6,6,678,29.8
+astar,9,199006,evacuated,6,6,636,78.8
+astar,9,199007,evacuated,6,6,680,36.7
+astar,9,199008,evacuated,6,6,651,66.3
+astar,9,199009,gave_up,5,6,538,67.0
+astar,9,199010,evacuated,6,6,651,56.2
+astar,9,199011,evacuated,6,6,665,58.9
+astar,9,199012,evacuated,6,6,677,41.2
+astar,9,199013,gave_up,5,6,534,104.6
+astar,9,199014,died,0,6,0,104.5
+astar,9,199015,evacuated,6,6,651,72.4
+astar,9,199016,evacuated,6,6,632,92.7
+astar,9,199017,evacuated,6,6,656,71.9
+astar,9,199018,evacuated,6,6,660,57.5
+astar,9,199019,evacuated,6,6,690,29.3
+v2 deterministic,0,190000,evacuated,3,3,390,30.2
+v2 deterministic,0,190001,evacuated,3,3,395,23.0
+v2 deterministic,0,190002,evacuated,3,3,399,16.6
+v2 deterministic,0,190003,evacuated,3,3,400,15.0
+v2 deterministic,0,190004,died,2,3,160,40.1
+v2 deterministic,0,190005,gave_up,2,3,269,62.1
+v2 deterministic,0,190006,evacuated,3,3,401,14.2
+v2 deterministic,0,190007,evacuated,3,3,393,26.2
+v2 deterministic,0,190008,evacuated,3,3,389,31.8
+v2 deterministic,0,190009,evacuated,3,3,390,29.4
+v2 deterministic,0,190010,evacuated,3,3,393,26.2
+v2 deterministic,0,190011,evacuated,3,3,396,21.4
+v2 deterministic,0,190012,evacuated,3,3,399,16.6
+v2 deterministic,0,190013,evacuated,3,3,399,15.8
+v2 deterministic,0,190014,evacuated,3,3,380,21.8
+v2 deterministic,0,190015,evacuated,3,3,397,19.0
+v2 deterministic,0,190016,evacuated,3,3,389,31.0
+v2 deterministic,0,190017,evacuated,3,3,401,13.4
+v2 deterministic,0,190018,evacuated,3,3,387,35.0
+v2 deterministic,0,190019,evacuated,3,3,386,35.8
+v2 deterministic,1,191000,evacuated,3,3,386,36.6
+v2 deterministic,1,191001,evacuated,3,3,386,36.6
+v2 deterministic,1,191002,evacuated,3,3,374,32.6
+v2 deterministic,1,191003,evacuated,3,3,385,37.4
+v2 deterministic,1,191004,evacuated,3,3,393,26.2
+v2 deterministic,1,191005,evacuated,3,3,373,35.0
+v2 deterministic,1,191006,evacuated,3,3,381,43.8
+v2 deterministic,1,191007,evacuated,3,3,388,32.6
+v2 deterministic,1,191008,evacuated,3,3,393,25.4
+v2 deterministic,1,191009,evacuated,3,3,390,30.2
+v2 deterministic,1,191010,died,0,3,0,17.0
+v2 deterministic,1,191011,evacuated,3,3,365,39.7
+v2 deterministic,1,191012,evacuated,3,3,389,31.0
+v2 deterministic,1,191013,evacuated,3,3,379,39.5
+v2 deterministic,1,191014,evacuated,3,3,390,29.4
+v2 deterministic,1,191015,evacuated,3,3,385,38.2
+v2 deterministic,1,191016,evacuated,3,3,384,39.0
+v2 deterministic,1,191017,evacuated,3,3,389,31.8
+v2 deterministic,1,191018,evacuated,3,3,388,32.6
+v2 deterministic,1,191019,evacuated,3,3,371,37.4
+v2 deterministic,2,192000,evacuated,4,4,483,19.8
+v2 deterministic,2,192001,evacuated,4,4,479,26.2
+v2 deterministic,2,192002,evacuated,4,4,481,33.4
+v2 deterministic,2,192003,evacuated,4,4,477,28.6
+v2 deterministic,2,192004,evacuated,4,4,477,28.6
+v2 deterministic,2,192005,evacuated,4,4,469,31.8
+v2 deterministic,2,192006,evacuated,4,4,474,32.6
+v2 deterministic,2,192007,evacuated,4,4,462,29.2
+v2 deterministic,2,192008,evacuated,4,4,473,35.0
+v2 deterministic,2,192009,evacuated,4,4,472,36.6
+v2 deterministic,2,192010,evacuated,4,4,468,33.4
+v2 deterministic,2,192011,evacuated,4,4,480,35.0
+v2 deterministic,2,192012,evacuated,4,4,476,30.2
+v2 deterministic,2,192013,evacuated,4,4,475,31.8
+v2 deterministic,2,192014,evacuated,4,4,498,17.4
+v2 deterministic,2,192015,evacuated,4,4,491,17.4
+v2 deterministic,2,192016,evacuated,4,4,479,25.4
+v2 deterministic,2,192017,evacuated,4,4,472,36.6
+v2 deterministic,2,192018,evacuated,4,4,480,24.6
+v2 deterministic,2,192019,died,0,4,0,39.5
+v2 deterministic,3,193000,gave_up,3,4,354,74.9
+v2 deterministic,3,193001,evacuated,4,4,478,28.6
+v2 deterministic,3,193002,died,0,4,0,44.1
+v2 deterministic,3,193003,evacuated,4,4,482,32.6
+v2 deterministic,3,193004,evacuated,4,4,485,27.8
+v2 deterministic,3,193005,evacuated,4,4,472,38.2
+v2 deterministic,3,193006,evacuated,4,4,484,29.4
+v2 deterministic,3,193007,evacuated,4,4,480,26.2
+v2 deterministic,3,193008,evacuated,4,4,485,28.6
+v2 deterministic,3,193009,evacuated,4,4,476,42.2
+v2 deterministic,3,193010,evacuated,4,4,470,40.6
+v2 deterministic,3,193011,evacuated,4,4,477,39.8
+v2 deterministic,3,193012,evacuated,4,4,474,34.2
+v2 deterministic,3,193013,evacuated,4,4,441,52.2
+v2 deterministic,3,193014,evacuated,4,4,475,32.6
+v2 deterministic,3,193015,evacuated,4,4,479,38.2
+v2 deterministic,3,193016,evacuated,4,4,472,38.2
+v2 deterministic,3,193017,evacuated,4,4,475,33.4
+v2 deterministic,3,193018,evacuated,4,4,484,29.4
+v2 deterministic,3,193019,evacuated,4,4,473,36.6
+v2 deterministic,4,194000,gave_up,3,5,345,70.4
+v2 deterministic,4,194001,gave_up,4,5,447,67.4
+v2 deterministic,4,194002,died,4,5,360,63.3
+v2 deterministic,4,194003,evacuated,5,5,576,41.7
+v2 deterministic,4,194004,gave_up,4,5,428,80.0
+v2 deterministic,4,194005,gave_up,4,5,456,71.8
+v2 deterministic,4,194006,evacuated,5,5,578,38.7
+v2 deterministic,4,194007,gave_up,4,5,460,69.3
+v2 deterministic,4,194008,gave_up,4,5,450,120.2
+v2 deterministic,4,194009,gave_up,4,5,459,58.6
+v2 deterministic,4,194010,evacuated,5,5,555,64.4
+v2 deterministic,4,194011,evacuated,5,5,575,35.1
+v2 deterministic,4,194012,evacuated,5,5,577,31.4
+v2 deterministic,4,194013,died,0,5,0,39.1
+v2 deterministic,4,194014,evacuated,5,5,587,35.1
+v2 deterministic,4,194015,evacuated,5,5,597,19.7
+v2 deterministic,4,194016,gave_up,4,5,460,74.8
+v2 deterministic,4,194017,evacuated,5,5,582,42.4
+v2 deterministic,4,194018,gave_up,4,5,450,121.8
+v2 deterministic,4,194019,evacuated,5,5,586,35.9
+v2 deterministic,5,195000,evacuated,5,5,572,56.3
+v2 deterministic,5,195001,evacuated,5,5,593,24.8
+v2 deterministic,5,195002,evacuated,5,5,586,27.7
+v2 deterministic,5,195003,evacuated,5,5,573,38.0
+v2 deterministic,5,195004,evacuated,5,5,581,34.3
+v2 deterministic,5,195005,evacuated,5,5,584,39.5
+v2 deterministic,5,195006,evacuated,5,5,586,27.0
+v2 deterministic,5,195007,evacuated,5,5,570,60.1
+v2 deterministic,5,195008,evacuated,5,5,557,61.6
+v2 deterministic,5,195009,evacuated,5,5,539,60.7
+v2 deterministic,5,195010,evacuated,5,5,569,34.3
+v2 deterministic,5,195011,evacuated,5,5,584,38.7
+v2 deterministic,5,195012,evacuated,5,5,573,36.5
+v2 deterministic,5,195013,evacuated,5,5,583,40.2
+v2 deterministic,5,195014,evacuated,5,5,588,33.6
+v2 deterministic,5,195015,evacuated,5,5,587,34.3
+v2 deterministic,5,195016,evacuated,5,5,592,26.3
+v2 deterministic,5,195017,evacuated,5,5,560,57.1
+v2 deterministic,5,195018,evacuated,5,5,578,47.5
+v2 deterministic,5,195019,evacuated,5,5,584,38.7
+v2 deterministic,6,196000,died,0,6,0,44.4
+v2 deterministic,6,196001,died,0,6,0,36.8
+v2 deterministic,6,196002,died,0,6,0,25.0
+v2 deterministic,6,196003,evacuated,6,6,663,51.9
+v2 deterministic,6,196004,died,0,6,0,55.4
+v2 deterministic,6,196005,evacuated,6,6,642,61.1
+v2 deterministic,6,196006,died,5,6,460,68.3
+v2 deterministic,6,196007,gave_up,5,6,553,76.2
+v2 deterministic,6,196008,gave_up,5,6,540,78.4
+v2 deterministic,6,196009,evacuated,6,6,686,36.5
+v2 deterministic,6,196010,died,0,6,0,73.5
+v2 deterministic,6,196011,evacuated,6,6,680,44.6
+v2 deterministic,6,196012,died,0,6,0,49.7
+v2 deterministic,6,196013,died,4,6,360,119.7
+v2 deterministic,6,196014,evacuated,6,6,690,30.7
+v2 deterministic,6,196015,died,0,6,0,44.4
+v2 deterministic,6,196016,gave_up,5,6,556,81.5
+v2 deterministic,6,196017,evacuated,6,6,671,49.7
+v2 deterministic,6,196018,evacuated,6,6,649,64.4
+v2 deterministic,6,196019,evacuated,6,6,659,46.3
+v2 deterministic,7,197000,evacuated,6,6,644,61.5
+v2 deterministic,7,197001,evacuated,6,6,669,42.4
+v2 deterministic,7,197002,evacuated,6,6,645,60.1
+v2 deterministic,7,197003,evacuated,6,6,673,46.8
+v2 deterministic,7,197004,gave_up,5,6,531,122.4
+v2 deterministic,7,197005,evacuated,6,6,684,38.7
+v2 deterministic,7,197006,evacuated,6,6,642,65.1
+v2 deterministic,7,197007,gave_up,5,6,550,71.1
+v2 deterministic,7,197008,evacuated,6,6,647,56.2
+v2 deterministic,7,197009,evacuated,6,6,647,56.4
+v2 deterministic,7,197010,gave_up,5,6,544,159.1
+v2 deterministic,7,197011,evacuated,6,6,635,75.4
+v2 deterministic,7,197012,evacuated,6,6,628,84.9
+v2 deterministic,7,197013,evacuated,6,6,643,62.9
+v2 deterministic,7,197014,gave_up,5,6,555,62.3
+v2 deterministic,7,197015,evacuated,6,6,664,49.1
+v2 deterministic,7,197016,evacuated,6,6,625,112.8
+v2 deterministic,7,197017,evacuated,6,6,689,32.1
+v2 deterministic,7,197018,evacuated,6,6,657,60.0
+v2 deterministic,7,197019,died,0,6,0,46.7
+v2 deterministic,8,198000,evacuated,6,6,650,104.0
+v2 deterministic,8,198001,evacuated,6,6,643,63.7
+v2 deterministic,8,198002,evacuated,6,6,644,101.1
+v2 deterministic,8,198003,evacuated,6,6,661,65.1
+v2 deterministic,8,198004,gave_up,4,6,450,194.3
+v2 deterministic,8,198005,died,0,6,0,92.1
+v2 deterministic,8,198006,died,0,6,0,178.3
+v2 deterministic,8,198007,evacuated,6,6,675,43.1
+v2 deterministic,8,198008,died,0,6,0,56.9
+v2 deterministic,8,198009,evacuated,6,6,644,120.3
+v2 deterministic,8,198010,died,0,6,0,79.0
+v2 deterministic,8,198011,evacuated,6,6,674,45.3
+v2 deterministic,8,198012,evacuated,6,6,637,93.7
+v2 deterministic,8,198013,evacuated,6,6,663,61.5
+v2 deterministic,8,198014,died,0,6,0,84.0
+v2 deterministic,8,198015,evacuated,6,6,649,71.8
+v2 deterministic,8,198016,evacuated,6,6,624,180.3
+v2 deterministic,8,198017,evacuated,6,6,637,113.4
+v2 deterministic,8,198018,gave_up,5,6,525,99.0
+v2 deterministic,8,198019,evacuated,6,6,645,121.7
+v2 deterministic,9,199000,evacuated,6,6,650,72.0
+v2 deterministic,9,199001,evacuated,6,6,650,72.5
+v2 deterministic,9,199002,gave_up,5,6,543,82.5
+v2 deterministic,9,199003,evacuated,6,6,675,43.9
+v2 deterministic,9,199004,died,0,6,0,159.3
+v2 deterministic,9,199005,evacuated,6,6,679,29.2
+v2 deterministic,9,199006,died,0,6,0,234.3
+v2 deterministic,9,199007,evacuated,6,6,679,37.9
+v2 deterministic,9,199008,evacuated,6,6,657,70.5
+v2 deterministic,9,199009,died,0,6,0,200.6
+v2 deterministic,9,199010,gave_up,5,6,538,134.4
+v2 deterministic,9,199011,evacuated,6,6,661,63.9
+v2 deterministic,9,199012,evacuated,6,6,641,85.3
+v2 deterministic,9,199013,gave_up,5,6,548,83.7
+v2 deterministic,9,199014,gave_up,3,6,326,161.7
+v2 deterministic,9,199015,evacuated,6,6,660,66.0
+v2 deterministic,9,199016,gave_up,5,6,537,209.1
+v2 deterministic,9,199017,died,0,6,0,115.3
+v2 deterministic,9,199018,evacuated,6,6,642,83.9
+v2 deterministic,9,199019,evacuated,6,6,689,31.2
+v4 deterministic,0,190000,evacuated,3,3,390,30.2
+v4 deterministic,0,190001,evacuated,3,3,395,23.0
+v4 deterministic,0,190002,evacuated,3,3,399,16.6
+v4 deterministic,0,190003,evacuated,3,3,400,15.0
+v4 deterministic,0,190004,died,2,3,160,40.1
+v4 deterministic,0,190005,evacuated,3,3,381,43.8
+v4 deterministic,0,190006,evacuated,3,3,401,14.2
+v4 deterministic,0,190007,evacuated,3,3,393,26.2
+v4 deterministic,0,190008,evacuated,3,3,389,31.8
+v4 deterministic,0,190009,evacuated,3,3,390,29.4
+v4 deterministic,0,190010,evacuated,3,3,393,26.2
+v4 deterministic,0,190011,evacuated,3,3,396,21.4
+v4 deterministic,0,190012,evacuated,3,3,399,16.6
+v4 deterministic,0,190013,evacuated,3,3,399,15.8
+v4 deterministic,0,190014,evacuated,3,3,380,21.8
+v4 deterministic,0,190015,evacuated,3,3,397,19.0
+v4 deterministic,0,190016,evacuated,3,3,389,31.0
+v4 deterministic,0,190017,evacuated,3,3,401,13.4
+v4 deterministic,0,190018,evacuated,3,3,387,35.0
+v4 deterministic,0,190019,evacuated,3,3,386,35.8
+v4 deterministic,1,191000,evacuated,3,3,386,36.6
+v4 deterministic,1,191001,evacuated,3,3,386,36.6
+v4 deterministic,1,191002,evacuated,3,3,374,32.6
+v4 deterministic,1,191003,evacuated,3,3,385,37.4
+v4 deterministic,1,191004,evacuated,3,3,393,26.2
+v4 deterministic,1,191005,evacuated,3,3,373,35.0
+v4 deterministic,1,191006,evacuated,3,3,381,43.8
+v4 deterministic,1,191007,evacuated,3,3,388,32.6
+v4 deterministic,1,191008,evacuated,3,3,393,25.4
+v4 deterministic,1,191009,evacuated,3,3,390,30.2
+v4 deterministic,1,191010,died,0,3,0,17.0
+v4 deterministic,1,191011,evacuated,3,3,365,39.7
+v4 deterministic,1,191012,evacuated,3,3,389,31.0
+v4 deterministic,1,191013,evacuated,3,3,379,39.5
+v4 deterministic,1,191014,evacuated,3,3,390,29.4
+v4 deterministic,1,191015,evacuated,3,3,385,38.2
+v4 deterministic,1,191016,evacuated,3,3,384,39.0
+v4 deterministic,1,191017,evacuated,3,3,389,31.8
+v4 deterministic,1,191018,evacuated,3,3,388,32.6
+v4 deterministic,1,191019,evacuated,3,3,371,37.4
+v4 deterministic,2,192000,evacuated,4,4,483,19.8
+v4 deterministic,2,192001,evacuated,4,4,479,26.2
+v4 deterministic,2,192002,evacuated,4,4,481,33.4
+v4 deterministic,2,192003,evacuated,4,4,482,31.0
+v4 deterministic,2,192004,evacuated,4,4,477,28.6
+v4 deterministic,2,192005,evacuated,4,4,469,31.8
+v4 deterministic,2,192006,evacuated,4,4,474,32.6
+v4 deterministic,2,192007,evacuated,4,4,462,29.2
+v4 deterministic,2,192008,evacuated,4,4,473,35.0
+v4 deterministic,2,192009,evacuated,4,4,472,36.6
+v4 deterministic,2,192010,evacuated,4,4,468,33.4
+v4 deterministic,2,192011,evacuated,4,4,480,35.0
+v4 deterministic,2,192012,evacuated,4,4,476,30.2
+v4 deterministic,2,192013,evacuated,4,4,475,31.8
+v4 deterministic,2,192014,evacuated,4,4,498,17.4
+v4 deterministic,2,192015,evacuated,4,4,491,17.4
+v4 deterministic,2,192016,evacuated,4,4,479,25.4
+v4 deterministic,2,192017,evacuated,4,4,472,36.6
+v4 deterministic,2,192018,evacuated,4,4,480,24.6
+v4 deterministic,2,192019,died,0,4,0,47.9
+v4 deterministic,3,193000,gave_up,3,4,354,74.9
+v4 deterministic,3,193001,evacuated,4,4,478,28.6
+v4 deterministic,3,193002,gave_up,3,4,350,81.3
+v4 deterministic,3,193003,evacuated,4,4,482,32.6
+v4 deterministic,3,193004,evacuated,4,4,485,27.8
+v4 deterministic,3,193005,evacuated,4,4,472,38.2
+v4 deterministic,3,193006,evacuated,4,4,484,29.4
+v4 deterministic,3,193007,evacuated,4,4,480,26.2
+v4 deterministic,3,193008,evacuated,4,4,485,28.6
+v4 deterministic,3,193009,evacuated,4,4,476,42.2
+v4 deterministic,3,193010,evacuated,4,4,470,40.6
+v4 deterministic,3,193011,evacuated,4,4,477,39.8
+v4 deterministic,3,193012,evacuated,4,4,474,34.2
+v4 deterministic,3,193013,evacuated,4,4,441,52.2
+v4 deterministic,3,193014,evacuated,4,4,475,32.6
+v4 deterministic,3,193015,evacuated,4,4,479,38.2
+v4 deterministic,3,193016,evacuated,4,4,472,38.2
+v4 deterministic,3,193017,evacuated,4,4,475,33.4
+v4 deterministic,3,193018,evacuated,4,4,484,29.4
+v4 deterministic,3,193019,evacuated,4,4,473,36.6
+v4 deterministic,4,194000,gave_up,3,5,356,54.2
+v4 deterministic,4,194001,gave_up,4,5,445,70.4
+v4 deterministic,4,194002,gave_up,4,5,447,76.9
+v4 deterministic,4,194003,evacuated,5,5,576,41.7
+v4 deterministic,4,194004,gave_up,4,5,430,83.7
+v4 deterministic,4,194005,gave_up,4,5,456,71.8
+v4 deterministic,4,194006,evacuated,5,5,578,38.7
+v4 deterministic,4,194007,gave_up,4,5,460,69.3
+v4 deterministic,4,194008,evacuated,5,5,535,68.9
+v4 deterministic,4,194009,gave_up,4,5,459,58.6
+v4 deterministic,4,194010,evacuated,5,5,555,65.2
+v4 deterministic,4,194011,evacuated,5,5,575,35.1
+v4 deterministic,4,194012,evacuated,5,5,577,31.4
+v4 deterministic,4,194013,died,0,5,0,39.1
+v4 deterministic,4,194014,evacuated,5,5,587,35.1
+v4 deterministic,4,194015,evacuated,5,5,597,19.7
+v4 deterministic,4,194016,gave_up,4,5,460,74.8
+v4 deterministic,4,194017,evacuated,5,5,582,42.4
+v4 deterministic,4,194018,gave_up,4,5,460,74.8
+v4 deterministic,4,194019,evacuated,5,5,586,35.9
+v4 deterministic,5,195000,evacuated,5,5,572,56.3
+v4 deterministic,5,195001,evacuated,5,5,593,24.8
+v4 deterministic,5,195002,evacuated,5,5,586,27.7
+v4 deterministic,5,195003,evacuated,5,5,573,38.0
+v4 deterministic,5,195004,evacuated,5,5,581,34.3
+v4 deterministic,5,195005,evacuated,5,5,583,40.2
+v4 deterministic,5,195006,evacuated,5,5,586,27.0
+v4 deterministic,5,195007,evacuated,5,5,570,60.1
+v4 deterministic,5,195008,evacuated,5,5,557,61.6
+v4 deterministic,5,195009,evacuated,5,5,539,60.7
+v4 deterministic,5,195010,evacuated,5,5,569,34.3
+v4 deterministic,5,195011,evacuated,5,5,580,36.5
+v4 deterministic,5,195012,evacuated,5,5,573,36.5
+v4 deterministic,5,195013,evacuated,5,5,583,40.2
+v4 deterministic,5,195014,evacuated,5,5,588,33.6
+v4 deterministic,5,195015,evacuated,5,5,587,34.3
+v4 deterministic,5,195016,evacuated,5,5,592,26.3
+v4 deterministic,5,195017,evacuated,5,5,560,57.1
+v4 deterministic,5,195018,evacuated,5,5,578,47.5
+v4 deterministic,5,195019,evacuated,5,5,584,38.7
+v4 deterministic,6,196000,died,0,6,0,44.4
+v4 deterministic,6,196001,died,0,6,0,36.8
+v4 deterministic,6,196002,died,0,6,0,25.0
+v4 deterministic,6,196003,evacuated,6,6,663,51.9
+v4 deterministic,6,196004,died,0,6,0,55.4
+v4 deterministic,6,196005,evacuated,6,6,642,61.1
+v4 deterministic,6,196006,died,5,6,460,68.3
+v4 deterministic,6,196007,gave_up,5,6,559,67.4
+v4 deterministic,6,196008,gave_up,5,6,541,77.1
+v4 deterministic,6,196009,evacuated,6,6,686,36.5
+v4 deterministic,6,196010,died,0,6,0,73.5
+v4 deterministic,6,196011,evacuated,6,6,680,44.6
+v4 deterministic,6,196012,died,0,6,0,49.7
+v4 deterministic,6,196013,gave_up,4,6,458,68.9
+v4 deterministic,6,196014,evacuated,6,6,690,30.7
+v4 deterministic,6,196015,died,0,6,0,44.4
+v4 deterministic,6,196016,gave_up,5,6,556,81.5
+v4 deterministic,6,196017,evacuated,6,6,671,49.7
+v4 deterministic,6,196018,evacuated,6,6,649,64.4
+v4 deterministic,6,196019,evacuated,6,6,660,45.5
+v4 deterministic,7,197000,evacuated,6,6,644,61.5
+v4 deterministic,7,197001,evacuated,6,6,668,43.1
+v4 deterministic,7,197002,evacuated,6,6,649,53.5
+v4 deterministic,7,197003,evacuated,6,6,673,46.8
+v4 deterministic,7,197004,gave_up,5,6,531,172.3
+v4 deterministic,7,197005,evacuated,6,6,690,29.9
+v4 deterministic,7,197006,evacuated,6,6,640,67.3
+v4 deterministic,7,197007,gave_up,5,6,537,131.2
+v4 deterministic,7,197008,evacuated,6,6,646,56.9
+v4 deterministic,7,197009,evacuated,6,6,648,55.7
+v4 deterministic,7,197010,gave_up,5,6,551,79.9
+v4 deterministic,7,197011,gave_up,5,6,536,145.1
+v4 deterministic,7,197012,gave_up,5,6,537,117.3
+v4 deterministic,7,197013,evacuated,6,6,640,68.1
+v4 deterministic,7,197014,gave_up,5,6,553,66.0
+v4 deterministic,7,197015,evacuated,6,6,664,49.1
+v4 deterministic,7,197016,evacuated,6,6,645,60.7
+v4 deterministic,7,197017,evacuated,6,6,688,32.9
+v4 deterministic,7,197018,gave_up,5,6,537,107.8
+v4 deterministic,7,197019,died,0,6,0,46.7
+v4 deterministic,8,198000,evacuated,6,6,669,51.9
+v4 deterministic,8,198001,evacuated,6,6,643,63.7
+v4 deterministic,8,198002,evacuated,6,6,667,54.9
+v4 deterministic,8,198003,evacuated,6,6,650,98.9
+v4 deterministic,8,198004,evacuated,6,6,675,52.7
+v4 deterministic,8,198005,evacuated,6,6,673,54.9
+v4 deterministic,8,198006,gave_up,5,6,512,175.1
+v4 deterministic,8,198007,evacuated,6,6,675,43.1
+v4 deterministic,8,198008,died,0,6,0,63.9
+v4 deterministic,8,198009,evacuated,6,6,648,85.4
+v4 deterministic,8,198010,died,0,6,0,69.1
+v4 deterministic,8,198011,evacuated,6,6,682,42.4
+v4 deterministic,8,198012,evacuated,6,6,664,49.7
+v4 deterministic,8,198013,evacuated,6,6,665,57.9
+v4 deterministic,8,198014,gave_up,5,6,544,145.2
+v4 deterministic,8,198015,evacuated,6,6,646,67.4
+v4 deterministic,8,198016,evacuated,6,6,676,41.7
+v4 deterministic,8,198017,evacuated,6,6,654,73.0
+v4 deterministic,8,198018,gave_up,5,6,531,112.9
+v4 deterministic,8,198019,evacuated,6,6,669,61.5
+v4 deterministic,9,199000,evacuated,6,6,642,78.4
+v4 deterministic,9,199001,evacuated,6,6,638,141.9
+v4 deterministic,9,199002,gave_up,5,6,545,79.9
+v4 deterministic,9,199003,gave_up,4,6,426,129.7
+v4 deterministic,9,199004,evacuated,6,6,661,65.2
+v4 deterministic,9,199005,evacuated,6,6,679,28.5
+v4 deterministic,9,199006,evacuated,6,6,630,95.2
+v4 deterministic,9,199007,evacuated,6,6,679,37.9
+v4 deterministic,9,199008,gave_up,5,6,554,75.1
+v4 deterministic,9,199009,gave_up,5,6,564,60.4
+v4 deterministic,9,199010,evacuated,6,6,645,61.9
+v4 deterministic,9,199011,evacuated,6,6,661,64.5
+v4 deterministic,9,199012,evacuated,6,6,675,43.2
+v4 deterministic,9,199013,gave_up,5,6,546,87.1
+v4 deterministic,9,199014,gave_up,3,6,326,148.0
+v4 deterministic,9,199015,evacuated,6,6,659,67.4
+v4 deterministic,9,199016,gave_up,5,6,526,94.6
+v4 deterministic,9,199017,evacuated,6,6,651,79.2
+v4 deterministic,9,199018,evacuated,6,6,651,70.5
+v4 deterministic,9,199019,evacuated,6,6,689,31.2
+v4 sampled,0,190000,evacuated,3,3,390,30.2
+v4 sampled,0,190001,evacuated,3,3,395,23.0
+v4 sampled,0,190002,evacuated,3,3,399,16.6
+v4 sampled,0,190003,evacuated,3,3,400,15.0
+v4 sampled,0,190004,gave_up,2,3,287,34.8
+v4 sampled,0,190005,evacuated,3,3,381,43.8
+v4 sampled,0,190006,evacuated,3,3,401,14.2
+v4 sampled,0,190007,evacuated,3,3,393,26.2
+v4 sampled,0,190008,evacuated,3,3,387,34.2
+v4 sampled,0,190009,evacuated,3,3,390,29.4
+v4 sampled,0,190010,evacuated,3,3,393,26.2
+v4 sampled,0,190011,evacuated,3,3,396,21.4
+v4 sampled,0,190012,evacuated,3,3,399,16.6
+v4 sampled,0,190013,evacuated,3,3,399,15.8
+v4 sampled,0,190014,evacuated,3,3,380,21.8
+v4 sampled,0,190015,evacuated,3,3,397,19.0
+v4 sampled,0,190016,evacuated,3,3,389,31.0
+v4 sampled,0,190017,evacuated,3,3,401,13.4
+v4 sampled,0,190018,evacuated,3,3,387,35.0
+v4 sampled,0,190019,evacuated,3,3,386,35.8
+v4 sampled,1,191000,evacuated,3,3,386,36.6
+v4 sampled,1,191001,evacuated,3,3,386,36.6
+v4 sampled,1,191002,evacuated,3,3,374,32.6
+v4 sampled,1,191003,evacuated,3,3,385,37.4
+v4 sampled,1,191004,evacuated,3,3,393,26.2
+v4 sampled,1,191005,evacuated,3,3,373,35.0
+v4 sampled,1,191006,evacuated,3,3,381,43.8
+v4 sampled,1,191007,evacuated,3,3,388,32.6
+v4 sampled,1,191008,evacuated,3,3,393,25.4
+v4 sampled,1,191009,evacuated,3,3,390,30.2
+v4 sampled,1,191010,died,0,3,0,17.0
+v4 sampled,1,191011,evacuated,3,3,365,39.7
+v4 sampled,1,191012,evacuated,3,3,389,31.0
+v4 sampled,1,191013,evacuated,3,3,379,39.5
+v4 sampled,1,191014,evacuated,3,3,390,29.4
+v4 sampled,1,191015,evacuated,3,3,385,38.2
+v4 sampled,1,191016,evacuated,3,3,384,39.0
+v4 sampled,1,191017,evacuated,3,3,389,31.8
+v4 sampled,1,191018,evacuated,3,3,388,32.6
+v4 sampled,1,191019,evacuated,3,3,371,37.4
+v4 sampled,2,192000,evacuated,4,4,483,19.8
+v4 sampled,2,192001,evacuated,4,4,479,26.2
+v4 sampled,2,192002,evacuated,4,4,481,33.4
+v4 sampled,2,192003,evacuated,4,4,482,31.0
+v4 sampled,2,192004,evacuated,4,4,477,28.6
+v4 sampled,2,192005,evacuated,4,4,469,31.8
+v4 sampled,2,192006,evacuated,4,4,474,32.6
+v4 sampled,2,192007,evacuated,4,4,462,29.2
+v4 sampled,2,192008,evacuated,4,4,473,35.0
+v4 sampled,2,192009,evacuated,4,4,472,36.6
+v4 sampled,2,192010,evacuated,4,4,468,33.4
+v4 sampled,2,192011,evacuated,4,4,480,35.0
+v4 sampled,2,192012,evacuated,4,4,476,30.2
+v4 sampled,2,192013,evacuated,4,4,475,31.8
+v4 sampled,2,192014,evacuated,4,4,498,17.4
+v4 sampled,2,192015,evacuated,4,4,491,17.4
+v4 sampled,2,192016,evacuated,4,4,479,25.4
+v4 sampled,2,192017,evacuated,4,4,472,36.6
+v4 sampled,2,192018,evacuated,4,4,480,24.6
+v4 sampled,2,192019,died,0,4,0,40.3
+v4 sampled,3,193000,gave_up,3,4,354,74.9
+v4 sampled,3,193001,evacuated,4,4,478,28.6
+v4 sampled,3,193002,gave_up,3,4,356,71.7
+v4 sampled,3,193003,evacuated,4,4,482,32.6
+v4 sampled,3,193004,evacuated,4,4,485,27.8
+v4 sampled,3,193005,evacuated,4,4,472,38.2
+v4 sampled,3,193006,evacuated,4,4,484,29.4
+v4 sampled,3,193007,evacuated,4,4,480,26.2
+v4 sampled,3,193008,evacuated,4,4,485,28.6
+v4 sampled,3,193009,evacuated,4,4,476,42.2
+v4 sampled,3,193010,evacuated,4,4,470,40.6
+v4 sampled,3,193011,evacuated,4,4,477,39.8
+v4 sampled,3,193012,evacuated,4,4,474,34.2
+v4 sampled,3,193013,evacuated,4,4,441,52.2
+v4 sampled,3,193014,evacuated,4,4,475,32.6
+v4 sampled,3,193015,evacuated,4,4,479,38.2
+v4 sampled,3,193016,evacuated,4,4,472,38.2
+v4 sampled,3,193017,evacuated,4,4,475,33.4
+v4 sampled,3,193018,evacuated,4,4,484,29.4
+v4 sampled,3,193019,evacuated,4,4,473,36.6
+v4 sampled,4,194000,gave_up,3,5,356,54.2
+v4 sampled,4,194001,gave_up,4,5,447,68.2
+v4 sampled,4,194002,gave_up,4,5,454,74.9
+v4 sampled,4,194003,evacuated,5,5,576,41.7
+v4 sampled,4,194004,gave_up,4,5,430,83.7
+v4 sampled,4,194005,gave_up,4,5,456,71.8
+v4 sampled,4,194006,evacuated,5,5,578,38.7
+v4 sampled,4,194007,gave_up,4,5,464,69.0
+v4 sampled,4,194008,evacuated,5,5,535,68.9
+v4 sampled,4,194009,gave_up,4,5,459,58.6
+v4 sampled,4,194010,evacuated,5,5,555,65.2
+v4 sampled,4,194011,evacuated,5,5,575,35.1
+v4 sampled,4,194012,evacuated,5,5,577,31.4
+v4 sampled,4,194013,died,0,5,0,39.1
+v4 sampled,4,194014,evacuated,5,5,587,35.1
+v4 sampled,4,194015,evacuated,5,5,597,19.7
+v4 sampled,4,194016,gave_up,4,5,460,74.8
+v4 sampled,4,194017,evacuated,5,5,582,42.4
+v4 sampled,4,194018,evacuated,5,5,570,60.7
+v4 sampled,4,194019,evacuated,5,5,586,35.9
+v4 sampled,5,195000,evacuated,5,5,572,56.3
+v4 sampled,5,195001,evacuated,5,5,593,24.8
+v4 sampled,5,195002,evacuated,5,5,586,27.7
+v4 sampled,5,195003,evacuated,5,5,573,38.0
+v4 sampled,5,195004,evacuated,5,5,581,34.3
+v4 sampled,5,195005,evacuated,5,5,583,40.9
+v4 sampled,5,195006,evacuated,5,5,586,27.0
+v4 sampled,5,195007,evacuated,5,5,570,60.1
+v4 sampled,5,195008,evacuated,5,5,557,61.6
+v4 sampled,5,195009,evacuated,5,5,539,60.7
+v4 sampled,5,195010,evacuated,5,5,569,34.3
+v4 sampled,5,195011,evacuated,5,5,580,36.5
+v4 sampled,5,195012,evacuated,5,5,573,36.5
+v4 sampled,5,195013,evacuated,5,5,583,40.2
+v4 sampled,5,195014,evacuated,5,5,588,33.6
+v4 sampled,5,195015,evacuated,5,5,587,34.3
+v4 sampled,5,195016,evacuated,5,5,592,26.3
+v4 sampled,5,195017,evacuated,5,5,560,57.1
+v4 sampled,5,195018,evacuated,5,5,578,48.3
+v4 sampled,5,195019,evacuated,5,5,584,38.7
+v4 sampled,6,196000,died,0,6,0,44.4
+v4 sampled,6,196001,died,0,6,0,36.8
+v4 sampled,6,196002,died,0,6,0,25.0
+v4 sampled,6,196003,evacuated,6,6,668,53.4
+v4 sampled,6,196004,died,0,6,0,55.4
+v4 sampled,6,196005,evacuated,6,6,642,61.1
+v4 sampled,6,196006,died,5,6,460,68.3
+v4 sampled,6,196007,gave_up,5,6,560,66.7
+v4 sampled,6,196008,gave_up,5,6,541,76.2
+v4 sampled,6,196009,evacuated,6,6,686,36.5
+v4 sampled,6,196010,died,0,6,0,73.5
+v4 sampled,6,196011,evacuated,6,6,680,44.6
+v4 sampled,6,196012,died,0,6,0,49.7
+v4 sampled,6,196013,gave_up,4,6,465,58.9
+v4 sampled,6,196014,evacuated,6,6,690,30.7
+v4 sampled,6,196015,died,0,6,0,44.4
+v4 sampled,6,196016,gave_up,5,6,555,82.2
+v4 sampled,6,196017,evacuated,6,6,671,49.7
+v4 sampled,6,196018,evacuated,6,6,649,64.4
+v4 sampled,6,196019,evacuated,6,6,660,45.5
+v4 sampled,7,197000,evacuated,6,6,644,61.5
+v4 sampled,7,197001,evacuated,6,6,668,43.1
+v4 sampled,7,197002,evacuated,6,6,649,53.5
+v4 sampled,7,197003,evacuated,6,6,673,46.8
+v4 sampled,7,197004,gave_up,5,6,531,181.4
+v4 sampled,7,197005,evacuated,6,6,690,30.7
+v4 sampled,7,197006,evacuated,6,6,639,68.8
+v4 sampled,7,197007,gave_up,5,6,537,149.9
+v4 sampled,7,197008,evacuated,6,6,651,49.6
+v4 sampled,7,197009,evacuated,6,6,648,55.7
+v4 sampled,7,197010,gave_up,5,6,544,92.2
+v4 sampled,7,197011,died,0,6,0,58.6
+v4 sampled,7,197012,gave_up,5,6,537,123.6
+v4 sampled,7,197013,evacuated,6,6,640,68.1
+v4 sampled,7,197014,gave_up,5,6,553,66.3
+v4 sampled,7,197015,evacuated,6,6,664,49.1
+v4 sampled,7,197016,evacuated,6,6,645,60.7
+v4 sampled,7,197017,gave_up,5,6,550,110.6
+v4 sampled,7,197018,evacuated,6,6,647,74.7
+v4 sampled,7,197019,died,0,6,0,46.7
+v4 sampled,8,198000,evacuated,6,6,670,51.2
+v4 sampled,8,198001,evacuated,6,6,643,63.7
+v4 sampled,8,198002,evacuated,6,6,652,58.5
+v4 sampled,8,198003,evacuated,6,6,658,69.5
+v4 sampled,8,198004,evacuated,6,6,674,54.1
+v4 sampled,8,198005,evacuated,6,6,671,58.5
+v4 sampled,8,198006,evacuated,6,6,643,81.4
+v4 sampled,8,198007,evacuated,6,6,675,43.1
+v4 sampled,8,198008,died,0,6,0,65.2
+v4 sampled,8,198009,evacuated,6,6,642,75.9
+v4 sampled,8,198010,evacuated,6,6,620,86.9
+v4 sampled,8,198011,evacuated,6,6,682,42.4
+v4 sampled,8,198012,evacuated,6,6,665,47.5
+v4 sampled,8,198013,evacuated,6,6,661,65.2
+v4 sampled,8,198014,gave_up,5,6,543,161.5
+v4 sampled,8,198015,gave_up,5,6,531,154.6
+v4 sampled,8,198016,died,5,6,460,226.9
+v4 sampled,8,198017,evacuated,6,6,654,73.0
+v4 sampled,8,198018,gave_up,5,6,544,153.1
+v4 sampled,8,198019,evacuated,6,6,654,64.5
+v4 sampled,9,199000,evacuated,6,6,637,85.1
+v4 sampled,9,199001,evacuated,6,6,649,73.2
+v4 sampled,9,199002,gave_up,5,6,545,80.1
+v4 sampled,9,199003,gave_up,4,6,426,95.7
+v4 sampled,9,199004,evacuated,6,6,661,65.2
+v4 sampled,9,199005,evacuated,6,6,679,29.2
+v4 sampled,9,199006,evacuated,6,6,630,96.9
+v4 sampled,9,199007,evacuated,6,6,678,38.5
+v4 sampled,9,199008,gave_up,5,6,553,76.4
+v4 sampled,9,199009,died,0,6,0,179.5
+v4 sampled,9,199010,evacuated,6,6,643,64.1
+v4 sampled,9,199011,evacuated,6,6,661,63.9
+v4 sampled,9,199012,evacuated,6,6,674,45.2
+v4 sampled,9,199013,gave_up,5,6,544,89.7
+v4 sampled,9,199014,gave_up,3,6,326,93.2
+v4 sampled,9,199015,evacuated,6,6,660,66.7
+v4 sampled,9,199016,evacuated,6,6,619,102.7
+v4 sampled,9,199017,evacuated,6,6,652,78.5
+v4 sampled,9,199018,evacuated,6,6,651,69.9
+v4 sampled,9,199019,evacuated,6,6,689,31.2

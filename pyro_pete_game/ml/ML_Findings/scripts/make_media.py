@@ -31,7 +31,7 @@ MANIFEST = [
     ("early_trials", "03_step101k", os.path.join(EXP, "exp01_plain_s0", "videos", "step_000101376_stage01.mp4"),
      "After 101,376 steps (epoch 33): learned to stand still"),
 ]
-for group in ("baselines", "reward_versions"):
+for group in ("baselines", "reward_versions", "imitation"):
     d = os.path.join(MEDIA, group)
     if os.path.isdir(d):
         for f in sorted(os.listdir(d)):
@@ -47,6 +47,10 @@ FEATURED_GIFS = {
     "exp01_plain_s0_step0101376_seed1001_gave_up",
     "exp07_giveup200_long_s0_step0301056_seed1001_died",
     "exp06_plain_s2_continued_step0402432_seed1001_gave_up",
+    # imitation: the clone matching A*, a success on an unseen stage, a failure on an unseen stage,
+    # and the local-view network dying on that same unseen stage
+    "stage01_seed1000_v2_evacuated", "stage08_seed1000_v2_evacuated",
+    "stage07_seed1001_v2_gave_up", "stage09_seed1000_v2_died", "stage08_seed1000_v1_died",
 }
 
 

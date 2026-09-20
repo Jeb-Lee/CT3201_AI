@@ -3,12 +3,34 @@
 *Pyro Pete: Emergency Evacuation -- machine-learning findings*
 *Data collected 2026-09-20. All numbers trace to files in this folder.*
 
+> **Correction, added the same day as the first version and after it was pushed.**
+> These documents originally said the learned agent was "held to exactly what A\*
+> is allowed to know". **That was false.** A* plans over the whole real map and
+> the live hazard field everywhere; only the occupants' positions are hidden from
+> it. The learned agent's observation (an 11 x 11 window of tiles it had walked
+> near) gave it strictly *less*. What this changes:
+>
+> * **Unaffected:** everything about the reward and the optimiser: the price list
+>   and its prediction of each run's return, the abandon-penalty arithmetic, the
+>   collapse to standing still, the sampled-versus-deterministic gap, training
+>   reproducibility, and the GPU finding. None of those depend on what the
+>   observation contains.
+> * **Reframed:** every learned-versus-A\* comparison is a *local-view learner
+>   against a global-view planner*, so "0 of 40 vs 39 of 40" is not a like-for-like
+>   contest. The explanations offered in F9 (partial map memorisation, no memory
+>   of where other occupants are) are now confounded with the learner simply not
+>   being able to see the layout A* plans over.
+> * **Follow-up:** [IMITATION.md](IMITATION.md) measures how much of the gap this
+>   accounts for, using an observation that adds A\*-equivalent route information.
+
 ## Abstract
 
 We asked whether a neural network trained by reinforcement learning could
 replace a hand-written A* planner as the AI rescuer in a burning-building
-game, when held to the same information the planner has. We built a Gymnasium
-environment over the real game, a fair-information observation, a
+game, from a local view of the building (as I first described it, "the same
+information the planner has"; that turned out to be wrong, see the correction
+below). We built a Gymnasium environment over the real game, a local-view
+observation, a
 `MaskablePPO` learner, an evaluation harness with confidence intervals, and
 tooling that logs every epoch and records the agent playing.
 
@@ -47,7 +69,7 @@ cheapest failure. The full account is in
 
 ## 1. Question and setup
 
-*Can a neural network trained with RL, seeing only what the A\* agent may see,
+*Can a neural network trained with RL, from a local view of the building,
 learn to lead occupants out of a burning building?* The learned agent is an
 optional AI brain; A* stays the default and Pete is never ML-driven.
 
@@ -184,6 +206,21 @@ give-ups never left the spawn tile, and fire was in view in 36-57% of them, whic
 a random walker also has (43%) after 12 s. **Not supported.** The give-ups are a
 learned decision at the start of the episode.
 
+### F11. Shown A*'s decisions and A*'s information, the network plays
+
+The follow-up study ([IMITATION.md](IMITATION.md)) trains the same kind of network to copy A*
+(behaviour cloning, then DAgger). With only a local window it evacuates **20%** of episodes; given
+A*'s own information (parity enforced by tests) **77-80%** (A* 87% over the same 300 episodes);
+adding a memory of its own path helps by a few points (v4: 80%, paired p ~ 0.04) and cuts
+back-and-forth pacing (A* never does it), though a first-test gain of 7 points did **not**
+replicate on fresh seeds (a registered prediction, P10, was falsified). It is roughly level with A*
+on stages it trained on (84% vs 87%) and **clearly behind on unseen stages (71% vs 87%)**; it does
+not match A* (25 episodes to 4, p ~ 0.0001). Unlike the RL models, **both its deterministic and
+sampled policies work**. **This reframes F1-F10:** the RL learner had less information than A*
+(see the correction box at the top), so those results compare a local-view learner against a
+global-view planner, and the imitation study shows the information gap alone accounts for most of
+the difference between 0% and about 80%.
+
 ### E-findings (engineering, each of which changed a decision)
 
 * **E1. Eight trials per stage cannot resolve a small difference.** A change to
@@ -298,9 +335,9 @@ that any of the proposed remedies work. None of them was run.
 
 ## 6. Open questions and next experiments
 
-1. **Imitation warm start from A\*** (behaviour cloning, then PPO). Also
-   produces a genuine supervised epochs-vs-accuracy curve. *Prediction:* a
-   cloned network evacuates a large share of episodes before any RL.
+1. **Imitation warm start from A\*: done**, see [IMITATION.md](IMITATION.md) (it
+   works: 80% with A*'s information). What remains from this idea is the *RL fine-tune*
+   from the clone, anchored to A*'s behaviour, which is the step that could go beyond A*.
 2. **Curriculum** from an easier, fire-free map. *Prediction:* full evacuation
    appears within 100k steps on the easy map.
 3. **Potential-based shaping** on distance to the exit or frontier

@@ -1,0 +1,38 @@
+{
+  "name": "imit_b",
+  "runs_dir": "runs",
+  "train_stages": "1-7",
+  "heldout_stages": "8-10",
+  "train_episodes": 120,
+  "val_episodes": 20,
+  "unseen_episodes": 30,
+  "all_demos": false,
+  "epochs": 30,
+  "batch_size": 512,
+  "lr": 0.001,
+  "net_arch": "256,256",
+  "obs_version": 2,
+  "game_every": 5,
+  "dagger_rounds": 4,
+  "dagger_episodes": 25,
+  "dagger_epochs": 12,
+  "final_episodes": 10,
+  "workers": 8,
+  "max_seconds": 90.0,
+  "seed": 0,
+  "install": false,
+  "train_stages_1based": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "heldout_stages_1based": [
+    8,
+    9,
+    10
+  ]
+}

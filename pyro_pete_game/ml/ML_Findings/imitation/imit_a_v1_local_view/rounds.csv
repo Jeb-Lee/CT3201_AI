@@ -1,0 +1,5 @@
+round,beta,new_decisions,total_decisions,learner_outcome_died,learner_outcome_gave_up,learner_outcome_timeout,learner_outcome_evacuated,val_seen_acc,val_unseen_acc,game_seen_evac,game_seen_occ,game_unseen_evac,game_unseen_occ,game_seen_n,game_unseen_n
+1,0.5,20299,86086,0.142857,0,0.0914286,0.765714,0.912869,0.781607,0.285714,0.25,0,0,28,18
+2,0.3,24766,110852,0.16,0,0.291429,0.548571,0.923226,0.780874,0.392857,0.333333,0,0,28,18
+3,0.1,25577,136429,0.262857,0,0.285714,0.451429,0.926125,0.771891,0.392857,0.333333,0,0.0462963,28,18
+4,0,28249,164678,0.245714,0.0228571,0.411429,0.32,0.919912,0.761137,0.357143,0.283333,0,0,28,18
