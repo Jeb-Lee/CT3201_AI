@@ -115,6 +115,8 @@ CARD_H = 64
 CARD_GAP = 84       # centre to centre
 FIRST_CARD_CY = 280
 PANEL_TOP = 55
+PANEL_FOOT = 92     # last card's bottom edge -> panel's bottom edge (room for the hint row)
+PANEL_MARGIN = 8    # the panel keeps this far from the bottom of the screen
 ICON = 44           # the portrait on an option that has one
 _CARDS = {}
 
@@ -207,10 +209,21 @@ class ChoiceMenu:
                         self.result = self.options[i][1]
                         break
 
+    def card_gap(self):
+        """Centre-to-centre distance between cards: CARD_GAP, closed up when there
+        are enough options that the panel would otherwise run off the bottom of the
+        screen (the brain menu can list A*, two learned models and an installed one).
+        Never so close that cards touch."""
+        n = len(self.options)
+        if n < 2:
+            return CARD_GAP
+        room = (SCREEN_HEIGHT - PANEL_MARGIN - PANEL_FOOT - CARD_H // 2 - FIRST_CARD_CY) // (n - 1)
+        return max(CARD_H + 4, min(CARD_GAP, room))
+
     def panel_rect(self, width=SCREEN_WIDTH):
         """The panel behind everything: from the title down past the hint row."""
-        last_bottom = FIRST_CARD_CY + (len(self.options) - 1) * CARD_GAP + CARD_H // 2
-        rect = pygame.Rect(0, PANEL_TOP, min(PANEL_W, width - 40), last_bottom + 92 - PANEL_TOP)
+        last_bottom = FIRST_CARD_CY + (len(self.options) - 1) * self.card_gap() + CARD_H // 2
+        rect = pygame.Rect(0, PANEL_TOP, min(PANEL_W, width - 40), last_bottom + PANEL_FOOT - PANEL_TOP)
         rect.centerx = width // 2
         return rect
 
@@ -243,7 +256,7 @@ class ChoiceMenu:
             label, value, desc = option[:3]
             icon = option[3] if len(option) > 3 else None
             rect = pygame.Rect(0, 0, CARD_W, CARD_H)
-            rect.center = (w // 2, FIRST_CARD_CY + i * CARD_GAP)
+            rect.center = (w // 2, FIRST_CARD_CY + i * self.card_gap())
             self._option_rects.append(rect)
 
             selected = (i == self.index)

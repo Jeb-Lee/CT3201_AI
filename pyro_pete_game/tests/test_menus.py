@@ -184,3 +184,46 @@ def test_a_portrait_is_drawn_in_the_icon_slot():
     _, row_without = across(m._option_rects[1])
     assert len(row_with) > 3                         # a picture
     assert len(row_without) == 1                     # nothing but the card
+
+
+# --- many options (the brain menu can list A*, two learned models and an installed one) -------------
+def _n_options(n, monkeypatch=None):
+    return ChoiceMenu("T", [(f"Option {i}", i, f"description {i}") for i in range(n)], subtitle="Pick")
+
+
+@pytest.mark.parametrize("n", [1, 2, 3, 4, 5])
+def test_the_panel_stays_on_screen_and_cards_never_touch(n, monkeypatch):
+    seen = {}
+    real = menu_mod.key_hint_row
+    monkeypatch.setattr(menu_mod, "key_hint_row", lambda *a, **k: seen.setdefault("row", real(*a, **k)))
+    m = _n_options(n)
+    _drawn(m)
+    panel = m.panel_rect(SCREEN_WIDTH)
+    if n <= 4:                                       # up to four options must fit the screen
+        assert panel.bottom <= SCREEN_HEIGHT - menu_mod.PANEL_MARGIN
+        assert panel.contains(seen["row"]) and all(panel.contains(r) for r in m._option_rects)
+    for a, b in zip(m._option_rects, m._option_rects[1:]):
+        assert b.top - a.bottom >= 4                 # a gap between cards, at any count
+        assert b.centery - a.centery == m.card_gap()  # and the cards really are laid out at that gap
+    assert m._option_rects[-1].bottom + menu_mod.PANEL_FOOT == panel.bottom   # so the panel ends where they do
+
+
+def test_two_and_three_options_keep_the_designed_spacing():
+    for n in (2, 3):
+        m = _n_options(n)
+        _drawn(m)
+        assert m._option_rects[1].centery - m._option_rects[0].centery == menu_mod.CARD_GAP
+
+
+def test_four_options_close_up_rather_than_run_off_the_screen():
+    m = _n_options(4)
+    _drawn(m)
+    assert m.card_gap() < menu_mod.CARD_GAP
+    assert m._option_rects[-1].bottom < SCREEN_HEIGHT - 60      # the hint row still fits below the last card
+
+
+def test_clicking_the_last_of_four_cards_picks_it():
+    m = _n_options(4)
+    _drawn(m)
+    m.update(0, [pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=m._option_rects[3].center, button=1)])
+    assert m.result == 3
