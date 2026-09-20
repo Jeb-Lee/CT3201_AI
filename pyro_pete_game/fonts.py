@@ -14,7 +14,8 @@ pygame.font.SysFont("arial") resolves to ARIALN.TTF (Arial *Narrow*) and
 "segoeui" to the Light weight, because of how pygame maps family names.
 
 Scale (role -> where it is used):
-    title    36  menu titles, results headline, pause, intro prompt   bold
+    display  60  the game's title on the intro                        bold
+    title    36  menu titles, results headline, pause                 bold
     heading  24  menu options, rescuer names, scores, verdict         bold
     body     18  HUD, subtitles, score/stat rows                      regular
     small    15  menu descriptions and hints                          regular
@@ -54,6 +55,7 @@ _BOLD_PATHS = (
 # the tallest results panel fits the screen (larger sizes made it 643px tall
 # against a 640px window).
 _SCALE = {
+    "display": (60, 64, True),
     "title": (36, 44, True),
     "heading": (24, 30, True),
     "body": (18, 24, False),
@@ -69,7 +71,7 @@ def _first_existing(paths):
 
 
 def ui_font(role, bold=None):
-    """The font for a role: "title", "heading", "body" or "small".
+    """The font for a role: "display", "title", "heading", "body" or "small".
 
     `bold` overrides the role's usual weight (the HUD passes bold=True for
     body text)."""

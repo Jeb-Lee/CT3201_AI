@@ -183,3 +183,54 @@ def key_chip(surface, x, y, label, font, colour=TEXT, height=28):
     pygame.draw.rect(surface, (104, 108, 124), rect, 1, border_radius=6)
     surface.blit(text, text.get_rect(center=rect.center))
     return rect
+
+
+# --- panels the whole UI shares ---------------------------------------------------
+_PANELS, _SHADOWS = {}, {}
+HINT = (176, 178, 188)          # the colour of a key hint's label
+
+
+def cached_panel(size, accent=None, radius=12, alpha=220):
+    """gradient_panel, built once per (size, accent, radius, alpha)."""
+    key = (size, accent, radius, alpha)
+    if key not in _PANELS:
+        _PANELS[key] = gradient_panel(size, accent, radius, alpha)
+    return _PANELS[key]
+
+
+def draw_panel(surface, rect, accent=None, radius=12, alpha=220, shadow=True):
+    """A panel in the game's one look -- gradient, hairline edge, top sheen, an
+    optional accent border, a soft shadow -- at `rect`. The HUD, the pause screen,
+    the menus and the results all use it, so they read as one game."""
+    size = rect.size
+    if shadow:
+        if (size, radius) not in _SHADOWS:
+            _SHADOWS[(size, radius)] = drop_shadow(size, radius)
+        surface.blit(_SHADOWS[(size, radius)], (rect.x - 6, rect.y - 3))
+    surface.blit(cached_panel(size, accent, radius, alpha), rect.topleft)
+
+
+# --- key hints: "[Enter] Next stage   [R] Replay   [Esc] Quit" --------------------------
+def chip_width(label, font, height=28):
+    return max(height, font.size(label)[0] + 18)
+
+
+def hint_row_width(items, chip_font, label_font, gap=26, inner=8):
+    """Width key_hint_row will take for `items` [(key, label), ...]."""
+    total = sum(chip_width(k, chip_font) + inner + label_font.size(t)[0] for k, t in items)
+    return total + gap * (len(items) - 1)
+
+
+def key_hint_row(surface, items, chip_font, label_font, cx, cy, gap=26, inner=8, colour=HINT):
+    """Draw hints centred on (cx, cy): each a key cap then what it does. The same
+    row on every screen, so a key is always spelled the same way. Returns the
+    rect it covers."""
+    total = hint_row_width(items, chip_font, label_font, gap, inner)
+    x = cx - total // 2
+    top = cy - 14
+    for key, text in items:
+        chip = key_chip(surface, x, top, key, chip_font)
+        img = label_font.render(text, True, colour)
+        surface.blit(img, img.get_rect(midleft=(chip.right + inner, cy)))
+        x = chip.right + inner + img.get_width() + gap
+    return pygame.Rect(cx - total // 2, top, total, 30)
