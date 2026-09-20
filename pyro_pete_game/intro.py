@@ -23,7 +23,7 @@ import random
 import pygame
 
 from fonts import ui_font
-from hud_icons import (HINT, draw_panel, ease_out, hint_row_width, key_chip, key_hint_row,
+from hud_icons import (draw_panel, ease_out, hint_row_width, key_chip, key_hint_row,
                        lerp_colour)
 from settings import SCREEN_WIDTH, SCREEN_HEIGHT, RESULTS_ACCENT_COLOR
 
