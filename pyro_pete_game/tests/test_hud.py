@@ -249,7 +249,7 @@ def test_toasts_fade_in_and_out_then_expire():
     assert 0 < t.alpha < 1
     s = session()
     s.hud.update(0.016, s)
-    for _ in range(300):
+    for _ in range(int(max(hud_mod.CONTROLS_LIFE, hud_mod.BANNER_LIFE) / 0.016) + 20):   # longest-lived toast
         s.hud.update(0.016, s)
     assert s.hud.toasts == []
 

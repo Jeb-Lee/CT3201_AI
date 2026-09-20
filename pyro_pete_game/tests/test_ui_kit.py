@@ -172,3 +172,61 @@ def test_results_panels_have_the_gold_edge(which, monkeypatch):
     screen, panel, _ = _draw(which, True, True, monkeypatch)
     r, g, b = screen.get_at((panel.left + 1, panel.centery))[:3]
     assert r - b > 100
+
+
+# --- the first stage's banner says how to play ---------------------------------------------
+import hud
+import main as game
+
+
+def _banner(stage_index, spectate=False):
+    s = game.GameSession(levels.get(stage_index), spectate=spectate, agent_visual="robot",
+                         stage_index=stage_index)
+    s.update(1 / 60, pygame.key.get_pressed())
+    banners = [t for t in s.hud.toasts if t.big]
+    assert len(banners) == 1
+    return s, banners[0]
+
+
+def test_stage_one_banner_lists_the_keys_and_stays_up_long_enough_to_read():
+    _, b = _banner(0)
+    assert b.hints == (("WASD", "Move"), ("P", "Pause"), ("M", "Sound"))
+    assert b.life == hud.CONTROLS_LIFE and hud.CONTROLS_LIFE > hud.BANNER_LIFE
+
+
+def test_watching_has_no_move_key():
+    _, b = _banner(0, spectate=True)
+    assert b.hints == (("P", "Pause"), ("M", "Sound"))
+
+
+def test_later_stages_do_not_repeat_the_lesson():
+    _, b = _banner(1)
+    assert b.hints == () and b.life == hud.BANNER_LIFE
+
+
+def _draw_banner(hints, monkeypatch):
+    seen = {}
+    real = hud.key_hint_row
+    monkeypatch.setattr(hud, "key_hint_row", lambda *a, **k: seen.setdefault("row", real(*a, **k)))
+    s, b = _banner(0)
+    b.hints = hints
+    b.age = 1.0
+    surf = _screen()
+    s.hud._draw_banner(surf, b)
+    lit = [(x, y) for x in range(0, SCREEN_WIDTH, 2) for y in range(0, SCREEN_HEIGHT // 2, 2)
+           if surf.get_at((x, y))[:3] != (0, 0, 0)]
+    xs, ys = [p[0] for p in lit], [p[1] for p in lit]
+    return seen.get("row"), pygame.Rect(min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys))
+
+
+def test_a_banner_with_keys_is_taller_and_holds_the_key_row(monkeypatch):
+    _, plain = _draw_banner((), monkeypatch)
+    row, tall = _draw_banner((("WASD", "Move"), ("P", "Pause"), ("M", "Sound")), monkeypatch)
+    assert tall.height >= plain.height + 30
+    assert row is not None
+    # the row is drawn on the banner's own surface: it fits inside its width and height
+    width_needed = hud_icons.hint_row_width((("WASD", "Move"), ("P", "Pause"), ("M", "Sound")),
+                                            ui_font("small", bold=True), ui_font("small"))
+    assert tall.width >= width_needed + 60
+    assert row.width == width_needed
+    assert 0 <= row.left and row.right <= tall.width and row.bottom <= tall.height
