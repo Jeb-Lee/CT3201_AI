@@ -306,8 +306,9 @@ def test_dead_and_finished_portraits_draw():
 def test_the_drone_skin_gets_a_drawn_portrait_not_a_missing_sprite():
     s = game.GameSession(levels.get(0), spectate=False, agent_visual="drone")
     h = settled(s)
-    h.draw(SCREEN, s)
-    assert ("drone", 56) not in h._portraits                   # never looked up: drawn instead
+    h.draw(SCREEN, s)                                          # the drawn portrait must not raise
+    from portraits import portrait_image
+    assert portrait_image("drone", 56) is None                 # no sprite art: it is drawn instead
 
 
 # ----------------------------------------------------------------- tooltips

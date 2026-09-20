@@ -15,7 +15,6 @@ size scale.
 """
 
 import math
-import os
 from dataclasses import dataclass
 
 import pygame
@@ -23,20 +22,18 @@ import pygame
 from entities.victim import STATE_IDLE, STATE_FOLLOWING
 from fonts import ui_font
 from hud_icons import (
-    TEXT, DIM, EDGE, lerp_colour, ease_out, shadowed_text, gradient_panel, drop_shadow,
+    TEXT, DIM, EDGE, BLUE, lerp_colour, ease_out, shadowed_text, gradient_panel, drop_shadow,
     flame, person, cross, key_icon, padlock, clock_icon, tick, drone_icon,
 )
+from portraits import portrait_image
 from settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT, HEALTH_MAX, SCORE_PER_SURVIVOR,
     HEALTH_BAR_COLOR_FULL, HEALTH_BAR_COLOR_MID, HEALTH_BAR_FILL_COLOR,
     RESULTS_ACCENT_COLOR,
 )
 
-_ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
-
 # --- palette ---------------------------------------------------------------
 GOLD = RESULTS_ACCENT_COLOR                 # Pete / "you" (the same gold as the menus)
-BLUE = (120, 150, 210)                      # the AI (its colour on the old health label)
 GREEN = (130, 210, 140)
 POS, NEG = (150, 210, 150), (222, 130, 110)
 FIRE_CALM, FIRE_WARN, FIRE_HOT = (222, 224, 230), (240, 178, 64), (240, 84, 58)
@@ -115,7 +112,7 @@ class Hud:
         self.f_head = ui_font("heading")
         self.f_body = ui_font("body", bold=True)
         self.f_small = ui_font("small")
-        self._panels, self._shadows, self._portraits = {}, {}, {}
+        self._panels, self._shadows = {}, {}
         self._vignette = None
         self.reset()
 
@@ -299,22 +296,6 @@ class Hud:
         if kind:
             self.hot.append((rest.move(0, dy), kind))
 
-    def _portrait_image(self, kind, size):
-        key = (kind, size)
-        if key not in self._portraits:
-            path = os.path.join(_ASSETS, "pete" if kind == "pete" else "robot", "idle_down.png")
-            img = None
-            if os.path.exists(path):
-                src = pygame.image.load(path).convert_alpha()
-                crop = src.get_bounding_rect()
-                crop.h = int(crop.h * 0.58)                 # head and shoulders only
-                src = src.subsurface(crop)
-                k = size / max(src.get_width(), src.get_height())
-                img = pygame.transform.smoothscale(
-                    src, (max(1, round(src.get_width() * k)), max(1, round(src.get_height() * k))))
-            self._portraits[key] = img
-        return self._portraits[key]
-
     # ---- rescuer cards -------------------------------------------------
     def _card(self, surface, rest, who, s, intro):
         r = self._r[who]
@@ -329,7 +310,7 @@ class Hud:
         pr = pygame.Rect(9, 10, 64, 64)
         pygame.draw.rect(card, (8, 9, 13, 255), pr, border_radius=9)
         kind = "pete" if you else ("robot" if s.agent_visual == "robot" else "drone")
-        img = self._portrait_image(kind, 56) if kind != "drone" else None
+        img = portrait_image(kind, 56)               # None for the drone: it is drawn
         if img is not None:
             card.blit(img, img.get_rect(center=pr.center))
         else:

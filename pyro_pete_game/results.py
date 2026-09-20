@@ -10,19 +10,25 @@ where it came from.
 
 import pygame
 
+from hud_icons import BLUE
+from portraits import draw_portrait
 from settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT,
     RESULTS_PANEL_COLOR, RESULTS_TEXT_COLOR, RESULTS_ACCENT_COLOR,
 )
 
-_REASON_TEXT = {
-    "exit": "reached the exit",
-    "dead": "did not make it",
-    "time": "still searching",
-}
 _DIM = (172, 172, 178)
 _POS = (150, 210, 150)
 _NEG = (222, 130, 110)
+_AMBER = (240, 178, 64)
+
+# How a rescuer's run ended, in words and in the colour that says whether that
+# was good: green got out, red died, amber gave up with people still inside.
+_STATUS = {
+    "exit": ("reached the exit", _POS),
+    "dead": ("did not make it", _NEG),
+    "time": ("still searching", _AMBER),
+}
 
 # Headline for the race outcome (GameSession.outcome). Falls back to the
 # old neutral "Run complete" when no outcome was recorded, so spectate
@@ -46,6 +52,11 @@ _ROW = 22             # minimum height of one label/value row
 _GAP = 40             # between the two columns of the race panel
 _SECTION_GAP = 10     # blank space between the score and stats sections
 _TOTAL_PAD = 10       # rule + gap above the Total row (rule is 4px in, row 6px below)
+_PORTRAIT = 50        # the rescuer's framed face, top-left of its column
+_PORTRAIT_GAP = 10    # portrait -> name
+_COMPACT_BELOW = 340  # columns narrower than this (the race panel's) get the compact header
+_SEP = "  \u00b7  "        # between the subtitle's parts
+_INFO_SEP = " \u00b7 "       # tighter, on the header's info line: room is short in a race column
 
 
 # Vertical spacing comes from the fonts' own heights, not fixed pixel offsets.
@@ -68,12 +79,12 @@ def _top(title_font, body_font):
     return _sub_y(title_font) + body_font.get_height() + 16
 
 
-def _head_block(head_font, body_font):
-    """(reason_y, score_y, height) of a column's name / reason / big-score
-    block, relative to the column's top."""
-    reason_y = head_font.get_height() + 6
-    score_y = reason_y + body_font.get_height() + 4
-    return reason_y, score_y, score_y + head_font.get_height() + 12
+def _head_block(head_font, info_font):
+    """(name_y, info_y, height) of a column's header -- portrait, name, and the
+    "how it decided / how it ended" line -- relative to the column's top."""
+    name_y = 2
+    info_y = name_y + head_font.get_height() + 3
+    return name_y, info_y, max(_PORTRAIT, info_y + info_font.get_height()) + 16
 
 
 def _section(surface, body_font, x, right, y, title):
@@ -96,27 +107,70 @@ def _row(surface, body_font, x, right, y, label, value, value_colour,
     return y + _row_h(body_font)
 
 
-def _column_height(head_font, body_font, st):
+def _column_height(head_font, body_font, st, small_font=None):
     """Height _draw_column will use, so a panel can be sized to its content
     instead of a fixed 470px with a dead strip at the bottom."""
     section = body_font.get_height() + 2 + 8
     row = _row_h(body_font)
-    return (_head_block(head_font, body_font)[2]
+    return (_head_block(head_font, small_font or body_font)[2]
             + section + len(st.score_breakdown()) * row
             + _TOTAL_PAD + row
             + _SECTION_GAP
             + section + len(st.summary_rows()) * row)
 
 
-def _draw_column(surface, head_font, body_font, x, top_y, width, st, total_font=None):
+def _info_parts(font, role, status, colour, avail):
+    """The header's second line as (text, colour) pieces: "role \u00b7 status"
+    with the status coloured. When that is wider than `avail` the role is the
+    part that gives way -- how it ended matters more than how it decided."""
+    if status and font.size(role + _INFO_SEP + status)[0] <= avail:
+        return [(role, _DIM), (_INFO_SEP, _DIM), (status, colour)]
+    if status:
+        return [(status, colour)]
+    return [(role, _DIM)]
+
+
+def _draw_header(surface, x, top_y, width, st, head_font, small_font, title_font):
+    """Portrait, name, "role \u00b7 outcome", and the score.
+
+    Colour says who it is, the same as in the HUD: gold for Pete, blue for the
+    AI. A wide column (Watch AI Play) puts a big score with a POINTS caption on
+    the right; a narrow one (the race panel's two columns) shares the name's
+    line with a smaller score, so nothing collides."""
     right = x + width
-    reason_y, score_y, head_h = _head_block(head_font, body_font)
-    surface.blit(head_font.render(st.label, True, RESULTS_ACCENT_COLOR), (x, top_y))
-    reason = _REASON_TEXT.get(st.finished_reason, "")
-    if reason:
-        surface.blit(body_font.render(reason, True, _DIM), (x, top_y + reason_y))
-    surface.blit(head_font.render(str(st.score), True, RESULTS_TEXT_COLOR),
-                 (x, top_y + score_y))
+    you = st.kind == "you"
+    accent = RESULTS_ACCENT_COLOR if you else BLUE
+    draw_portrait(surface, pygame.Rect(x, top_y, _PORTRAIT, _PORTRAIT),
+                  "pete" if you else st.kind, accent)
+    nx = x + _PORTRAIT + _PORTRAIT_GAP
+    name_y, info_y, _ = _head_block(head_font, small_font)
+    surface.blit(head_font.render(st.display_name, True, accent), (nx, top_y + name_y))
+
+    score = str(st.score)
+    if width >= _COMPACT_BELOW:
+        num = (title_font or head_font).render(score, True, RESULTS_TEXT_COLOR)
+        cap = small_font.render("POINTS", True, _DIM)
+        surface.blit(num, (right - num.get_width(), top_y - 2))
+        surface.blit(cap, (right - cap.get_width(), top_y - 2 + num.get_height() - 2))
+        reserved = max(num.get_width(), cap.get_width()) + 12      # the info line stops short of it
+    else:
+        num = head_font.render(score, True, RESULTS_TEXT_COLOR)
+        surface.blit(num, (right - num.get_width(), top_y + name_y))
+        reserved = 0                                                # it sits below the score
+    status, colour = _STATUS.get(st.finished_reason, ("", _DIM))
+    px = nx
+    for text, c in _info_parts(small_font, st.role, status, colour, right - nx - reserved):
+        img = small_font.render(text, True, c)
+        surface.blit(img, (px, top_y + info_y))
+        px += img.get_width()
+
+
+def _draw_column(surface, head_font, body_font, x, top_y, width, st, total_font=None,
+                 title_font=None, small_font=None):
+    right = x + width
+    small = small_font or body_font
+    _draw_header(surface, x, top_y, width, st, head_font, small, title_font)
+    head_h = _head_block(head_font, small)[2]
 
     y = _section(surface, body_font, x, right, top_y + head_h, "SCORE")
     for label, pts in st.score_breakdown():
@@ -142,6 +196,14 @@ def _draw_column(surface, head_font, body_font, x, top_y, width, st, total_font=
     for label, value in st.summary_rows():
         y = _row(surface, body_font, x, right, y, label, value, RESULTS_TEXT_COLOR)
     return y
+
+
+def _subtitle(stage_label, total):
+    """"Stage 1/10 \u00b7 Ground Floor \u00b7 3 occupants" -- dots, as in the HUD,
+    rather than hyphens; "1 occupant", not "1 occupants"."""
+    people = f"{total} occupant" + ("" if total == 1 else "s")
+    parts = ([stage_label.replace(" - ", _SEP)] if stage_label else []) + [people]
+    return _SEP.join(parts)
 
 
 def _fit_panel_width(*needed, minimum=420):
@@ -171,11 +233,8 @@ def _draw_panel(surface, px, py, panel_w, panel_h):
 def draw_results(surface, title_font, head_font, body_font,
                  player_stats, agent_stats, total_victims,
                  outcome=None, stage_label=None, has_next_stage=False,
-                 total_font=None):
-    sub = f"{total_victims} occupants in the building"
-    if stage_label:
-        sub = f"{stage_label}  --  {sub}"
-    sub_surf = body_font.render(sub, True, _DIM)
+                 total_font=None, small_font=None):
+    sub_surf = body_font.render(_subtitle(stage_label, total_victims), True, _DIM)
 
     verdict = _verdict(player_stats, agent_stats)
     v = head_font.render(verdict, True, RESULTS_TEXT_COLOR)
@@ -192,8 +251,8 @@ def draw_results(surface, title_font, head_font, body_font,
                                hint.get_width() + 40, minimum=660)
     col_w = (panel_w - 2 * _MARGIN - _GAP) // 2
     top = _top(title_font, body_font)
-    col_h = max(_column_height(head_font, body_font, player_stats),
-                _column_height(head_font, body_font, agent_stats))
+    col_h = max(_column_height(head_font, body_font, player_stats, small_font),
+                _column_height(head_font, body_font, agent_stats, small_font))
     # columns, then the verdict, then the hint -- panel is as tall as that
     panel_h = top + col_h + 16 + v.get_height() + 14 + hint.get_height() + 18
     px = (SCREEN_WIDTH - panel_w) // 2
@@ -207,7 +266,8 @@ def draw_results(surface, title_font, head_font, body_font,
 
     for i, st in enumerate((player_stats, agent_stats)):
         x = px + _MARGIN + i * (col_w + _GAP)
-        _draw_column(surface, head_font, body_font, x, py + top, col_w, st, total_font)
+        _draw_column(surface, head_font, body_font, x, py + top, col_w, st, total_font,
+                     title_font, small_font)
     # a thin rule down the gutter so the two columns read as two blocks
     mid = px + _MARGIN + col_w + _GAP // 2
     pygame.draw.line(surface, (60, 62, 70), (mid, py + top + 4),
@@ -221,14 +281,11 @@ def draw_results(surface, title_font, head_font, body_font,
 
 def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
                        total_victims, stage_label=None, cleared=False,
-                       has_next_stage=False, total_font=None):
+                       has_next_stage=False, total_font=None, small_font=None):
     """Single-column variant for spectate ("Watch AI Play") runs -- same
     panel language as draw_results, just one column since there's no Pete
     to compare against."""
-    sub = f"{total_victims} occupants in the building"
-    if stage_label:
-        sub = f"{stage_label}  --  {sub}"
-    sub_surf = body_font.render(sub, True, _DIM)
+    sub_surf = body_font.render(_subtitle(stage_label, total_victims), True, _DIM)
 
     if cleared and has_next_stage:
         hint_text = "Enter for the next stage     R to replay     Esc to quit"
@@ -245,19 +302,19 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
     panel_w = _fit_panel_width(sub_surf.get_width() + 2 * _MARGIN,
                                hint.get_width() + 40)
     top = _top(title_font, body_font)
-    col_h = _column_height(head_font, body_font, agent_stats)
+    col_h = _column_height(head_font, body_font, agent_stats, small_font)
     panel_h = top + col_h + 16 + hint.get_height() + 18
     px = (SCREEN_WIDTH - panel_w) // 2
     py = (SCREEN_HEIGHT - panel_h) // 2
     _draw_panel(surface, px, py, panel_w, panel_h)
 
     headline, headline_colour = (
-        ("Stage cleared", _POS) if cleared else ("The AI didn't make it", _NEG))
+        ("The AI cleared the stage", _POS) if cleared else ("The AI didn't make it", _NEG))
     _draw_heading(surface, title_font, headline, headline_colour, sub_surf,
                   px, py, panel_w)
 
     _draw_column(surface, head_font, body_font, px + _MARGIN, py + top,
-                 panel_w - 2 * _MARGIN, agent_stats, total_font)
+                 panel_w - 2 * _MARGIN, agent_stats, total_font, title_font, small_font)
 
     surface.blit(hint, (px + (panel_w - hint.get_width()) // 2,
                         py + top + col_h + 16))

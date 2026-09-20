@@ -25,7 +25,7 @@ _BODY = pygame.font.SysFont(None, 24)
 
 @pytest.mark.parametrize("index", range(levels.STAGE_COUNT))
 def test_watch_results_panel_fits_every_stage_subtitle(index):
-    sub = f"{levels.label(index)}  --  12 occupants in the building"
+    sub = results._subtitle(levels.label(index), 12)
     hint = "Enter for the next stage     R to replay     Esc to quit"
     w = _fit_panel_width(_BODY.size(sub)[0] + 60, _BODY.size(hint)[0] + 40)
     assert w >= _BODY.size(sub)[0] + 60           # text plus its margins
@@ -234,7 +234,8 @@ def test_default_font_layout_is_unchanged_by_the_font_metrics_refactor():
     assert results._row_h(b) == 22
     assert results._sub_y(t) == 54
     assert results._top(t, b) == 86
-    assert results._head_block(h, b) == (26, 46, 78)
+    # the header changed (portrait + name + info line), so this is its new baseline
+    assert results._head_block(h, b) == (2, 25, 66)
 
 
 @pytest.mark.parametrize("fonts_", [_FONTS, _DEFAULT_FONTS, _TALL_FONTS],
@@ -246,10 +247,10 @@ def test_spacing_scales_with_the_font_so_nothing_overlaps(fonts_):
     assert results._row_h(b) >= b.get_linesize()            # rows don't collide
     assert results._sub_y(t) >= 18 + t.get_height()         # subtitle below headline
     assert results._top(t, b) >= results._sub_y(t) + b.get_height()
-    reason_y, score_y, head_h = results._head_block(h, b)
-    assert reason_y >= h.get_height()                       # reason below the name
-    assert score_y >= reason_y + b.get_height()             # score below the reason
-    assert head_h >= score_y + h.get_height()               # section below the score
+    name_y, info_y, head_h = results._head_block(h, b)
+    assert info_y >= name_y + h.get_height()                # the info line is below the name
+    assert head_h >= info_y + b.get_height()                # the SCORE section is below the info line
+    assert head_h >= results._PORTRAIT                      # ...and below the portrait
 
 
 @pytest.mark.parametrize("fonts_", [_FONTS, _DEFAULT_FONTS], ids=["arial", "default"])
@@ -440,3 +441,217 @@ def test_the_game_hands_the_bold_font_to_both_results_panels():
     src = (_GAME_DIR / "main.py").read_text(encoding="utf-8")
     assert 'total_font = ui_font("body", bold=True)' in src
     assert src.count("total_font=total_font") == 2      # draw_results and draw_watch_results
+
+
+# --- the name block: who it is, how it decided, how it ended --------------------
+import fonts
+from hud_icons import BLUE
+from portraits import draw_portrait, portrait_image
+from settings import RESULTS_ACCENT_COLOR
+
+_SMALL = ui_font("small")
+_TITLE = _FONTS[0]
+
+
+class _Rec:
+    """A font that records what it was asked to render (and otherwise is the font)."""
+    def __init__(self, font):
+        self._f, self.said = font, []
+
+    def render(self, text, *a, **k):
+        self.said.append(text)
+        return self._f.render(text, *a, **k)
+
+    def __getattr__(self, name):
+        return getattr(self._f, name)
+
+
+def _col(st, width, head=None, small=None, title=None):
+    """A column drawn at (20, 10); returns (surface, x, top_y)."""
+    surf = pygame.Surface((max(400, width + 40), 520))
+    surf.fill((0, 0, 0))
+    results._draw_column(surf, head or _FONTS[1], _FONTS[2], 20, 10, width, st, _BOLD,
+                         title or _TITLE, small or _SMALL)
+    return surf, 20, 10
+
+
+def _has(surf, colour, box):
+    x0, y0, x1, y1 = box
+    return any(surf.get_at((x, y))[:3] == colour
+               for x in range(x0, x1) for y in range(y0, y1))
+
+
+# ---- who a rescuer is (stats.py) ------------------------------------------------
+def test_a_rescuer_knows_its_name_and_how_it_decides():
+    pete, robot = RunStats("You (Pete)"), RunStats("AI robot")
+    drone, learned = RunStats("AI drone"), RunStats("AI robot (learned)")
+    assert (pete.kind, pete.brain, pete.display_name, pete.role) == ("you", "human", "Pete", "Human player")
+    assert (robot.kind, robot.brain, robot.display_name, robot.role) == ("robot", "astar", "AI Robot", "A* planner")
+    assert (drone.display_name, drone.role) == ("AI Drone", "A* planner")
+    assert (learned.display_name, learned.role) == ("AI Robot", "Learned model")   # "(learned)" leaves the name
+    assert RunStats("anything", kind="drone", brain="learned").display_name == "AI Drone"   # explicit wins
+    with pytest.raises(ValueError):
+        RunStats("x", kind="cat")
+    with pytest.raises(ValueError):
+        RunStats("x", kind="robot", brain="magic")
+
+
+@pytest.mark.parametrize("visual,kind", [("robot", "robot"), ("drone", "drone")])
+def test_the_game_says_who_each_rescuer_is_instead_of_leaving_it_to_the_label(visual, kind):
+    s = game.GameSession(levels.get(0), spectate=False, agent_visual=visual)
+    assert (s.player_stats.kind, s.player_stats.brain) == ("you", "human")
+    assert (s.agent_stats.kind, s.agent_stats.brain) == (kind, "astar")
+
+
+# ---- portraits ---------------------------------------------------------------------
+def test_pete_and_the_robot_have_portraits_and_the_drone_is_drawn():
+    for kind in ("pete", "robot"):
+        img = portrait_image(kind, 42)
+        assert img is not None and max(img.get_size()) <= 42
+        assert portrait_image(kind, 42) is img                    # cached
+    assert portrait_image("drone", 42) is None
+    for kind, accent in (("pete", RESULTS_ACCENT_COLOR), ("robot", BLUE), ("drone", BLUE)):
+        surf = pygame.Surface((80, 80))
+        surf.fill((0, 0, 0))
+        rect = pygame.Rect(10, 10, 50, 50)
+        draw_portrait(surf, rect, kind, accent)
+        assert surf.get_at((rect.centerx, rect.y))[:3] == accent  # framed in the rescuer's colour
+
+
+# ---- colour: gold is you, blue is the AI (as in the HUD) ------------------------------
+@pytest.mark.parametrize("width", [278, 356], ids=["race column", "watch column"])
+def test_pete_is_gold_and_the_ai_is_blue(width):
+    nx = 20 + results._PORTRAIT + results._PORTRAIT_GAP
+    name = (nx, 10, nx + 110, 10 + 30)
+    pete, _, _ = _col(_stats("You (Pete)"), width)
+    ai, _, _ = _col(_stats("AI robot"), width)
+    assert _has(pete, RESULTS_ACCENT_COLOR, name) and not _has(pete, BLUE, name)
+    assert _has(ai, BLUE, name) and not _has(ai, RESULTS_ACCENT_COLOR, name)
+
+
+@pytest.mark.parametrize("reason,colour", [("exit", results._POS), ("dead", results._NEG),
+                                           ("time", results._AMBER)])
+def test_the_outcome_is_coloured_by_whether_it_was_good(reason, colour):
+    nx = 20 + results._PORTRAIT + results._PORTRAIT_GAP
+    info_y = results._head_block(_FONTS[1], _SMALL)[1]
+    surf, _, _ = _col(_stats(reason=reason), 356)
+    assert _has(surf, colour, (nx, 10 + info_y, 20 + 356, 10 + info_y + _SMALL.get_height()))
+
+
+# ---- wording -----------------------------------------------------------------------------
+def test_the_name_block_uses_the_names_and_says_how_it_decided_and_ended():
+    head, small = _Rec(_FONTS[1]), _Rec(_SMALL)
+    _col(_stats("AI robot (learned)", reason="time"), 356, head=head, small=small)
+    assert "AI Robot" in head.said and not any("learned" in t for t in head.said)
+    assert "Learned model" in small.said and "still searching" in small.said
+    head, small = _Rec(_FONTS[1]), _Rec(_SMALL)
+    _col(_stats("You (Pete)", reason="dead"), 278, head=head, small=small)
+    assert "Pete" in head.said and "You (Pete)" not in head.said
+    assert "Human player" in small.said and "did not make it" in small.said
+
+
+def test_the_role_gives_way_before_the_outcome():
+    parts = results._info_parts
+    full = parts(_SMALL, "A* planner", "reached the exit", results._POS, 10_000)
+    assert [t for t, _ in full] == ["A* planner", results._INFO_SEP, "reached the exit"]
+    assert parts(_SMALL, "A* planner", "reached the exit", results._POS, 30) == [
+        ("reached the exit", results._POS)]                         # no room: keep the outcome
+    assert parts(_SMALL, "A* planner", "", results._DIM, 10_000) == [("A* planner", results._DIM)]
+
+
+@pytest.mark.skipif(not fonts._first_existing(fonts._REGULAR_PATHS),
+                    reason="widths differ on the fallback font; the role dropping is its design")
+def test_every_role_and_outcome_fits_a_race_column_with_arial():
+    """If any pair overflowed, that rescuer's role would vanish and its column
+    would disagree with its neighbour's."""
+    col_w = (660 - 2 * results._MARGIN - results._GAP) // 2
+    avail = col_w - results._PORTRAIT - results._PORTRAIT_GAP
+    for role in ("Human player", "A* planner", "Learned model"):
+        for status, _ in results._STATUS.values():
+            assert _SMALL.size(role + results._INFO_SEP + status)[0] <= avail, (role, status)
+
+
+def test_in_a_race_column_the_name_and_score_share_a_line_without_touching():
+    col_w = (660 - 2 * results._MARGIN - results._GAP) // 2
+    room = col_w - results._PORTRAIT - results._PORTRAIT_GAP
+    widest_name = max(_FONTS[1].size(n)[0] for n in ("Pete", "AI Robot", "AI Drone"))
+    score = _FONTS[1].size("9999")[0]
+    assert widest_name + score + 12 <= room
+
+
+def test_a_wide_column_has_a_points_caption_and_a_narrow_one_does_not():
+    wide, narrow = _Rec(_SMALL), _Rec(_SMALL)
+    _col(_stats(), 356, small=wide)
+    _col(_stats(), 278, small=narrow)
+    assert "POINTS" in wide.said and "POINTS" not in narrow.said
+
+
+def test_the_info_line_leaves_room_for_the_big_score(monkeypatch):
+    seen = []
+    real = results._info_parts
+    monkeypatch.setattr(results, "_info_parts",
+                        lambda font, role, status, colour, avail: (seen.append(avail),
+                                                                   real(font, role, status, colour, avail))[1])
+    nx = results._PORTRAIT + results._PORTRAIT_GAP
+    _col(_stats(saved=12, dmg=0), 356)                            # wide: 4-digit score, big
+    big = _TITLE.size(str(_stats(saved=12, dmg=0).score))[0]
+    cap = _SMALL.size("POINTS")[0]
+    assert seen[-1] == 356 - nx - (max(big, cap) + 12)
+    _col(_stats(), 278)                                           # narrow: the score is on the name's line
+    assert seen[-1] == 278 - nx
+
+
+# ---- the subtitle and the headline --------------------------------------------------------------
+def test_the_subtitle_uses_dots_and_gets_singular_and_plural_right():
+    assert results._subtitle("Stage 1/10 - Ground Floor", 3) == "Stage 1/10  ·  Ground Floor  ·  3 occupants"
+    assert results._subtitle("Stage 1/10 - Ground Floor", 1).endswith("1 occupant")
+    assert results._subtitle(None, 3) == "3 occupants"
+    for text in (results._subtitle(levels.label(i), n) for i in range(levels.STAGE_COUNT) for n in (1, 5)):
+        assert "--" not in text and " - " not in text
+
+
+@pytest.mark.parametrize("cleared,headline", [(True, "The AI cleared the stage"),
+                                              (False, "The AI didn't make it")])
+def test_the_watch_headline_says_who_did_it(cleared, headline):
+    title = _Rec(_FONTS[0])
+    results.draw_watch_results(pygame.display.get_surface(), title, _FONTS[1], _FONTS[2], _stats(),
+                               3, stage_label="Stage 1/10 - Ground Floor", cleared=cleared,
+                               has_next_stage=True, total_font=_BOLD, small_font=_SMALL)
+    assert headline in title.said
+
+
+# ---- the panels still fit, and main wires the new font ------------------------------------------
+@pytest.mark.parametrize("draw", ["watch", "race"])
+@pytest.mark.parametrize("kind", ["robot", "drone"])
+def test_the_new_header_keeps_every_panel_on_screen(draw, kind, monkeypatch):
+    seen = []
+    real = results._draw_panel
+    monkeypatch.setattr(results, "_draw_panel",
+                        lambda s, px, py, w, h: (seen.append((px, py, w, h)), real(s, px, py, w, h))[1])
+    screen = pygame.display.get_surface()
+    ai = _stats(f"AI {kind} (learned)", saved=12, dmg=200, died=True, reason="dead")
+    label = levels.label(levels.STAGE_COUNT - 1)
+    if draw == "watch":
+        results.draw_watch_results(screen, *_FONTS, ai, 12, stage_label=label, cleared=False,
+                                   has_next_stage=True, total_font=_BOLD, small_font=_SMALL)
+    else:
+        results.draw_results(screen, *_FONTS, _stats("You (Pete)", saved=12, dmg=200, died=True,
+                             reason="dead"), ai, 12, outcome="died", stage_label=label,
+                             has_next_stage=True, total_font=_BOLD, small_font=_SMALL)
+    px, py, w, h = seen[0]
+    assert py >= 10 and py + h <= results.SCREEN_HEIGHT - 10 and px >= 0 and px + w <= SCREEN_WIDTH
+
+
+@pytest.mark.parametrize("width", [278, 356], ids=["race column", "watch column"])
+def test_the_column_reports_its_height_with_the_new_header(width):
+    for kw in (dict(), dict(dmg=200, reason="dead", died=True), dict(reason="time")):
+        st = _stats(**kw)
+        surf = pygame.Surface((500, 600))
+        end = results._draw_column(surf, _FONTS[1], _FONTS[2], 20, 10, width, st, _BOLD, _TITLE, _SMALL)
+        assert end - 10 == results._column_height(_FONTS[1], _FONTS[2], st, _SMALL)
+
+
+def test_the_game_hands_the_small_font_to_both_results_panels():
+    src = (_GAME_DIR / "main.py").read_text(encoding="utf-8")
+    assert 'small_font = ui_font("small")' in src
+    assert src.count("small_font=small_font") == 2

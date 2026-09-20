@@ -167,11 +167,13 @@ class GameSession:
         # input, updated, or drawn -- see the `if not self.spectate` guards
         # below.
         self.player = Player(spawn_x, spawn_y)
-        self.player_stats = RunStats("You (Pete)")
+        self.player_stats = RunStats("You (Pete)", kind="you", brain="human")
         label = "AI drone" if self.agent_visual != "robot" else "AI robot"
         if self.agent_brain == "learned":
             label += " (learned)"
-        self.agent_stats = RunStats(label)
+        self.agent_stats = RunStats(
+            label, kind="robot" if self.agent_visual == "robot" else "drone",
+            brain=self.agent_brain)
 
         self.hazards = HazardField(
             tm, seed=self.stage.SEED,
@@ -561,6 +563,7 @@ def main():
     head_font = ui_font("heading")
     body_font = ui_font("body")
     total_font = ui_font("body", bold=True)      # the results' Total row
+    small_font = ui_font("small")                # the results' "role \u00b7 outcome" line
 
     # Built once here (not per-call, and not at module import time): it
     # loads sprites via convert_alpha(), which needs the display created
@@ -699,7 +702,7 @@ def main():
                                        stage_label=session.stage_label,
                                        cleared=session.cleared,
                                        has_next_stage=session.has_next_stage,
-                                       total_font=total_font)
+                                       total_font=total_font, small_font=small_font)
                 else:
                     draw_results(screen, title_font, head_font, body_font,
                                  session.player_stats, session.agent_stats,
@@ -707,7 +710,7 @@ def main():
                                  outcome=session.outcome,
                                  stage_label=session.stage_label,
                                  has_next_stage=session.has_next_stage,
-                                 total_font=total_font)
+                                 total_font=total_font, small_font=small_font)
             elif session.paused:
                 _draw_pause_overlay(screen, title_font, body_font)
 

@@ -15,9 +15,27 @@ from settings import (
 )
 
 
+_KINDS = {"you": "Pete", "robot": "AI Robot", "drone": "AI Drone"}     # kind -> name shown
+_ROLES = {"human": "Human player", "astar": "A* planner", "learned": "Learned model"}
+
+
+def _kind_from_label(label):
+    l = label.lower()
+    return "you" if l.startswith("you") else "drone" if "drone" in l else "robot"
+
+
 class RunStats:
-    def __init__(self, label):
+    def __init__(self, label, kind=None, brain=None):
+        """`label` is the running text ("You (Pete)", "AI robot (learned)").
+        `kind` ("you", "robot" or "drone") and `brain` ("human", "astar" or
+        "learned") say who this is; when omitted they are read off the label,
+        so older callers keep working."""
         self.label = label
+        self.kind = kind or _kind_from_label(label)
+        self.brain = brain or ("human" if self.kind == "you"
+                               else "learned" if "(learned)" in label else "astar")
+        if self.kind not in _KINDS or self.brain not in _ROLES:
+            raise ValueError(f"unknown rescuer kind/brain: {self.kind!r}/{self.brain!r}")
         self.elapsed = 0.0           # seconds of *game* time (accumulated dt)
         self._running = True
 
@@ -31,6 +49,16 @@ class RunStats:
         self.goal_changes = 0
 
         self.finished_reason = None  # "exit" | "dead" | None (still going)
+
+    @property
+    def display_name(self):
+        """The name for a heading: "Pete", "AI Robot" or "AI Drone"."""
+        return _KINDS[self.kind]
+
+    @property
+    def role(self):
+        """How it decides: "Human player", "A* planner" or "Learned model"."""
+        return _ROLES[self.brain]
 
     # -- events ---------------------------------------------------------
     def tick(self, dt):

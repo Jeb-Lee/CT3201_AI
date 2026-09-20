@@ -11,6 +11,7 @@ import pygame
 # --- palette ---------------------------------------------------------------
 TEXT = (236, 236, 240)
 DIM = (150, 152, 162)
+BLUE = (120, 150, 210)          # the AI (gold is "you": settings.RESULTS_ACCENT_COLOR)
 PANEL_TOP, PANEL_BOT = (36, 39, 49), (15, 17, 23)
 EDGE = (74, 78, 92)
 
