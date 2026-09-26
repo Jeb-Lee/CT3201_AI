@@ -21,10 +21,11 @@ cut the route off. A rescuer has to decide, moment to moment and with
 incomplete information, **who to go to next and by what route** as conditions
 change.
 
-**User.** `[TEAM: pick the one you actually intended]` — e.g. fire‑service
-route planners evaluating building layouts; a training simulator for
-rescuers; or a decision‑support tool that suggests a route to a rescuer in
-the field.
+**User.** A rescuer inside the building, human or robotic — the system is a
+decision‑support tool that proposes a route, not an autonomous replacement
+for them. This is the framing the rest of the report already uses (Section
+7's Responsible AI table and the deployment verdict): the AI suggests, a
+person decides.
 
 **Environment.** A multi‑room floor plan modelled as a grid of connected
 cells (the course's "floor plan as a graph"). Hazards evolve over time:
@@ -224,11 +225,12 @@ on each dimension.
 | Model hallucination produces an impossible route | **Low** for us — the route comes from A\* on a real graph, not a language model. |
 | Adversarial inputs to a neural component | **Not applicable** — no neural network in the agent. |
 
-**Should it be deployed?** `[TEAM: your reasoned position]` — a defensible
-answer is *"not as an autonomous router; yes as a transparent
-decision‑support display that a trained rescuer can accept or override,
-provided the sensor feed's integrity is assured and a triage signal
-replaces greedy nearest‑first."*
+**Should it be deployed?** Not as an autonomous router — the Bias row above
+shows it has no notion of who's most at risk, and the Security row shows it
+blindly trusts its hazard map. Yes as a transparent decision-support
+display that a trained rescuer can accept or override, provided the sensor
+feed's integrity is assured and a triage signal replaces greedy
+nearest-first.
 
 ---
 
