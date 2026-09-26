@@ -4,12 +4,15 @@ screen (Play vs AI / Watch AI Play) and the skin-select screen
 since they're the same interaction shape with different labels.
 """
 
+import math
 import os
 import traceback
 
 import pygame
 
 from fonts import ui_font
+from hud_icons import DIM, EDGE, PANEL_BOT, draw_panel, key_hint_row, lerp_colour
+from portraits import draw_portrait
 from settings import SCREEN_WIDTH, SCREEN_HEIGHT, RESULTS_ACCENT_COLOR
 from intro import build_building_layer, _load_sprite, PETE_ASSET_DIR, ROBOT_ASSET_DIR
 
@@ -106,20 +109,65 @@ def build_menu_background(width=SCREEN_WIDTH, height=SCREEN_HEIGHT):
     return surf
 
 
+PANEL_W = 560       # the panel behind the title and options
+CARD_W = 480        # one option's card
+CARD_H = 64
+CARD_GAP = 84       # centre to centre
+FIRST_CARD_CY = 280
+PANEL_TOP = 55
+PANEL_FOOT = 92     # last card's bottom edge -> panel's bottom edge (room for the hint row)
+PANEL_MARGIN = 8    # the panel keeps this far from the bottom of the screen
+ICON = 44           # the portrait on an option that has one
+_CARDS = {}
+
+
+def _card(size, accent, selected):
+    """An option's card, built once: the selected one glows in the accent
+    colour, the others are a faint outline."""
+    key = (size, accent, selected)
+    if key not in _CARDS:
+        w, h = size
+        card = pygame.Surface(size, pygame.SRCALPHA)
+        if selected:
+            top, bot = lerp_colour(PANEL_BOT, accent, 0.30), lerp_colour(PANEL_BOT, accent, 0.10)
+            for y in range(h):
+                card.fill((*lerp_colour(top, bot, y / max(1, h - 1)), 255), (0, y, w, 1))
+        else:
+            card.fill((255, 255, 255, 10))
+        mask = pygame.Surface(size, pygame.SRCALPHA)
+        pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=10)
+        card.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+        pygame.draw.rect(card, accent if selected else EDGE, card.get_rect(),
+                         2 if selected else 1, border_radius=10)
+        _CARDS[key] = card
+    return _CARDS[key]
+
+
+def _arrows(font):
+    """The up/down arrows for a key cap if the font has those glyphs, else words."""
+    if all(m is not None for m in font.metrics("↑↓")):
+        return "↑ ↓"
+    return "Up/Down"
+
+
 class ChoiceMenu:
-    """options: list of (label, value, description_or_None).
+    """options: list of (label, value, description_or_None[, icon]), where icon
+    is "pete", "robot" or "drone" -- a portrait drawn beside the label.
 
     Navigate with Up/Down (wraps) or mouse hover; confirm with
     Enter/Space or a click. .result holds the chosen value once picked,
-    else None. Esc leaves .cancelled True so main.py can back out a
-    screen instead of quitting outright, when that's wired up."""
+    else None. Esc leaves .cancelled True (the game itself quits on Esc).
+    `accent` is the colour of the selection: gold for the player's own
+    choices, blue (the AI's colour) for choices about the AI."""
 
-    def __init__(self, title, options, subtitle=None, background=None):
+    def __init__(self, title, options, subtitle=None, background=None, accent=RESULTS_ACCENT_COLOR):
         self.title = title
         self.subtitle = subtitle
         self.options = options
         self.background = background  # pre-rendered pygame.Surface, or None for flat BG_COLOR
+        self.accent = accent
         self.index = 0
+        self.t = 0.0
         self.result = None
         self.cancelled = False
         self._option_rects = []
@@ -129,8 +177,16 @@ class ChoiceMenu:
         self._option_font = ui_font("heading")
         self._desc_font = ui_font("small")
         self._hint_font = ui_font("small")
+        self._chip_font = ui_font("small", bold=True)
+
+    def hint_items(self):
+        return [(_arrows(self._chip_font), "Choose"), ("Enter", "Select"), ("Esc", "Quit")]
+
+    def has_icons(self):
+        return any(len(o) > 3 and o[3] for o in self.options)
 
     def update(self, dt, events):
+        self.t += dt
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_DOWN, pygame.K_s):
@@ -153,6 +209,24 @@ class ChoiceMenu:
                         self.result = self.options[i][1]
                         break
 
+    def card_gap(self):
+        """Centre-to-centre distance between cards: CARD_GAP, closed up when there
+        are enough options that the panel would otherwise run off the bottom of the
+        screen (the brain menu can list A*, two learned models and an installed one).
+        Never so close that cards touch."""
+        n = len(self.options)
+        if n < 2:
+            return CARD_GAP
+        room = (SCREEN_HEIGHT - PANEL_MARGIN - PANEL_FOOT - CARD_H // 2 - FIRST_CARD_CY) // (n - 1)
+        return max(CARD_H + 4, min(CARD_GAP, room))
+
+    def panel_rect(self, width=SCREEN_WIDTH):
+        """The panel behind everything: from the title down past the hint row."""
+        last_bottom = FIRST_CARD_CY + (len(self.options) - 1) * self.card_gap() + CARD_H // 2
+        rect = pygame.Rect(0, PANEL_TOP, min(PANEL_W, width - 40), last_bottom + PANEL_FOOT - PANEL_TOP)
+        rect.centerx = width // 2
+        return rect
+
     def draw(self, surface):
         if self.background is not None:
             surface.blit(self.background, (0, 0))
@@ -160,45 +234,55 @@ class ChoiceMenu:
             surface.fill(BG_COLOR)
         w = surface.get_width()
 
-        # a soft dark panel behind the title/options column -- belt and
-        # braces alongside the background's own dimming, so light parts of
-        # the scenery (a flame, a lit window) never fight with the text.
-        panel = pygame.Surface((min(560, w - 40), 430), pygame.SRCALPHA)
-        pygame.draw.rect(panel, (8, 8, 10, 130), panel.get_rect(), border_radius=16)
-        surface.blit(panel, panel.get_rect(center=(w // 2, 270)))
+        panel = self.panel_rect(w)
+        draw_panel(surface, panel, accent=self.accent, radius=16, alpha=205)
 
         title_surf = self._title_font.render(self.title, True, TITLE_COLOR)
         title_rect = title_surf.get_rect(center=(w // 2, 150))
         surface.blit(title_surf, title_rect)
 
+        bottom = title_rect.bottom
         if self.subtitle:
             sub_surf = self._subtitle_font.render(self.subtitle, True, SUBTITLE_COLOR)
-            surface.blit(sub_surf, sub_surf.get_rect(center=(w // 2, title_rect.bottom + 26)))
+            sub_rect = sub_surf.get_rect(center=(w // 2, title_rect.bottom + 26))
+            surface.blit(sub_surf, sub_rect)
+            bottom = sub_rect.bottom
+        pygame.draw.rect(surface, self.accent,                       # a short accent rule
+                         pygame.Rect(w // 2 - 24, bottom + 12, 48, 3), border_radius=2)
 
         self._option_rects = []
-        top = 280
-        gap = 84
-        opt_w = 420
-        for i, (label, value, desc) in enumerate(self.options):
-            cy = top + i * gap
-            rect = pygame.Rect(0, 0, opt_w, 60)
-            rect.center = (w // 2, cy)
+        icons = self.has_icons()
+        for i, option in enumerate(self.options):
+            label, value, desc = option[:3]
+            icon = option[3] if len(option) > 3 else None
+            rect = pygame.Rect(0, 0, CARD_W, CARD_H)
+            rect.center = (w // 2, FIRST_CARD_CY + i * self.card_gap())
             self._option_rects.append(rect)
 
             selected = (i == self.index)
-            if selected:
-                pygame.draw.rect(surface, HIGHLIGHT_BG, rect, border_radius=8)
-                pygame.draw.rect(surface, RESULTS_ACCENT_COLOR, rect, 2, border_radius=8)
+            surface.blit(_card(rect.size, self.accent, selected), rect.topleft)
 
-            label_color = RESULTS_ACCENT_COLOR if selected else OPTION_COLOR
-            label_surf = self._option_font.render(label, True, label_color)
-            label_rect = label_surf.get_rect(center=(rect.centerx, rect.centery - (10 if desc else 0)))
-            surface.blit(label_surf, label_rect)
+            label_surf = self._option_font.render(label, True, self.accent if selected else OPTION_COLOR)
+            desc_surf = (self._desc_font.render(desc, True, DIM if selected else OPTION_DESC_COLOR)
+                         if desc else None)
+            dy = 10 if desc else 0
+            if icons:
+                box = pygame.Rect(0, 0, ICON, ICON)
+                box.midleft = (rect.left + 12, rect.centery)
+                if icon:
+                    draw_portrait(surface, box, icon, self.accent if selected else EDGE)
+                x = box.right + 14
+                surface.blit(label_surf, label_surf.get_rect(midleft=(x, rect.centery - dy)))
+                if desc_surf:
+                    surface.blit(desc_surf, desc_surf.get_rect(midleft=(x, rect.centery + 16)))
+            else:
+                surface.blit(label_surf, label_surf.get_rect(center=(rect.centerx, rect.centery - dy)))
+                if desc_surf:
+                    surface.blit(desc_surf, desc_surf.get_rect(center=(rect.centerx, rect.centery + 16)))
+            if selected:                                             # a chevron that nudges
+                nx = rect.right - 22 + round(2 * math.sin(self.t * 5))
+                pygame.draw.polygon(surface, self.accent, [(nx - 5, rect.centery - 8),
+                                                           (nx + 3, rect.centery), (nx - 5, rect.centery + 8)])
 
-            if desc:
-                desc_surf = self._desc_font.render(desc, True, OPTION_DESC_COLOR)
-                surface.blit(desc_surf, desc_surf.get_rect(center=(rect.centerx, rect.centery + 16)))
-
-        hint = self._hint_font.render(
-            "Arrow keys or mouse to choose, Enter to select", True, SUBTITLE_COLOR)
-        surface.blit(hint, hint.get_rect(center=(w // 2, surface.get_height() - 40)))
+        key_hint_row(surface, self.hint_items(), self._chip_font, self._hint_font,
+                     w // 2, panel.bottom - 34)

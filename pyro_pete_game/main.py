@@ -61,6 +61,7 @@ from pause import PauseScreen
 import levels
 from levels.tuning import DEFAULT as DEFAULT_TUNING
 from intro import IntroScene
+from hud_icons import BLUE
 from menu import ChoiceMenu, build_menu_background
 from audio import AudioManager, game_track
 from ml.policy import available_models, load_policy
@@ -443,8 +444,13 @@ class GameSession:
         self.agent.draw_route(surface, cam)
         self.agent.draw(surface, cam)
 
-        mouse = pygame.mouse.get_pos() if pygame.mouse.get_focused() else None
-        self.hud.draw(surface, self, mouse)
+        # The HUD belongs to a stage in progress. Once the stage has ended the
+        # results panel takes over the screen; drawing the HUD first meant its
+        # clock and cards showed through around (and were cut by) the panel.
+        # (Paused is still "playing", so the pause screen keeps a dimmed HUD.)
+        if self.state == "playing":
+            mouse = pygame.mouse.get_pos() if pygame.mouse.get_focused() else None
+            self.hud.draw(surface, self, mouse)
 
     def _draw_player_trail(self, surface, camera_offset):
         ox, oy = camera_offset
@@ -494,8 +500,8 @@ def _build_mode_menu(background=None):
     return ChoiceMenu(
         "Pyro Pete",
         [
-            ("Play vs AI", "play", "Race the AI rescuer yourself"),
-            ("Watch AI Play", "watch", "Sit back and watch the AI solve it alone"),
+            ("Play vs AI", "play", "Race the AI rescuer yourself", "pete"),
+            ("Watch AI Play", "watch", "Sit back and watch the AI solve it alone", "robot"),
         ],
         subtitle="Choose a mode",
         background=background,
@@ -506,11 +512,12 @@ def _build_skin_menu(background=None):
     return ChoiceMenu(
         "Choose the AI's Look",
         [
-            ("Robot", "robot", "The walking rescue robot"),
-            ("Drone", "drone", "The original quadcopter"),
+            ("Robot", "robot", "The walking rescue robot", "robot"),
+            ("Drone", "drone", "The original quadcopter", "drone"),
         ],
         subtitle="How should the AI opponent appear?",
         background=background,
+        accent=BLUE,
     )
 
 
@@ -526,6 +533,7 @@ def _build_brain_menu(models=None, background=None):
         options,
         subtitle="How should the AI opponent decide where to go?",
         background=background,
+        accent=BLUE,
     )
 
 

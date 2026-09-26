@@ -26,10 +26,11 @@ _BODY = pygame.font.SysFont(None, 24)
 @pytest.mark.parametrize("index", range(levels.STAGE_COUNT))
 def test_watch_results_panel_fits_every_stage_subtitle(index):
     sub = results._subtitle(levels.label(index), 12)
-    hint = "Enter for the next stage     R to replay     Esc to quit"
-    w = _fit_panel_width(_BODY.size(sub)[0] + 60, _BODY.size(hint)[0] + 40)
+    body, chips = ui_font("body"), ui_font("body", bold=True)
+    hint_w = results._hint_block(True, True, "", body, chips)[2]
+    w = _fit_panel_width(_BODY.size(sub)[0] + 60, hint_w + 40)
     assert w >= _BODY.size(sub)[0] + 60           # text plus its margins
-    assert w >= _BODY.size(hint)[0] + 40
+    assert w >= hint_w + 40
     assert w <= SCREEN_WIDTH - 20                 # and still on screen
 
 
@@ -192,10 +193,13 @@ def test_headline_is_centred_on_the_panel(which, monkeypatch):
         results.draw_results(screen, *_FONTS, _stats("You (Pete)"), _stats(), 4,
                              outcome="cleared", stage_label=stage, has_next_stage=True)
     px, py, w, h = seen[0]
-    bg = tuple(results.RESULTS_PANEL_COLOR[:3])
+    # The panel is a vertical gradient, so "background" is the colour at the
+    # panel's left inner edge on the same row; anything else is headline text.
     band = range(py + 18, py + 18 + _FONTS[0].get_height() - 8)   # headline text
-    lit = [x for x in range(px + 4, px + w - 4)
-           if any(screen.get_at((x, y))[:3] != bg for y in band)]
+    bg = {y: screen.get_at((px + 14, y))[:3] for y in band}
+    lit = [x for x in range(px + 14, px + w - 14)
+           if any(screen.get_at((x, y))[:3] != bg[y] for y in band)]
+    assert lit, "no headline text found"
     assert abs((lit[0] + lit[-1]) / 2 - (px + w / 2)) <= 3
 
 
@@ -301,10 +305,10 @@ def test_no_module_creates_its_own_font():
 
 
 def test_the_scale_is_strictly_ordered_and_bold_differs_from_regular():
-    heights = [ui_font(r).get_height() for r in ("title", "heading", "body", "small")]
-    assert heights == sorted(heights, reverse=True) and len(set(heights)) == 4
-    # the scale's weights: titles and headings bold, reading text regular
-    assert fonts._SCALE["title"][2] and fonts._SCALE["heading"][2]
+    heights = [ui_font(r).get_height() for r in ("display", "title", "heading", "body", "small")]
+    assert heights == sorted(heights, reverse=True) and len(set(heights)) == 5
+    # the scale's weights: display, titles and headings bold, reading text regular
+    assert fonts._SCALE["display"][2] and fonts._SCALE["title"][2] and fonts._SCALE["heading"][2]
     assert not fonts._SCALE["body"][2] and not fonts._SCALE["small"][2]
     # asking for bold body text really gives a different (wider) face
     if fonts._first_existing(fonts._BOLD_PATHS):
@@ -314,19 +318,25 @@ def test_the_scale_is_strictly_ordered_and_bold_differs_from_regular():
 
 @pytest.mark.parametrize("build", ["_build_mode_menu", "_build_skin_menu", "_build_brain_menu"])
 def test_every_menu_line_fits_its_panel(build):
-    """The menu panel is min(560, width-40) wide and each option box 420: the
-    subtitle, every label and description and the hint must fit inside."""
+    """Panel and option cards have fixed widths: the subtitle, every label and
+    description (beside the icon, when the option has one) and the hint row must
+    fit inside them."""
+    import menu as menu_mod
+    from hud_icons import hint_row_width
     menu = getattr(game, build)(None)
-    panel_w = min(560, SCREEN_WIDTH - 40)
+    panel_w = menu.panel_rect(SCREEN_WIDTH).width
     lines = [(menu._title_font, menu.title, panel_w - 40),
-             (menu._subtitle_font, menu.subtitle or "", panel_w - 40),
-             (menu._hint_font, "Arrow keys or mouse to choose, Enter to select", panel_w - 40)]
-    for label, _, desc in menu.options:
-        lines.append((menu._option_font, label, 420 - 20))
+             (menu._subtitle_font, menu.subtitle or "", panel_w - 40)]
+    text_room = menu_mod.CARD_W - 20
+    if menu.has_icons():
+        text_room -= menu_mod.ICON + 26 + 30       # icon, its margins, and the selection chevron
+    for label, _, desc, *_ in menu.options:
+        lines.append((menu._option_font, label, text_room))
         if desc:
-            lines.append((menu._desc_font, desc, 420 - 20))
+            lines.append((menu._desc_font, desc, text_room))
     for font, text, room in lines:
         assert font.size(text)[0] <= room, (text, font.size(text)[0], room)
+    assert hint_row_width(menu.hint_items(), menu._chip_font, menu._hint_font) <= panel_w - 40
     # and the whole thing draws
     menu.draw(pygame.Surface((SCREEN_WIDTH, 640)))
 
@@ -339,16 +349,18 @@ def test_waiting_occupant_marker_stays_at_least_as_tall_as_it_was():
     assert glyph.height >= 14
 
 
-def test_intro_prompt_font_is_created_once_not_every_frame():
+def test_intro_fonts_are_created_once_not_every_frame():
     import intro
 
-    class Scene:
-        blink_t = 0.0
+    scene = intro.IntroScene.__new__(intro.IntroScene)      # just the drawing, no art or animation
+    scene.blink_t, scene.held_t = 0.0, 5.0
     surf = pygame.Surface((SCREEN_WIDTH, 640))
-    intro.IntroScene._draw_prompt(Scene, surf)
-    first = Scene._prompt_font
-    intro.IntroScene._draw_prompt(Scene, surf)
-    assert Scene._prompt_font is first
+    scene._draw_prompt(surf)
+    scene._draw_lockup(surf)
+    first = scene._ui_fonts
+    scene._draw_prompt(surf)
+    scene._draw_lockup(surf)
+    assert scene._ui_fonts is first
 
 
 # --- the Total row is the one bold row ----------------------------------------

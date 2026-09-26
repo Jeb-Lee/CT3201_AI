@@ -19,7 +19,7 @@ from fonts import ui_font
 from hud_icons import (
     TEXT, DIM, GREEN, AMBER, gradient_panel, drop_shadow, shadowed_text, pause_icon, key_chip,
 )
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, RESULTS_ACCENT_COLOR
+from settings import SCREEN_WIDTH, RESULTS_ACCENT_COLOR
 
 # Between the fire clock (bottom edge y=100) and the mission strip (top edge y=586).
 REGION = pygame.Rect(10, 110, SCREEN_WIDTH - 20, 466)

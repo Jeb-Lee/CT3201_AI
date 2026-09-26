@@ -23,7 +23,7 @@ from entities.victim import STATE_IDLE, STATE_FOLLOWING
 from fonts import ui_font
 from hud_icons import (
     TEXT, DIM, EDGE, BLUE, GREEN, lerp_colour, ease_out, shadowed_text, gradient_panel, drop_shadow,
-    flame, person, cross, key_icon, padlock, clock_icon, tick, drone_icon,
+    flame, person, cross, key_icon, padlock, clock_icon, tick, drone_icon, hint_row_width, key_hint_row,
 )
 from portraits import portrait_image
 from settings import (
@@ -51,6 +51,7 @@ GHOST_HOLD = 0.45           # the pale "you just lost this" bar segment waits...
 GHOST_DRAIN = 70.0          # ...then drains at this many health points a second
 TOAST_LIFE = 2.6
 BANNER_LIFE = 3.2
+CONTROLS_LIFE = 5.5         # the first stage's banner stays up long enough to read the keys
 FLOAT_LIFE = 0.9
 MAX_TOASTS = 3
 FIRE_WARN_SECONDS, FIRE_HOT_SECONDS = 35, 15
@@ -82,6 +83,7 @@ class Toast:
     age: float = 0.0
     sub: str = ""               # a banner's second line
     big: bool = False           # a banner rather than a pill
+    hints: tuple = ()           # key caps under a banner: ((key, what it does), ...)
 
     @property
     def alpha(self):
@@ -111,6 +113,7 @@ class Hud:
         self.f_head = ui_font("heading")
         self.f_body = ui_font("body", bold=True)
         self.f_small = ui_font("small")
+        self.f_chip = ui_font("small", bold=True)
         self._panels, self._shadows = {}, {}
         self._vignette = None
         self.reset()
@@ -169,8 +172,12 @@ class Hud:
     def _stage_banner(self, s):
         goal = ("Watching the AI rescuer work" if s.spectate
                 else "Lead every occupant out  ·  the AI is racing you")
+        hints = ()
+        if s.stage_index == 0:              # a new player's first look at the keys
+            hints = ((("P", "Pause"), ("M", "Sound")) if s.spectate
+                     else (("WASD", "Move"), ("P", "Pause"), ("M", "Sound")))
         self._toast(s.stage_label.replace(" - ", "  ·  ").upper(), GOLD,
-                    life=BANNER_LIFE, sub=goal, big=True)
+                    life=CONTROLS_LIFE if hints else BANNER_LIFE, sub=goal, big=True, hints=hints)
 
     def _events(self, prev, now, s):
         """Turn changes in the game into toasts."""
@@ -533,13 +540,16 @@ class Hud:
     def _draw_banner(self, surface, t):
         title = self.f_title.render(t.text, True, t.colour)
         sub = self.f_body.render(t.sub, True, TEXT) if t.sub else None
-        w = max(title.get_width(), sub.get_width() if sub else 0) + 64
-        h = title.get_height() + (sub.get_height() + 6 if sub else 0) + 28
+        keys_w = hint_row_width(t.hints, self.f_chip, self.f_small) if t.hints else 0
+        w = max(title.get_width(), sub.get_width() if sub else 0, keys_w) + 64
+        h = title.get_height() + (sub.get_height() + 6 if sub else 0) + 28 + (38 if t.hints else 0)
         panel = pygame.Surface((w, h), pygame.SRCALPHA)
         panel.blit(self._panel((w, h), t.colour), (0, 0))
         panel.blit(title, title.get_rect(midtop=(w // 2, 12)))
         if sub:
             panel.blit(sub, sub.get_rect(midtop=(w // 2, 12 + title.get_height() + 6)))
+        if t.hints:
+            key_hint_row(panel, t.hints, self.f_chip, self.f_small, w // 2, h - 12 - 15)
         panel.set_alpha(round(255 * t.alpha))
         surface.blit(panel, ((SCREEN_WIDTH - w) // 2, SCREEN_HEIGHT // 3 - h // 2))
 

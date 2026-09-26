@@ -10,11 +10,11 @@ where it came from.
 
 import pygame
 
-from hud_icons import BLUE
+from hud_icons import BLUE, draw_panel, hint_row_width, key_hint_row
 from portraits import draw_portrait
 from settings import (
     SCREEN_WIDTH, SCREEN_HEIGHT,
-    RESULTS_PANEL_COLOR, RESULTS_TEXT_COLOR, RESULTS_ACCENT_COLOR,
+    RESULTS_TEXT_COLOR, RESULTS_ACCENT_COLOR,
 )
 
 _DIM = (172, 172, 178)
@@ -225,9 +225,40 @@ def _draw_panel(surface, px, py, panel_w, panel_h):
     shade = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     shade.fill((0, 0, 0, 160))
     surface.blit(shade, (0, 0))
-    panel = pygame.Rect(px, py, panel_w, panel_h)
-    pygame.draw.rect(surface, RESULTS_PANEL_COLOR, panel, border_radius=10)
-    pygame.draw.rect(surface, RESULTS_ACCENT_COLOR, panel, 2, border_radius=10)
+    draw_panel(surface, pygame.Rect(px, py, panel_w, panel_h), accent=RESULTS_ACCENT_COLOR,
+               radius=12, alpha=240)
+
+
+def _hint_items(cleared, has_next, finale):
+    """What the foot of a results panel says the keys do: (message, [(key, label)]).
+
+    One name per key in both modes (one key used to be described three different
+    ways, sentence-style). After a clear R replays the stage; after a loss it
+    tries again; on the last stage a message (`finale`) says so and Enter goes
+    to the menu."""
+    if cleared and has_next:
+        return None, [("Enter", "Next stage"), ("R", "Replay"), ("Esc", "Quit")]
+    if cleared:
+        return finale, [("Enter", "Menu"), ("R", "Replay"), ("Esc", "Quit")]
+    return None, [("R", "Try again"), ("Enter", "Menu"), ("Esc", "Quit")]
+
+
+def _hint_block(cleared, has_next, finale, body_font, chip_font):
+    """(items, message surface or None, width, height) of the hint area."""
+    message, items = _hint_items(cleared, has_next, finale)
+    msg = body_font.render(message, True, RESULTS_ACCENT_COLOR) if message else None
+    width = max(hint_row_width(items, chip_font, body_font), msg.get_width() if msg else 0)
+    height = 30 + (msg.get_height() + 6 if msg else 0)
+    return items, msg, width, height
+
+
+def _draw_hints(surface, block, body_font, chip_font, cx, y):
+    """Draw a hint block whose top is `y`, centred on `cx`."""
+    items, msg, _, _ = block
+    if msg:
+        surface.blit(msg, msg.get_rect(midtop=(cx, y)))
+        y += msg.get_height() + 6
+    key_hint_row(surface, items, chip_font, body_font, cx, y + 15)
 
 
 def draw_results(surface, title_font, head_font, body_font,
@@ -238,23 +269,19 @@ def draw_results(surface, title_font, head_font, body_font,
 
     verdict = _verdict(player_stats, agent_stats)
     v = head_font.render(verdict, True, RESULTS_TEXT_COLOR)
-    if outcome == "cleared" and has_next_stage:
-        hint_text = "Enter for the next stage     R to replay     Esc to quit"
-    elif outcome == "cleared":
-        hint_text = "You finished the last stage!     Enter for menu     Esc to quit"
-    else:
-        hint_text = "R to try again     Enter for menu     Esc to quit"
-    hint = body_font.render(hint_text, True, (150, 150, 155))
+    chip_font = total_font or body_font
+    hints = _hint_block(outcome == "cleared", has_next_stage, "You finished the last stage!",
+                        body_font, chip_font)
 
     panel_w = _fit_panel_width(sub_surf.get_width() + 2 * _MARGIN,
                                v.get_width() + 2 * _MARGIN,
-                               hint.get_width() + 40, minimum=660)
+                               hints[2] + 40, minimum=660)
     col_w = (panel_w - 2 * _MARGIN - _GAP) // 2
     top = _top(title_font, body_font)
     col_h = max(_column_height(head_font, body_font, player_stats, small_font),
                 _column_height(head_font, body_font, agent_stats, small_font))
     # columns, then the verdict, then the hint -- panel is as tall as that
-    panel_h = top + col_h + 16 + v.get_height() + 14 + hint.get_height() + 18
+    panel_h = top + col_h + 16 + v.get_height() + 14 + hints[3] + 18
     px = (SCREEN_WIDTH - panel_w) // 2
     py = (SCREEN_HEIGHT - panel_h) // 2
     _draw_panel(surface, px, py, panel_w, panel_h)
@@ -275,8 +302,8 @@ def draw_results(surface, title_font, head_font, body_font,
 
     vy = py + top + col_h + 16
     surface.blit(v, (px + (panel_w - v.get_width()) // 2, vy))
-    surface.blit(hint, (px + (panel_w - hint.get_width()) // 2,
-                        vy + v.get_height() + 14))
+    _draw_hints(surface, hints, body_font, chip_font, px + panel_w // 2,
+                vy + v.get_height() + 14)
 
 
 def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
@@ -287,37 +314,32 @@ def draw_watch_results(surface, title_font, head_font, body_font, agent_stats,
     to compare against."""
     sub_surf = body_font.render(_subtitle(stage_label, total_victims), True, _DIM)
 
-    if cleared and has_next_stage:
-        hint_text = "Enter for the next stage     R to replay     Esc to quit"
-    elif cleared:
-        hint_text = "Campaign complete!     Enter for menu     Esc to quit"
-    else:
-        hint_text = "R to run again     Enter for menu     Esc to quit"
-    hint = body_font.render(hint_text, True, (150, 150, 155))
+    chip_font = total_font or body_font
+    hints = _hint_block(cleared, has_next_stage, "Campaign complete!", body_font, chip_font)
 
     # The subtitle carries the stage name, so its length varies per stage
     # ("Turbine Hall" vs "Staff Canteen"). A fixed panel let it spill out the
     # right-hand side; size the panel to the widest line instead, never
     # narrower than the original design and never wider than the screen.
-    panel_w = _fit_panel_width(sub_surf.get_width() + 2 * _MARGIN,
-                               hint.get_width() + 40)
+    headline, headline_colour = (
+        ("The AI cleared the stage", _POS) if cleared else ("The AI didn't make it", _NEG))
+    headline_w = title_font.size(headline)[0]
+    panel_w = _fit_panel_width(sub_surf.get_width() + 2 * _MARGIN, hints[2] + 40,
+                               headline_w + 2 * _MARGIN)
     top = _top(title_font, body_font)
     col_h = _column_height(head_font, body_font, agent_stats, small_font)
-    panel_h = top + col_h + 16 + hint.get_height() + 18
+    panel_h = top + col_h + 16 + hints[3] + 18
     px = (SCREEN_WIDTH - panel_w) // 2
     py = (SCREEN_HEIGHT - panel_h) // 2
     _draw_panel(surface, px, py, panel_w, panel_h)
 
-    headline, headline_colour = (
-        ("The AI cleared the stage", _POS) if cleared else ("The AI didn't make it", _NEG))
     _draw_heading(surface, title_font, headline, headline_colour, sub_surf,
                   px, py, panel_w)
 
     _draw_column(surface, head_font, body_font, px + _MARGIN, py + top,
                  panel_w - 2 * _MARGIN, agent_stats, total_font, title_font, small_font)
 
-    surface.blit(hint, (px + (panel_w - hint.get_width()) // 2,
-                        py + top + col_h + 16))
+    _draw_hints(surface, hints, body_font, chip_font, px + panel_w // 2, py + top + col_h + 16)
 
 
 def _verdict(p, a):

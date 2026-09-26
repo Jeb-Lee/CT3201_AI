@@ -249,7 +249,7 @@ def test_toasts_fade_in_and_out_then_expire():
     assert 0 < t.alpha < 1
     s = session()
     s.hud.update(0.016, s)
-    for _ in range(300):
+    for _ in range(int(max(hud_mod.CONTROLS_LIFE, hud_mod.BANNER_LIFE) / 0.016) + 20):   # longest-lived toast
         s.hud.update(0.016, s)
     assert s.hud.toasts == []
 
@@ -431,3 +431,65 @@ def test_a_bottom_edge_tooltip_opens_above_so_it_does_not_cover_what_it_describe
     tip = h._draw_hover(SCREEN, s, card.center)
     assert tip.top >= card.bottom                               # top-edge elements: below the element,
                                                                 # so a card's score is not hidden by its tooltip
+
+
+# ------------------------------------------------- the HUD steps aside for the results
+def _counting_hud(s):
+    calls = []
+    real = s.hud.draw
+    s.hud.draw = lambda surface, sess, mouse=None: (calls.append(1), real(surface, sess, mouse))[1]
+    return calls
+
+
+def test_the_hud_is_drawn_while_playing_and_not_once_the_stage_has_ended():
+    """It used to be drawn under the results panel, so its clock and cards showed
+    through around it and the panel's top edge cut across the clock."""
+    s = session()
+    calls = _counting_hud(s)
+    s.draw(SCREEN)
+    assert len(calls) == 1                                    # playing: drawn
+    s.state = "results"
+    s.draw(SCREEN)
+    assert len(calls) == 1                                    # results: not drawn again
+
+
+def test_the_pause_screen_keeps_its_dimmed_hud():
+    """Paused is still a stage in progress; only the ended stage hides the HUD."""
+    s = session()
+    calls = _counting_hud(s)
+    s.paused = True
+    s.draw(SCREEN)
+    assert len(calls) == 1
+
+
+def _frame(s):
+    surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+    surf.fill((0, 0, 0))
+    s.draw(surf)
+    return pygame.image.tobytes(surf, "RGB")
+
+
+def test_the_results_frame_has_no_hud_pixels_and_the_playing_frame_does():
+    """Compared within ONE session (occupants are placed at random, so two
+    sessions differ in the world itself): the frame as drawn against the same
+    frame with the HUD's drawing switched off."""
+    for state, hud_shows in (("results", False), ("playing", True)):
+        s = session()
+        s.state = state
+        s.hud.t = 5.0                    # past the slide-in, or there is nothing on screen to compare
+        as_drawn = _frame(s)
+        s.hud.draw = lambda *a, **k: None
+        without_hud = _frame(s)
+        assert (as_drawn != without_hud) == hud_shows, state
+
+
+def test_a_stage_played_to_its_real_end_hides_the_hud():
+    s = session(spectate=True)                                    # the AI finishes stage 1 on its own
+    frames = 0
+    while s.state == "playing" and frames < 60 * 240:
+        s.update(1 / 60, pygame.key.get_pressed())
+        frames += 1
+    assert s.state == "results"
+    calls = _counting_hud(s)
+    s.draw(SCREEN)
+    assert calls == []
