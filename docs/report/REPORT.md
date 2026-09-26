@@ -232,77 +232,108 @@ replaces greedy nearest‑first."*
 
 ---
 
-## Section 8 — Human‑AI Reflection  *(Phase 8, Stage 9 — MANDATORY, rewrite in your own words)*
+## Section 8 — Human‑AI Reflection  *(Phase 8, Stage 9 — MANDATORY)*
 
-> These are **first‑draft answers** from what actually happened during the
-> project. Rewrite each in your own words and add what a draft can't know
-> (your other AI chats, disagreements within the team, dead ends).
+This covers the whole project: the original search/agent design, and the
+later UI rebuild and AI-model integration, where the same accept/verify/
+reject loop kept showing up.
 
-1. **What did AI help us understand or accomplish?** It explained the
-   difference between minimising *tiles* and minimising *cost*, which
-   redirected us from "BFS with fire as a wall" to weighted search. It
-   listed search alternatives and their trade‑offs quickly. It challenged
-   assumptions we hadn't noticed (full occupant map; single‑path maze
-   making the comparison meaningless). It accelerated the implementation
-   and the sprite pipeline.
+1. **What did AI help us understand or accomplish?** On the design side, it
+   explained the difference between minimising *tiles* and minimising
+   *cost*, which moved us off "BFS with fire as a wall" and onto weighted
+   search, and it listed search alternatives and trade-offs quickly. Later,
+   it built the whole UI rebuild — results screens, menus, pause screen,
+   HUD, intro — fast, work that would have taken us far longer by hand.
 
-2. **What did AI get wrong?** The generative *video* model could not
-   produce a usable walk‑toward‑camera animation for the occupant NPCs —
-   only unstable side‑view clips. It also recommended Greedy Best‑First as
-   "faster" without weighting that "faster to compute" ≠ "safer route",
-   which is what our problem needs.
+2. **What did AI get wrong?** The generative *video* model couldn't
+   produce a usable walk-toward-camera animation for the occupant NPCs,
+   only unstable side-view clips. It also recommended Greedy Best-First as
+   "faster" without weighing that "faster to compute" is not "safer
+   route". Later in the project it also got a fact wrong, not just a
+   design judgement: it claimed Jeb had personally written the pause-screen
+   feature, based only on a git commit being under his account. We caught
+   this — a commit only proves which account was used, not who actually
+   typed the code — and made it correct the claim rather than repeat it.
 
 3. **Which AI suggestions did you accept?** Weighted costs instead of
-   walls; A\* over the cost function; keeping BFS for unweighted jobs;
-   partial observability; the key sub‑goal; the connectivity‑checked
-   collapse; braiding the maze.
+   walls; A\* over the cost function; keeping BFS for the unweighted jobs;
+   partial observability; the key sub-goal; the connectivity-checked
+   collapse; braiding the maze. Later: the UI rebuild, reviewed and
+   approved stage by stage — screenshots first, then the real running
+   game, before anything was committed.
 
-4. **What did you change / modify after checking?** Maze: perfect →
-   braided. Sprite pipeline: AI‑video extraction → mixed‑source assembly +
-   procedural animation. Fire: instant‑kill wall → time‑based health drain
-   and a routing cost.
+4. **What did you change/modify after checking?** Maze: perfect →
+   braided. Sprite pipeline: AI-video extraction → mixed-source assembly +
+   procedural animation. Fire: instant-kill wall → time-based health drain
+   and a routing cost. During the UI work we also didn't accept fixes as a
+   block — we picked specific ones to apply out of a batch each time, and
+   caught an early font mistake (it had compared Arial *Narrow* instead of
+   plain Arial) and made it redo the comparison properly.
 
-5. **Which AI suggestions did you reject?** Greedy Best‑First for routing;
-   BFS for routing; the full occupant map; the AI‑video approach for the
-   toward/away directions.
+5. **Which AI suggestions did you reject?** Greedy Best-First for routing;
+   BFS for routing; the full occupant map; the AI-video approach for the
+   toward/away directions. Later, we refused to let it open a pull request
+   or merge anything into `master` on its own initiative, even when the
+   conversation drifted that way.
 
-6. **Why did you reject them?** Greedy/BFS aren't cost‑optimal on a
+6. **Why did you reject them?** Greedy/BFS aren't cost-optimal on a
    weighted map — evidence in Section 6. The full map contradicts the
-   problem statement and unbalances the human‑vs‑AI race. The video
-   approach failed the engine's requirements (4 stable directions).
+   problem statement and unbalances the human-vs-AI race. The video
+   approach failed the engine's requirements (4 stable directions). The
+   PR/merge refusal was a process decision: what lands on `master`, and
+   when, is a team call, not something to happen unilaterally through one
+   person's AI session.
 
-7. **How did you verify AI‑generated information?** Course knowledge
-   (search theory), a purpose‑built comparison harness with a cost table,
-   12 unit tests, and checking generated assets against concrete engine
-   requirements rather than "it looks right".
+7. **How did you verify AI-generated information?** Course knowledge
+   (search theory), a purpose-built comparison harness with a cost table,
+   unit tests, and checking generated assets against concrete engine
+   requirements rather than "it looks right". For the UI work we required
+   proof before trusting a claim: rendered screenshots before and after
+   each change, the full automated test suite actually run (not just
+   described), the real game driven end-to-end, and git history re-checked
+   independently rather than taking its summary of "what's on which
+   branch" at face value.
 
 8. **How did AI influence the final design?** The core routing approach
-   (weighted A\*), the decision to implement four search algorithms for
-   comparison, partial observability, and several robustness features
-   (key, safe collapse) came out of AI‑prompted challenge — but the
-   weights, the scoring, the balance and every accept/reject call were
-   ours.
+   (weighted A\*), implementing four search algorithms for comparison,
+   partial observability, and several robustness features (key, safe
+   collapse) came out of AI-prompted challenge. The UI's whole
+   look-and-feel was built by AI end to end, but only ever moved forward
+   after we'd seen proof it worked and said yes — the weights, the
+   scoring, the balance, and every accept/reject call, including whether
+   something actually looked right, were ours.
 
-9. **Where was human judgement necessary?** Recognising that the AI‑video
+9. **Where was human judgement necessary?** Recognising that the AI-video
    failure was *narrow* (one model, one axis) and could be routed around
    rather than abandoning AI art entirely. Deciding the scope reduction
-   (occupant NPCs don't need 4 walk directions). Choosing to keep BFS
-   where it's genuinely correct. All the tuning. The Responsible‑AI
-   position.
+   (occupant NPCs don't need 4 walk directions). Choosing to keep BFS where
+   it's genuinely correct. Catching the wrong claim about who wrote the
+   pause screen. Judging whether the UI actually looked "fancy" or
+   "professional" enough — that's a subjective call AI can't make for us.
+   Deciding what gets committed, to which branch, and refusing to let AI
+   merge or open pull requests on its own, even though it was technically
+   capable of it.
 
-10. **What if you had blindly followed AI?** With Greedy Best‑First, the
+10. **What if you had blindly followed AI?** With Greedy Best-First, the
     agent would lead people *through the fire* whenever the exit was
-    roughly beyond it — taking heavy damage, sometimes dying mid‑escort
-    and losing everyone — while reporting a "shorter" path. It would look
-    like bad game balance, not a wrong algorithm choice, and we'd have
-    debugged the wrong thing.
+    roughly beyond it — taking heavy damage, sometimes dying mid-escort and
+    losing everyone — while reporting a "shorter" path. It would look like
+    bad game balance, not a wrong algorithm choice, and we'd have debugged
+    the wrong thing. If we'd trusted the pause-screen claim, we'd have told
+    a teammate he built something he says he didn't. If we'd let it merge
+    or open PRs freely, it could have collided with a teammate's parallel
+    work on `master` without anyone agreeing to it first.
 
 11. **What did you learn about using AI responsibly?** AI is fast at
-    *breadth* (options, critiques, explanations) but you have to supply
-    the *objective* it's optimising against and then verify against it.
-    A suggestion that is technically true ("fewer expansions") can still
-    be wrong for your problem. Checking output against a concrete spec you
-    wrote yourself is what catches this.
+    *breadth* (options, critiques, explanations, and fast implementation)
+    but you have to supply the *objective* it's optimising against and
+    then verify against it. A suggestion that's technically true ("fewer
+    expansions") can still be wrong for your problem. A git commit or a
+    confident summary is not proof of anything — check the actual evidence
+    yourself. And keeping AI on a short leash for anything hard to undo or
+    team-facing (merges, pull requests), while letting it move fast on
+    reversible, reviewable work (UI code that's tested and shown to you
+    before it's committed), is the balance that actually worked for us.
 
 ---
 
