@@ -38,9 +38,11 @@ def replace_once(text, old, new):
     return text.replace(old, new, 1)
 
 
-def main():
+def assemble(section_name="rev2_section_learning.md", out_name="REPORT_rev2.md", extra_edits=None):
+    """REPORT.md + a learned-agent section -> out_name. `extra_edits(text) -> text`, if given, runs
+    after the section is inserted and before tables and citations are numbered (revision 3 uses it)."""
     report = read("REPORT.md")
-    section = read("rev2_section_learning.md").strip() + "\n\n---\n\n"
+    section = read(section_name).strip() + "\n\n---\n\n"
     refs = {}
     for line in read("rev2_references.md").splitlines():
         if line.strip():
@@ -85,6 +87,8 @@ def main():
     # 2. insert the section before Responsible AI
     marker = "## Section 8 — Responsible AI"
     report = replace_once(report, marker, section + marker)
+    if extra_edits is not None:
+        report = extra_edits(report)
 
     # 5. table labels -> numbers (count table blocks in document order, outside code fences and quotes)
     lines, in_fence, n_tables, prev_table, labels, pending = report.split("\n"), False, 0, False, {}, None
@@ -126,10 +130,14 @@ def main():
     report = report.rstrip("\n") + "\n\n---\n\n## References\n\n" + "\n\n".join(
         "[%d] %s" % (i + 1, refs[k]) for i, k in enumerate(order)) + "\n"
 
-    out = os.path.join(HERE, "REPORT_rev2.md")
+    out = os.path.join(HERE, out_name)
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(report)
     print("wrote", out, "-", len(order), "references,", n_tables, "tables; labels:", labels)
+
+
+def main():
+    assemble()
 
 
 if __name__ == "__main__":

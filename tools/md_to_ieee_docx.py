@@ -350,12 +350,298 @@ class Builder:
 
 
 # --------------------------------------------------------------------------- #
+#  revision 3 layout: real heading styles, tables that suit two columns        #
+# --------------------------------------------------------------------------- #
+COL_W = 234.5       # pt: one column, (505 - 36) / 2
+FULL_W = 505        # pt: both columns (page width minus margins)
+
+
+def _plain_style(style, size, italic=False, small_caps=False):
+    """Times New Roman, black, not bold, whatever the template's theme said."""
+    f = style.font
+    f.name = "Times New Roman"
+    f.size = Pt(size)
+    f.bold = False
+    f.italic = italic
+    f.small_caps = small_caps
+    f.color.rgb = RGBColor(0, 0, 0)
+    rpr = style.element.get_or_add_rPr()
+    fonts = rpr.find(qn("w:rFonts"))
+    if fonts is not None:                      # theme fonts would override the name above
+        for a in ("w:asciiTheme", "w:hAnsiTheme", "w:eastAsiaTheme", "w:cstheme"):
+            fonts.attrib.pop(qn(a), None)
+    color = rpr.find(qn("w:color"))
+    if color is not None:
+        for a in ("w:themeColor", "w:themeShade", "w:themeTint"):
+            color.attrib.pop(qn(a), None)
+
+
+def _border(parent, tag, edges, val="single", sz="4"):
+    box = parent.find(qn(tag))
+    if box is None:
+        box = OxmlElement(tag)
+        parent.append(box)
+    for edge in edges:
+        e = OxmlElement("w:" + edge)
+        e.set(qn("w:val"), val)
+        if val != "nil":
+            e.set(qn("w:sz"), sz)
+            e.set(qn("w:space"), "0")
+            e.set(qn("w:color"), "000000")
+        box.append(e)
+
+
+def _cell_margins(table, left=57, right=57):
+    mar = OxmlElement("w:tblCellMar")
+    for edge, w in (("left", left), ("right", right), ("top", 0), ("bottom", 0)):
+        e = OxmlElement("w:" + edge)
+        e.set(qn("w:w"), str(w))
+        e.set(qn("w:type"), "dxa")
+        mar.append(e)
+    table._tbl.tblPr.append(mar)
+
+
+def _table_width(table, width_pt):
+    tblPr = table._tbl.tblPr
+    for old in tblPr.findall(qn("w:tblW")):
+        tblPr.remove(old)
+    w = OxmlElement("w:tblW")
+    w.set(qn("w:w"), str(int(width_pt * 20)))
+    w.set(qn("w:type"), "dxa")
+    tblPr.append(w)
+
+
+def _float_to_top(table):
+    """Take the table out of the text flow and pin it to the top of the page its anchor paragraph is
+    on, across both columns; the text of both columns flows underneath (IEEE's table*/figure*)."""
+    pp = OxmlElement("w:tblpPr")
+    for k, v in dict(leftFromText="0", rightFromText="0", topFromText="0", bottomFromText="200",
+                     vertAnchor="margin", horzAnchor="margin", tblpXSpec="center", tblpYSpec="top").items():
+        pp.set(qn("w:" + k), v)
+    tblPr = table._tbl.tblPr
+    tblPr.insert(0, pp) if tblPr.find(qn("w:tblStyle")) is None else tblPr.find(qn("w:tblStyle")).addnext(pp)
+    ov = OxmlElement("w:tblOverlap")
+    ov.set(qn("w:val"), "never")
+    pp.addnext(ov)
+
+
+def _no_split(row):
+    trPr = row._tr.get_or_add_trPr()
+    trPr.append(OxmlElement("w:cantSplit"))
+
+
+def _header_row(row):
+    row._tr.get_or_add_trPr().append(OxmlElement("w:tblHeader"))
+
+
+def _column_widths(rows, total, size):
+    """Share `total` pt between columns by how much text each holds, but never narrower than its
+    longest word."""
+    ncol = max(len(r) for r in rows)
+    clean = lambda s: re.sub(r"[*`\\]", "", s)
+    weight, least = [], []
+    for c in range(ncol):
+        cells = [clean(r[c]) if c < len(r) else "" for r in rows]
+        weight.append(min(max(len(x) for x in cells), 70) + 4)
+        longest = max((len(w) for x in cells for w in x.split()), default=1)
+        least.append(min(longest * size * 0.52 + 7, total / ncol * 1.6))
+    widths = [total * w / sum(weight) for w in weight]
+    for _ in range(4):                       # lift narrow columns to their minimum, take it from the rest
+        short = [i for i in range(ncol) if widths[i] < least[i]]
+        if not short:
+            break
+        need = sum(least[i] - widths[i] for i in short)
+        rest = [i for i in range(ncol) if i not in short]
+        spare = sum(widths[i] for i in rest)
+        for i in short:
+            widths[i] = least[i]
+        for i in rest:
+            widths[i] -= need * widths[i] / spare
+    return widths
+
+
+class FloatBuilder(Builder):
+    """Revision 3: Word heading styles (so the Navigation pane and a table of contents work), and
+    tables and figures that suit two columns: column-width ones stay in the text and never break,
+    full-width ones float to the top of a page across both columns. The body never leaves two
+    columns, so no text is squeezed into half-height columns around a table."""
+
+    def __init__(self):
+        super().__init__()
+        self.fig_no = 0                          # figures are all real pictures now
+        st = self.doc.styles
+        specs = (("Heading 1", 10, False, True, WD_ALIGN_PARAGRAPH.CENTER, 10, 4, 0),
+                 ("Heading 2", 10, True, False, WD_ALIGN_PARAGRAPH.LEFT, 7, 3, 0),
+                 ("Heading 3", 10, True, False, WD_ALIGN_PARAGRAPH.LEFT, 4, 2, 14.4),
+                 ("Caption", 8, False, False, WD_ALIGN_PARAGRAPH.CENTER, 0, 0, 0))
+        for name, size, italic, caps, align, before, after, indent in specs:
+            style = st[name]
+            _plain_style(style, size, italic=italic, small_caps=caps)
+            pf = style.paragraph_format
+            pf.alignment = align
+            pf.space_before, pf.space_after = Pt(before), Pt(after)
+            pf.left_indent, pf.first_line_indent = Pt(indent), Pt(0)
+            pf.line_spacing = 1.0
+            pf.keep_with_next = name != "Caption"
+        self._word_2013_mode()
+
+    def _word_2013_mode(self):
+        """Without this Word opens the file in Compatibility Mode (the python-docx template is old)."""
+        settings = self.doc.settings.element
+        compat = settings.find(qn("w:compat"))
+        if compat is None:
+            compat = OxmlElement("w:compat")
+            settings.append(compat)
+        for cs in compat.findall(qn("w:compatSetting")):
+            if cs.get(qn("w:name")) == "compatibilityMode":
+                compat.remove(cs)
+        cs = OxmlElement("w:compatSetting")
+        for k, v in (("name", "compatibilityMode"), ("uri", "http://schemas.microsoft.com/office/word"), ("val", "15")):
+            cs.set(qn("w:" + k), v)
+        compat.append(cs)
+
+    # -- headings --------------------------------------------------------- #
+    def h1(self, n, text):
+        self.ensure(2)
+        p = self.doc.add_paragraph(style="Heading 1")
+        runs(p, ("%s. %s" % (ROMAN[n], text)) if n is not None else text, 10)
+        for r in p.runs:
+            r.font.small_caps = True
+
+    def h2(self, letter, text):
+        self.ensure(2)
+        p = self.doc.add_paragraph(style="Heading 2")
+        runs(p, "%s. %s" % (letter, text), 10, italic=True)
+
+    def h3(self, number, text):
+        self.ensure(2)
+        p = self.doc.add_paragraph(style="Heading 3")
+        runs(p, "%d) %s" % (number, text), 10, italic=True)
+
+    # -- captions --------------------------------------------------------- #
+    def _table_caption_into(self, p, roman, text):
+        p.style = self.doc.styles["Caption"]
+        p.paragraph_format.space_after = Pt(3)
+        p.paragraph_format.keep_with_next = True
+        r = p.add_run("TABLE %s" % roman)
+        r.font.size = Pt(8)
+        r.font.name = "Times New Roman"
+        r.add_break()
+        runs(p, text, 8)
+        for r in p.runs[1:]:
+            r.font.small_caps = True
+
+    def _figure_caption_into(self, p, text):
+        p.style = self.doc.styles["Caption"]
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.paragraph_format.space_before = Pt(3)
+        p.paragraph_format.space_after = Pt(8)
+        r = p.add_run("Fig. %d. " % self.fig_no)
+        r.font.size = Pt(8)
+        r.font.name = "Times New Roman"
+        runs(p, text, 8)
+
+    def _anchor(self):
+        """A 1-pt paragraph after a table: a floating table needs one to hang from, and two tables
+        with nothing between them would merge into one."""
+        p = self.doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.line_spacing = Pt(1)
+        r = p.add_run("")
+        r.font.size = Pt(1)
+        return p
+
+    # -- tables ----------------------------------------------------------- #
+    def ieee_table(self, rows, roman, caption, wide=False):
+        self.ensure(2)
+        rows = [r for r in rows if not all(set(c) <= set("-: ") for c in r)]
+        ncol = max(len(r) for r in rows)
+        size = 8 if wide else 7.5
+        total = FULL_W if wide else COL_W
+        widths = _column_widths(rows, total, size)
+        extra = 1 if wide else 0                 # a floating table carries its caption as a first row
+        if not wide:
+            self._table_caption_into(self.doc.add_paragraph(), roman, caption)
+        t = self.doc.add_table(rows=len(rows) + extra, cols=ncol)
+        t.style = "Table Grid"
+        t.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t.autofit = False
+        fixed_layout(t)
+        _table_width(t, total)
+        _cell_margins(t)
+        if wide:
+            cap = t.cell(0, 0).merge(t.cell(0, ncol - 1)) if ncol > 1 else t.cell(0, 0)
+            cap.text = ""
+            self._table_caption_into(cap.paragraphs[0], roman, caption)
+            _border(cap._tc.get_or_add_tcPr(), "w:tcBorders", ("top", "left", "right", "bottom"), val="nil")
+            _float_to_top(t)
+        for ri, row in enumerate(rows):
+            tr = t.rows[ri + extra]
+            _no_split(tr)
+            if ri == 0:
+                _header_row(tr)
+            for ci in range(ncol):
+                cell = t.cell(ri + extra, ci)
+                cell.width = Pt(widths[ci])
+                cell.text = ""
+                p = cell.paragraphs[0]
+                p.paragraph_format.space_after = Pt(1)
+                p.paragraph_format.line_spacing = 1.0
+                # keep a column table in one piece: every row holds on to the next
+                p.paragraph_format.keep_with_next = (not wide) and ri < len(rows) - 1
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER if ri == 0 else WD_ALIGN_PARAGRAPH.LEFT
+                runs(p, row[ci] if ci < len(row) else "", size, bold=(ri == 0))
+                if ri == 0:
+                    cell_bg(cell, GREY)
+                    if wide:
+                        _border(cell._tc.get_or_add_tcPr(), "w:tcBorders", ("top",))
+        for ci in range(ncol):
+            t.columns[ci].width = Pt(widths[ci])
+        if wide:
+            self._anchor()
+        else:
+            gap = self.doc.add_paragraph()
+            gap.paragraph_format.space_after = Pt(4)
+            gap.paragraph_format.line_spacing = Pt(4)
+
+    # -- figures ---------------------------------------------------------- #
+    def figure(self, path, caption, wide=False):
+        self.fig_no += 1
+        self.ensure(2)
+        if not wide:
+            p = self.doc.add_paragraph()
+            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p.paragraph_format.space_before = Pt(6)
+            p.paragraph_format.keep_with_next = True
+            p.add_run().add_picture(path, width=Pt(COL_W - 2))
+            self._figure_caption_into(self.doc.add_paragraph(), caption)
+            return
+        t = self.doc.add_table(rows=2, cols=1)
+        t.autofit = False
+        fixed_layout(t)
+        _table_width(t, FULL_W)
+        _cell_margins(t, 0, 0)
+        _border(t._tbl.tblPr, "w:tblBorders", ("top", "left", "bottom", "right", "insideH", "insideV"), val="nil")
+        _float_to_top(t)
+        pic = t.cell(0, 0).paragraphs[0]
+        pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        pic.add_run().add_picture(path, width=Pt(FULL_W - 6))
+        self._figure_caption_into(t.cell(1, 0).paragraphs[0], caption)
+        for row in t.rows:
+            _no_split(row)
+        self._anchor()
+
+
+# --------------------------------------------------------------------------- #
 #  markdown -> builder                                                         #
 # --------------------------------------------------------------------------- #
-def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS):
+def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS, layout="sections"):
+    """layout "sections" (revisions 1-2): a table switches the page to one column around it.
+    layout "float" (revision 3): FloatBuilder, heading styles, tables that suit two columns."""
     lines = open(md_path, encoding="utf-8").read().splitlines()
     md_dir = os.path.dirname(os.path.abspath(md_path))
-    b = Builder()
+    modern = layout == "float"
+    b = FloatBuilder() if modern else Builder()
     doc = b.doc
 
     # --- title band (section 0, one column) ------------------------------ #
@@ -415,6 +701,8 @@ def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS):
     table_i = 0
     last_heading = "results"
     pending_caption = None
+    pending_wide = False
+    h3_i = 0
     i = 0
     in_fence = False
     fence_lang = ""
@@ -461,6 +749,8 @@ def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS):
             continue
         if s.startswith("Table: "):                 # caption for the next table
             pending_caption = s[7:].strip()
+            pending_wide = pending_caption.endswith("{wide}")
+            pending_caption = pending_caption[:-6].strip() if pending_wide else pending_caption
             i += 1
             continue
         m_ref = re.match(r"^\[(\d+)\]\s+(.*)", s)
@@ -482,7 +772,14 @@ def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS):
                 h1_i += 1
                 b.h1(h1_i, txt)
             h2_i = 0
+            h3_i = 0
             last_heading = re.sub(r"^Appendix:\s*", "", txt)
+            i += 1
+            continue
+
+        if modern and s.startswith("#### "):
+            h3_i += 1
+            b.h3(h3_i, s[5:].strip())
             i += 1
             continue
 
@@ -490,6 +787,7 @@ def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS):
             txt = s[4:]
             txt = re.sub(r"\s*\*\(.*?\)\*\s*$", "", txt)
             h2_i += 1
+            h3_i = 0
             b.h2(chr(ord("A") + h2_i - 1), txt)
             last_heading = txt
             i += 1
@@ -502,20 +800,25 @@ def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS):
                 rows.append(cells)
                 i += 1
             table_i += 1
-            b.table_caption(ROMAN[table_i - 1], pending_caption or last_heading)
-            pending_caption = None
-            b.table(rows)
+            if modern:
+                b.ieee_table(rows, ROMAN[table_i - 1], pending_caption or last_heading, wide=pending_wide)
+            else:
+                b.table_caption(ROMAN[table_i - 1], pending_caption or last_heading)
+                b.table(rows)
+            pending_caption, pending_wide = None, False
             continue
 
         m = re.match(r"^(\d+)\.\s+(.*)", s)
-        if m:
-            b.numbered(int(m.group(1)), m.group(2))
+        if m or re.match(r"^[-*]\s+", s):
+            item = [m.group(2) if m else re.sub(r"^[-*]\s+", "", s)]
             i += 1
-            continue
-
-        if re.match(r"^[-*]\s+", s):
-            b.bullet(re.sub(r"^[-*]\s+", "", s))
-            i += 1
+            while modern and i < len(lines) and lines[i].startswith(("  ", "\t")) and lines[i].strip():
+                item.append(lines[i].strip())
+                i += 1
+            if m:
+                b.numbered(int(m.group(1)), " ".join(item))
+            else:
+                b.bullet(" ".join(item))
             continue
 
         # plain paragraph: join wrapped lines
@@ -559,9 +862,15 @@ if __name__ == "__main__":
     ap.add_argument("--rev2", action="store_true",
                     help="revision 2: build REPORT_rev2.md (adds the learned-agent section, figures and "
                          "references) into CT3201_Report_IEEE_rev2.docx, with the extended abstract")
+    ap.add_argument("--rev3", action="store_true",
+                    help="revision 3: build REPORT_rev3.md into CT3201_Report_IEEE_rev3.docx with the two-column "
+                         "layout (heading styles, column-width tables, full-width tables and figures at page tops)")
     args = ap.parse_args()
     base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "report")
-    if args.rev2:
+    if args.rev3:
+        build(os.path.join(base, "REPORT_rev3.md"), os.path.join(base, "CT3201_Report_IEEE_rev3.docx"),
+              abstract=ABSTRACT_REV2, index_terms=INDEX_TERMS_REV2, layout="float")
+    elif args.rev2:
         build(os.path.join(base, "REPORT_rev2.md"), os.path.join(base, "CT3201_Report_IEEE_rev2.docx"),
               abstract=ABSTRACT_REV2, index_terms=INDEX_TERMS_REV2)
     else:
