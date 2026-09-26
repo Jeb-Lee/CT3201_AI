@@ -89,6 +89,17 @@ cost from the agent, how much each of the four moves shortens it, and whether th
 goal exists. They are computed with **A*'s own path costs from A*'s own inputs**.
 The network still has to decide *which goal to pursue and when*.
 
+*Precision note (found by an automated code review of the pull request).* Each hint's
+costs are computed from the goal back to the agent (one Dijkstra per goal), while A*
+walks from the agent to the goal and charges each tile it enters. The two directions
+differ only by the costs of the two end tiles, so the move a hint ranks best is A*'s move
+(`test_the_exit_hint_points_the_way_a_star_would_step`). The numbers are not exact,
+though: when the agent stands on a hazard, every move's "progress" shifts by that tile's
+cost, and the remaining-cost figure counts the agent's tile instead of the goal's. The
+hints are therefore A*'s *ranking* of moves from A*'s inputs, not its exact costs. It
+gives the learner no information A* lacks. Correcting it would change the observation
+and require retraining v2-v5, so it is recorded here rather than changed.
+
 Parity is enforced by tests (`tests/test_imitation.py`), not just stated:
 
 | test | what it proves |

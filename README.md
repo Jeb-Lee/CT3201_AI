@@ -199,7 +199,7 @@ Controls: WASD / arrows move, `P` pause, `R` restart, `M` mute, `Esc` quit.
 On the results panel, Enter goes to the next stage after a clear, or back to
 the menu otherwise.
 Menus: arrow keys or mouse to choose, Enter/click to confirm, `Esc` to back out a screen.
-Tests (522): `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
+Tests (524): `pip install pytest`, then `python -m pytest` from `pyro_pete_game/`
 (`tests/test_core.py` also runs standalone with plain `python`).
 
 ## Stage identity: set dressing and music

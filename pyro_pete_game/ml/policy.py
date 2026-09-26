@@ -92,8 +92,12 @@ MODEL_CHOICES = (
 
 
 def available_models():
-    """[(key, label, description, path)] for every menu model whose file is present."""
-    if importlib.util.find_spec("stable_baselines3") is None:
+    """[(key, label, description, path)] for every menu model whose file is present.
+    Needs sb3-contrib as well as stable-baselines3: every model here is a
+    MaskablePPO policy, and offering one that cannot load would silently give
+    the player A* instead of what they picked."""
+    if (importlib.util.find_spec("stable_baselines3") is None
+            or importlib.util.find_spec("sb3_contrib") is None):
         return []
     found = [(key, label, desc, os.path.join(MODEL_DIR, name))
              for key, label, desc, name in MODEL_CHOICES

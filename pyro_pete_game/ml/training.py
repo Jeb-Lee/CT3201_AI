@@ -368,7 +368,16 @@ def final_test(run_dir, best_path, final_path, train_stages, heldout_stages,
 
 def install_model(src, dest):
     """Copy a trained model to where the game looks for it. The game's
-    'Learned model' menu entry appears once this file exists."""
+    'Learned model' menu entry appears once this file exists.
+
+    The model's JSON file (its search-order settings, see ml.policy) goes with
+    it; a model without one gets none, so an earlier install's settings are
+    never applied to a different model."""
+    from ml.policy import options_path
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     shutil.copyfile(src, dest)
+    if os.path.isfile(options_path(src)):
+        shutil.copyfile(options_path(src), options_path(dest))
+    elif os.path.isfile(options_path(dest)):
+        os.remove(options_path(dest))
     return dest

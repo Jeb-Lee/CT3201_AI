@@ -28,7 +28,6 @@ Any of them loads in the game via ml/policy.py or in the harness as model:PATH.
 import argparse
 import json
 import os
-import shutil
 import sys
 import time
 
@@ -180,9 +179,7 @@ def main():
     evaluation.write_csv(results, os.path.join(run_dir, "final_results.csv"))
     print("\n" + text)
     if args.install:
-        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-        shutil.copyfile(final_path + ".zip", MODEL_PATH)
-        print(f"\ninstalled -> {MODEL_PATH}")
+        print(f"\ninstalled -> {training.install_model(final_path + '.zip', MODEL_PATH)}")
     print(f"\ndone in {(time.time() - t0) / 60:.1f} min; chart: "
           f"{os.path.join(run_dir, 'imitation_epoch_vs_accuracy.png')}")
 

@@ -242,7 +242,7 @@ Wins are equally fast and equally scored for all three (43 to 45 s; 538 to 546 p
 - Each version was trained once (one random seed), so a difference of a few points between versions may be seed noise; the sign tests do not remove that.
 - Test sets were reused across versions; the fresh sets 2 and 3 were added to limit this, and one of our registered predictions failed because of it.
 - Only three stages are unseen, so the generalisation figure (73% against 87%) rests on 90 episodes per agent.
-- Route hints are computed with A\*'s own path costs, so v2 to v5 learn to *use* A\*'s outputs rather than learning to plan from scratch. This is the price of parity with the teacher and the reason we do not present these models as independent planners.
+- Route hints are computed with A\*'s own path costs, so v2 to v5 learn to *use* A\*'s outputs rather than learning to plan from scratch. This is the price of parity with the teacher and the reason we do not present these models as independent planners. The hints are computed from each goal back to the agent. This picks the same best move as A\*, but when the agent stands on a hazard the hint values shift by that tile's cost, so they are A\*'s ranking of moves rather than its exact costs (found by an automated code review; correcting it would mean retraining v2 to v5).
 - The network copies A\*'s biases, including nearest-first choice of occupants (Section 8).
 
 #### Where this could go next

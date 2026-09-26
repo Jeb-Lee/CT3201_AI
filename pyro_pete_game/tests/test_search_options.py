@@ -197,3 +197,36 @@ def test_the_brain_menu_is_a_watch_mode_screen():
     assert _brain_choices("watch", []) == []
     installed = models + [("installed", "Learned model", "d", "p")]
     assert _brain_choices("play", installed) == installed
+
+
+# ------------------------------------------------ installing a model (review findings)
+@pytest.mark.skipif(not HAVE_SB3, reason="stable-baselines3 not installed")
+def test_installing_a_model_carries_its_search_settings_and_drops_stale_ones(tmp_path):
+    """--install used to copy only the .zip, so a model trained against a far-side teacher
+    ran against the default search (or an earlier install's settings)."""
+    from ml.policy import options_path, read_agent_options, write_agent_options
+    from ml.training import install_model
+    src = tmp_path / "run" / "final_model.zip"
+    src.parent.mkdir()
+    src.write_bytes(b"model")
+    write_agent_options(str(src), {"frontier_lean": 0.5, "frontier_min_reveal": 4}, obs_version=4)
+    dest = str(tmp_path / "models" / "ai_policy.zip")
+    install_model(str(src), dest)
+    assert read_agent_options(dest) == {"frontier_lean": 0.5, "frontier_min_reveal": 4}
+    # a later model trained against the default agent must not inherit those settings
+    plain = tmp_path / "run" / "plain.zip"
+    plain.write_bytes(b"model")
+    install_model(str(plain), dest)
+    assert not os.path.isfile(options_path(dest))
+    assert read_agent_options(dest) == {}
+
+
+def test_no_learned_model_is_offered_without_sb3_contrib(monkeypatch):
+    """Every shipped model is a MaskablePPO policy from sb3-contrib; offering one that cannot
+    load would silently hand the player A* instead of the model they picked."""
+    import importlib.util
+    from ml import policy
+    real = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util, "find_spec",
+                        lambda name, *a, **k: None if name == "sb3_contrib" else real(name, *a, **k))
+    assert policy.available_models() == []
