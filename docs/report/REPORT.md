@@ -56,7 +56,7 @@ grid**, with hazards as costs rather than as walls where possible.
 
 | Element | Our project |
 |---|---|
-| **Agent** | one autonomous rescue unit (in‑game: the drone; the human plays the same role) |
+| **Agent** | one autonomous rescue unit (in‑game: a robot or drone skin, player's choice; the human plays the same role) |
 | **State** | current cell · set of occupants and their status (waiting / following / out) · the part of the map seen so far · current health |
 | **Actions** | move to one of the four adjacent floor cells |
 | **Goal** | lead every reachable occupant to the exit, then reach the exit |
@@ -112,8 +112,9 @@ verification method.
 ## Section 5 — Final AI Solution
 
 A playable top‑down evacuation game (Python + Pygame). The player controls
-Pete; an **autonomous rescue drone** runs the same map at the same time
-under the same rules, and a results screen scores both.
+Pete; an **autonomous rescue agent** — shown as a robot or a drone,
+player's choice — runs the same map at the same time under the same
+rules, and a results screen scores both.
 
 ### The agent's decision loop
 
@@ -209,7 +210,7 @@ on each dimension.
 
 | Dimension | Assessment |
 |---|---|
-| **Fairness** | In‑game the comparison is fair *by construction* — the drone has health and takes hazard damage exactly like the human, and both see only a small radius. A real deployment fairness question: does the "nearest occupant" rule systematically reach some people last (e.g. those furthest from the rescuer's entry point)? |
+| **Fairness** | In‑game the comparison is fair *by construction* — the AI agent has health and takes hazard damage exactly like the human, and both see only a small radius. A real deployment fairness question: does the "nearest occupant" rule systematically reach some people last (e.g. those furthest from the rescuer's entry point)? |
 | **Bias** | The agent's goal selection is **greedy nearest‑first**. It has no notion of who is most at risk — a mobile adult far from fire is chosen over a less‑mobile person close to it if the adult is nearer. A deployed version would need a triage signal, and that signal could itself be biased. |
 | **Transparency** | The agent **draws its planned route and its walked trail**, so a person watching can see *what* it decided and *why it changed its mind*. This is a deliberate design choice — an opaque "trust me" router would be much harder to accept. |
 | **Privacy** | A real occupant‑locating system needs live location data on people inside a building. That is sensitive personal data; it must be minimised, access‑controlled, and deleted after the incident. |
