@@ -3,13 +3,10 @@
 **Project:** *Pyro Pete: Emergency Evacuation* — an evacuation‑routing AI agent
 **Problem area:** search / intelligent agent / decision‑making under uncertainty
 
-> **How to use this file.** It's a first draft covering all 9 slide sections
-> plus the phase work. Everything is written from the game as it stands and
-> from the AI‑assisted work recorded in `docs/ai_critique.md`,
-> `docs/search_comparison.md` and the team's Claude Code history.
-> **`[TEAM]`** marks a spot where you must confirm, correct, or add from
-> your own experience — especially Section 8 (reflection), which the brief
-> grades on *your* judgement, not a draft's.
+> This covers all 9 slide sections plus the phase work, built from the game
+> as it stands and from the AI‑assisted work recorded in
+> `docs/ai_critique.md`, `docs/search_comparison.md` and the team's Claude
+> Code history.
 
 ---
 
@@ -44,9 +41,11 @@ another occupant, or take the ones I have and get out now?* — a trade‑off
 between more rescues (reward) and time / health / the risk of losing
 everyone if the rescuer dies on the way back.
 
-**"Think first" note.** `[TEAM]` — one or two lines confirming you defined
-the above before opening any AI tool, and roughly what your first sketch
-looked like (Stage 1 requires this).
+**"Think first" note.** Confirmed — the team brainstormed a few real-world
+problems and picked this one before opening any AI tool: get everyone out
+of a burning building before fire cuts off the route, with a rescuer
+deciding who to reach next. The routing algorithm itself was worked out
+once we started using AI to help build it, not before.
 
 ---
 
@@ -66,10 +65,14 @@ grid**, with hazards as costs rather than as walls where possible.
 | **Constraints** | walls and fallen debris are impassable; the locked door is impassable until the key is picked up; health drains while standing in a hazard and reaching 0 ends the run |
 | **Information** | **partial** — only cells and occupants within a small vision radius are known; the agent plans on its current belief and re‑plans when reality differs |
 
-**Initial plan (pre‑AI).** `[TEAM: confirm]` Breadth‑first search from the
-rescuer to the nearest occupant, escort to the exit, repeat; treat fire as
-a wall. Our first instinct was that BFS would be "good enough" because the
-building graph is small.
+**Initial plan.** Breadth-first search from the rescuer to the nearest
+occupant, escort to the exit, repeat; treat fire as a wall. Our first
+instinct was that BFS would be "good enough" because the building graph is
+small. This is the design worked out once we started using AI to help
+build the routing — there was no separate, earlier coded version before
+that; the problem itself (evacuation routing) was chosen human-first, but
+the algorithm design happened alongside AI from the start of
+implementation.
 
 ---
 
@@ -103,7 +106,6 @@ verification method.
 | Generate the NPC walk animations as **AI video**, then extract frames | **Reject** for the toward/away‑camera directions | The video model only produced stable **side‑view** clips with unstable proportions and no walk‑to‑camera. **Verified** against what the engine needs (4 directions, fixed sprite size, feet anchor). Corrected by assembling the sprites from mixed sources + procedural animation. See `docs/ai_critique.md` — this is the mandatory *identified → verified → corrected* example. |
 | Make the maze a **perfect maze** (single path everywhere) | **Modify** | On a single‑path maze *every* search strategy returns the identical route, so the comparison is meaningless. **Verified** by observing BFS = A\* = Greedy path cost. Corrected by **braiding** the maze (`level_01.BRAID = 0.18`) so routing has real choices. |
 | Give the AI agent a **full map of occupant locations** | **Reject** | Contradicts "you don't know the building" and makes the human‑vs‑AI race unfair. **Verified** by reasoning about the problem statement. Corrected with partial observability + frontier exploration. |
-| `[TEAM]` add any other decisions — e.g. the scoring weights, agent speed vs player speed, fire pacing | | |
 
 ---
 
