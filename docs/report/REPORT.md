@@ -255,9 +255,10 @@ reject loop kept showing up.
    only unstable side-view clips. It also recommended Greedy Best-First as
    "faster" without weighing that "faster to compute" is not "safer
    route". Later in the project it also got a fact wrong, not just a
-   design judgement: it claimed Jeb had personally written the pause-screen
-   feature, based only on a git commit being under his account. We caught
-   this — a commit only proves which account was used, not who actually
+   design judgement: it wrongly credited Jeb as the sole author of the
+   (real, working) pause-screen feature, based only on a git commit being
+   under his account. We caught this — a commit only proves which account
+   was used, not who actually
    typed the code — and made it correct the claim rather than repeat it.
 
 3. **Which AI suggestions did you accept?** Weighted costs instead of
