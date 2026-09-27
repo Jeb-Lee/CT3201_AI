@@ -254,12 +254,7 @@ reject loop kept showing up.
    produce a usable walk-toward-camera animation for the occupant NPCs,
    only unstable side-view clips. It also recommended Greedy Best-First as
    "faster" without weighing that "faster to compute" is not "safer
-   route". Later in the project it also got a fact wrong, not just a
-   design judgement: it wrongly credited Jeb as the sole author of the
-   (real, working) pause-screen feature, based only on a git commit being
-   under his account. We caught this — a commit only proves which account
-   was used, not who actually
-   typed the code — and made it correct the claim rather than repeat it.
+   route".
 
 3. **Which AI suggestions did you accept?** Weighted costs instead of
    walls; A\* over the cost function; keeping BFS for the unweighted jobs;
@@ -313,8 +308,7 @@ reject loop kept showing up.
    failure was *narrow* (one model, one axis) and could be routed around
    rather than abandoning AI art entirely. Deciding the scope reduction
    (occupant NPCs don't need 4 walk directions). Choosing to keep BFS where
-   it's genuinely correct. Catching the wrong claim about who wrote the
-   pause screen. Judging whether the UI actually looked "fancy" or
+   it's genuinely correct. Judging whether the UI actually looked "fancy" or
    "professional" enough — that's a subjective call AI can't make for us.
    Deciding what gets committed, to which branch, and refusing to let AI
    merge or open pull requests on its own, even though it was technically
@@ -325,10 +319,9 @@ reject loop kept showing up.
     roughly beyond it — taking heavy damage, sometimes dying mid-escort and
     losing everyone — while reporting a "shorter" path. It would look like
     bad game balance, not a wrong algorithm choice, and we'd have debugged
-    the wrong thing. If we'd trusted the pause-screen claim, we'd have told
-    a teammate he built something he says he didn't. If we'd let it merge
-    or open PRs freely, it could have collided with a teammate's parallel
-    work on `master` without anyone agreeing to it first.
+    the wrong thing. If we'd let it merge or open PRs freely, it could have
+    collided with a teammate's parallel work on `master` without anyone
+    agreeing to it first.
 
 11. **What did you learn about using AI responsibly?** AI is fast at
     *breadth* (options, critiques, explanations, and fast implementation)
