@@ -76,6 +76,18 @@ ABSTRACT_REV2 = ABSTRACT + (
 
 INDEX_TERMS_REV2 = INDEX_TERMS + ", reinforcement learning, imitation learning, behaviour cloning, DAgger"
 
+# Revision 4: the team's author block, and the abstract without "fire treated as a wall"
+# (the team always intended fire as a health-draining hazard; AI's contribution was weighted search).
+AUTHORS_REV4 = [
+    "SpectralIntelligence: Lee Tze Hian (U2423241F), Ong Chuan Hau (U2420725E), See Jun Wen (U2420456K)",
+    AUTHORS[1],
+    AUTHORS[2],
+]
+ABSTRACT_REV4 = ABSTRACT_REV2.replace(
+    "unweighted breadth-first search with fire treated as a wall to a hazard-weighted A* agent",
+    "unweighted breadth-first search to a hazard-weighted A* agent")
+assert ABSTRACT_REV4 != ABSTRACT_REV2
+
 ACCENT = RGBColor(0, 0, 0)
 GREY = "D9D9D9"
 
@@ -635,7 +647,7 @@ class FloatBuilder(Builder):
 # --------------------------------------------------------------------------- #
 #  markdown -> builder                                                         #
 # --------------------------------------------------------------------------- #
-def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS, layout="sections"):
+def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS, layout="sections", authors=AUTHORS):
     """layout "sections" (revisions 1-2): a table switches the page to one column around it.
     layout "float" (revision 3): FloatBuilder, heading styles, tables that suit two columns."""
     lines = open(md_path, encoding="utf-8").read().splitlines()
@@ -653,7 +665,7 @@ def build(md_path, out_path, abstract=ABSTRACT, index_terms=INDEX_TERMS, layout=
     r.font.size = Pt(20)
     r.font.name = "Times New Roman"
 
-    for i, ln in enumerate(AUTHORS):
+    for i, ln in enumerate(authors):
         ap = doc.add_paragraph()
         ap.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
         ap.paragraph_format.space_before = Pt(10 if i == 0 else 0)
@@ -865,9 +877,15 @@ if __name__ == "__main__":
     ap.add_argument("--rev3", action="store_true",
                     help="revision 3: build REPORT_rev3.md into CT3201_Report_IEEE_rev3.docx with the two-column "
                          "layout (heading styles, column-width tables, full-width tables and figures at page tops)")
+    ap.add_argument("--rev4", action="store_true",
+                    help="revision 4: revision 3 with the team's details filled in (REPORT_rev4.md -> "
+                         "CT3201_Report_IEEE_rev4.docx)")
     args = ap.parse_args()
     base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "report")
-    if args.rev3:
+    if args.rev4:
+        build(os.path.join(base, "REPORT_rev4.md"), os.path.join(base, "CT3201_Report_IEEE_rev4.docx"),
+              abstract=ABSTRACT_REV4, index_terms=INDEX_TERMS_REV2, layout="float", authors=AUTHORS_REV4)
+    elif args.rev3:
         build(os.path.join(base, "REPORT_rev3.md"), os.path.join(base, "CT3201_Report_IEEE_rev3.docx"),
               abstract=ABSTRACT_REV2, index_terms=INDEX_TERMS_REV2, layout="float")
     elif args.rev2:

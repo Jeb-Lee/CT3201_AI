@@ -301,12 +301,22 @@ pyro_pete_game/
 tools/
   build_victim_sprites.py  # rebuilds assets/victims/ from the Drive art
   search_comparison.py     # BFS vs Dijkstra vs A* vs Greedy on the maze
+  greedy_vs_astar_scan.py  # Greedy vs A* over 150 situations (10 stages x 3 layouts x 5 fire times); reproduces "98 of 150"
   evaluate_agents.py       # compare AI agents on the real game, with confidence intervals
   train_agent.py           # train the learned AI by RL; logs epoch-vs-accuracy, records videos, final test
   train_imitation.py       # train it to copy A* (cloning + DAgger); epoch-vs-accuracy log, final test vs A*
   record_agent.py          # screen-record any agent on any stage (MP4 via ffmpeg, else GIF)
   plot_training.py         # rebuild a run's chart + report.html from its CSVs
 ```
+
+## Report, interaction log and video
+
+The written deliverables live in [`docs/report/`](docs/report/README.md): the IEEE two-column report
+(`CT3201_Report_IEEE_rev5.docx` is the latest; earlier revisions are kept), and the AI interaction log
+(`CT3201_AI_Interaction_Log.docx`). The report's numbers can be reproduced from this repository:
+`tools/greedy_vs_astar_scan.py` (Greedy vs A*, 150 situations), `tools/evaluate_agents.py` (every agent, fresh
+episodes) and the logs in `pyro_pete_game/ml/ML_Findings/`. The documentary footage and the video's generated
+elements are large, so they are kept outside the repository.
 
 ## Asset notes
 
