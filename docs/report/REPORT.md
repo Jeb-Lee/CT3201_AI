@@ -3,13 +3,10 @@
 **Project:** *Pyro Pete: Emergency Evacuation* — an evacuation‑routing AI agent
 **Problem area:** search / intelligent agent / decision‑making under uncertainty
 
-> **How to use this file.** It's a first draft covering all 9 slide sections
-> plus the phase work. Everything is written from the game as it stands and
-> from the AI‑assisted work recorded in `docs/ai_critique.md`,
-> `docs/search_comparison.md` and the team's Claude Code history.
-> **`[TEAM]`** marks a spot where you must confirm, correct, or add from
-> your own experience — especially Section 8 (reflection), which the brief
-> grades on *your* judgement, not a draft's.
+> This covers all 9 slide sections plus the phase work, built from the game
+> as it stands and from the AI‑assisted work recorded in
+> `docs/ai_critique.md`, `docs/search_comparison.md` and the team's Claude
+> Code history.
 
 ---
 
@@ -21,10 +18,11 @@ cut the route off. A rescuer has to decide, moment to moment and with
 incomplete information, **who to go to next and by what route** as conditions
 change.
 
-**User.** `[TEAM: pick the one you actually intended]` — e.g. fire‑service
-route planners evaluating building layouts; a training simulator for
-rescuers; or a decision‑support tool that suggests a route to a rescuer in
-the field.
+**User.** A rescuer inside the building, human or robotic — the system is a
+decision‑support tool that proposes a route, not an autonomous replacement
+for them. This is the framing the rest of the report already uses (Section
+7's Responsible AI table and the deployment verdict): the AI suggests, a
+person decides.
 
 **Environment.** A multi‑room floor plan modelled as a grid of connected
 cells (the course's "floor plan as a graph"). Hazards evolve over time:
@@ -43,9 +41,11 @@ another occupant, or take the ones I have and get out now?* — a trade‑off
 between more rescues (reward) and time / health / the risk of losing
 everyone if the rescuer dies on the way back.
 
-**"Think first" note.** `[TEAM]` — one or two lines confirming you defined
-the above before opening any AI tool, and roughly what your first sketch
-looked like (Stage 1 requires this).
+**"Think first" note.** Confirmed — the team brainstormed a few real-world
+problems and picked this one before opening any AI tool: get everyone out
+of a burning building before fire cuts off the route, with a rescuer
+deciding who to reach next. The routing algorithm itself was worked out
+once we started using AI to help build it, not before.
 
 ---
 
@@ -56,7 +56,7 @@ grid**, with hazards as costs rather than as walls where possible.
 
 | Element | Our project |
 |---|---|
-| **Agent** | one autonomous rescue unit (in‑game: the drone; the human plays the same role) |
+| **Agent** | one autonomous rescue unit (in‑game: a robot or drone skin, player's choice; the human plays the same role) |
 | **State** | current cell · set of occupants and their status (waiting / following / out) · the part of the map seen so far · current health |
 | **Actions** | move to one of the four adjacent floor cells |
 | **Goal** | lead every reachable occupant to the exit, then reach the exit |
@@ -65,10 +65,14 @@ grid**, with hazards as costs rather than as walls where possible.
 | **Constraints** | walls and fallen debris are impassable; the locked door is impassable until the key is picked up; health drains while standing in a hazard and reaching 0 ends the run |
 | **Information** | **partial** — only cells and occupants within a small vision radius are known; the agent plans on its current belief and re‑plans when reality differs |
 
-**Initial plan (pre‑AI).** `[TEAM: confirm]` Breadth‑first search from the
-rescuer to the nearest occupant, escort to the exit, repeat; treat fire as
-a wall. Our first instinct was that BFS would be "good enough" because the
-building graph is small.
+**Initial plan.** Breadth-first search from the rescuer to the nearest
+occupant, escort to the exit, repeat; treat fire as a wall. Our first
+instinct was that BFS would be "good enough" because the building graph is
+small. This is the design worked out once we started using AI to help
+build the routing — there was no separate, earlier coded version before
+that; the problem itself (evacuation routing) was chosen human-first, but
+the algorithm design happened alongside AI from the start of
+implementation.
 
 ---
 
@@ -102,15 +106,15 @@ verification method.
 | Generate the NPC walk animations as **AI video**, then extract frames | **Reject** for the toward/away‑camera directions | The video model only produced stable **side‑view** clips with unstable proportions and no walk‑to‑camera. **Verified** against what the engine needs (4 directions, fixed sprite size, feet anchor). Corrected by assembling the sprites from mixed sources + procedural animation. See `docs/ai_critique.md` — this is the mandatory *identified → verified → corrected* example. |
 | Make the maze a **perfect maze** (single path everywhere) | **Modify** | On a single‑path maze *every* search strategy returns the identical route, so the comparison is meaningless. **Verified** by observing BFS = A\* = Greedy path cost. Corrected by **braiding** the maze (`level_01.BRAID = 0.18`) so routing has real choices. |
 | Give the AI agent a **full map of occupant locations** | **Reject** | Contradicts "you don't know the building" and makes the human‑vs‑AI race unfair. **Verified** by reasoning about the problem statement. Corrected with partial observability + frontier exploration. |
-| `[TEAM]` add any other decisions — e.g. the scoring weights, agent speed vs player speed, fire pacing | | |
 
 ---
 
 ## Section 5 — Final AI Solution
 
 A playable top‑down evacuation game (Python + Pygame). The player controls
-Pete; an **autonomous rescue drone** runs the same map at the same time
-under the same rules, and a results screen scores both.
+Pete; an **autonomous rescue agent** — shown as a robot or a drone,
+player's choice — runs the same map at the same time under the same
+rules, and a results screen scores both.
 
 ### The agent's decision loop
 
@@ -206,7 +210,7 @@ on each dimension.
 
 | Dimension | Assessment |
 |---|---|
-| **Fairness** | In‑game the comparison is fair *by construction* — the drone has health and takes hazard damage exactly like the human, and both see only a small radius. A real deployment fairness question: does the "nearest occupant" rule systematically reach some people last (e.g. those furthest from the rescuer's entry point)? |
+| **Fairness** | In‑game the comparison is fair *by construction* — the AI agent has health and takes hazard damage exactly like the human, and both see only a small radius. A real deployment fairness question: does the "nearest occupant" rule systematically reach some people last (e.g. those furthest from the rescuer's entry point)? |
 | **Bias** | The agent's goal selection is **greedy nearest‑first**. It has no notion of who is most at risk — a mobile adult far from fire is chosen over a less‑mobile person close to it if the adult is nearer. A deployed version would need a triage signal, and that signal could itself be biased. |
 | **Transparency** | The agent **draws its planned route and its walked trail**, so a person watching can see *what* it decided and *why it changed its mind*. This is a deliberate design choice — an opaque "trust me" router would be much harder to accept. |
 | **Privacy** | A real occupant‑locating system needs live location data on people inside a building. That is sensitive personal data; it must be minimised, access‑controlled, and deleted after the incident. |
@@ -224,85 +228,111 @@ on each dimension.
 | Model hallucination produces an impossible route | **Low** for us — the route comes from A\* on a real graph, not a language model. |
 | Adversarial inputs to a neural component | **Not applicable** — no neural network in the agent. |
 
-**Should it be deployed?** `[TEAM: your reasoned position]` — a defensible
-answer is *"not as an autonomous router; yes as a transparent
-decision‑support display that a trained rescuer can accept or override,
-provided the sensor feed's integrity is assured and a triage signal
-replaces greedy nearest‑first."*
+**Should it be deployed?** Not as an autonomous router — the Bias row above
+shows it has no notion of who's most at risk, and the Security row shows it
+blindly trusts its hazard map. Yes as a transparent decision-support
+display that a trained rescuer can accept or override, provided the sensor
+feed's integrity is assured and a triage signal replaces greedy
+nearest-first.
 
 ---
 
-## Section 8 — Human‑AI Reflection  *(Phase 8, Stage 9 — MANDATORY, rewrite in your own words)*
+## Section 8 — Human‑AI Reflection  *(Phase 8, Stage 9 — MANDATORY)*
 
-> These are **first‑draft answers** from what actually happened during the
-> project. Rewrite each in your own words and add what a draft can't know
-> (your other AI chats, disagreements within the team, dead ends).
+This covers the whole project: the original search/agent design, and the
+later UI rebuild and AI-model integration, where the same accept/verify/
+reject loop kept showing up.
 
-1. **What did AI help us understand or accomplish?** It explained the
-   difference between minimising *tiles* and minimising *cost*, which
-   redirected us from "BFS with fire as a wall" to weighted search. It
-   listed search alternatives and their trade‑offs quickly. It challenged
-   assumptions we hadn't noticed (full occupant map; single‑path maze
-   making the comparison meaningless). It accelerated the implementation
-   and the sprite pipeline.
+1. **What did AI help us understand or accomplish?** On the design side, it
+   explained the difference between minimising *tiles* and minimising
+   *cost*, which moved us off "BFS with fire as a wall" and onto weighted
+   search, and it listed search alternatives and trade-offs quickly. Later,
+   it built the whole UI rebuild — results screens, menus, pause screen,
+   HUD, intro — fast, work that would have taken us far longer by hand.
 
-2. **What did AI get wrong?** The generative *video* model could not
-   produce a usable walk‑toward‑camera animation for the occupant NPCs —
-   only unstable side‑view clips. It also recommended Greedy Best‑First as
-   "faster" without weighting that "faster to compute" ≠ "safer route",
-   which is what our problem needs.
+2. **What did AI get wrong?** The generative *video* model couldn't
+   produce a usable walk-toward-camera animation for the occupant NPCs,
+   only unstable side-view clips. It also recommended Greedy Best-First as
+   "faster" without weighing that "faster to compute" is not "safer
+   route".
 
 3. **Which AI suggestions did you accept?** Weighted costs instead of
-   walls; A\* over the cost function; keeping BFS for unweighted jobs;
-   partial observability; the key sub‑goal; the connectivity‑checked
-   collapse; braiding the maze.
+   walls; A\* over the cost function; keeping BFS for the unweighted jobs;
+   partial observability; the key sub-goal; the connectivity-checked
+   collapse; braiding the maze. Later: the UI rebuild, reviewed and
+   approved stage by stage — screenshots first, then the real running
+   game, before anything was committed.
 
-4. **What did you change / modify after checking?** Maze: perfect →
-   braided. Sprite pipeline: AI‑video extraction → mixed‑source assembly +
-   procedural animation. Fire: instant‑kill wall → time‑based health drain
-   and a routing cost.
+4. **What did you change/modify after checking?** Maze: perfect →
+   braided. Sprite pipeline: AI-video extraction → mixed-source assembly +
+   procedural animation. Fire: instant-kill wall → time-based health drain
+   and a routing cost. During the UI work we also didn't accept fixes as a
+   block — we picked specific ones to apply out of a batch each time, and
+   caught an early font mistake (it had compared Arial *Narrow* instead of
+   plain Arial) and made it redo the comparison properly.
 
-5. **Which AI suggestions did you reject?** Greedy Best‑First for routing;
-   BFS for routing; the full occupant map; the AI‑video approach for the
-   toward/away directions.
+5. **Which AI suggestions did you reject?** Greedy Best-First for routing;
+   BFS for routing; the full occupant map; the AI-video approach for the
+   toward/away directions. Later, we refused to let it open a pull request
+   or merge anything into `master` on its own initiative, even when the
+   conversation drifted that way.
 
-6. **Why did you reject them?** Greedy/BFS aren't cost‑optimal on a
+6. **Why did you reject them?** Greedy/BFS aren't cost-optimal on a
    weighted map — evidence in Section 6. The full map contradicts the
-   problem statement and unbalances the human‑vs‑AI race. The video
-   approach failed the engine's requirements (4 stable directions).
+   problem statement and unbalances the human-vs-AI race. The video
+   approach failed the engine's requirements (4 stable directions). The
+   PR/merge refusal was a process decision: what lands on `master`, and
+   when, is a team call, not something to happen unilaterally through one
+   person's AI session.
 
-7. **How did you verify AI‑generated information?** Course knowledge
-   (search theory), a purpose‑built comparison harness with a cost table,
-   12 unit tests, and checking generated assets against concrete engine
-   requirements rather than "it looks right".
+7. **How did you verify AI-generated information?** Course knowledge
+   (search theory), a purpose-built comparison harness with a cost table,
+   unit tests, and checking generated assets against concrete engine
+   requirements rather than "it looks right". For the UI work we required
+   proof before trusting a claim: rendered screenshots before and after
+   each change, the full automated test suite actually run (not just
+   described), the real game driven end-to-end, and git history re-checked
+   independently rather than taking its summary of "what's on which
+   branch" at face value.
 
 8. **How did AI influence the final design?** The core routing approach
-   (weighted A\*), the decision to implement four search algorithms for
-   comparison, partial observability, and several robustness features
-   (key, safe collapse) came out of AI‑prompted challenge — but the
-   weights, the scoring, the balance and every accept/reject call were
-   ours.
+   (weighted A\*), implementing four search algorithms for comparison,
+   partial observability, and several robustness features (key, safe
+   collapse) came out of AI-prompted challenge. The UI's whole
+   look-and-feel was built by AI end to end, but only ever moved forward
+   after we'd seen proof it worked and said yes — the weights, the
+   scoring, the balance, and every accept/reject call, including whether
+   something actually looked right, were ours.
 
-9. **Where was human judgement necessary?** Recognising that the AI‑video
+9. **Where was human judgement necessary?** Recognising that the AI-video
    failure was *narrow* (one model, one axis) and could be routed around
    rather than abandoning AI art entirely. Deciding the scope reduction
-   (occupant NPCs don't need 4 walk directions). Choosing to keep BFS
-   where it's genuinely correct. All the tuning. The Responsible‑AI
-   position.
+   (occupant NPCs don't need 4 walk directions). Choosing to keep BFS where
+   it's genuinely correct. Judging whether the UI actually looked "fancy" or
+   "professional" enough — that's a subjective call AI can't make for us.
+   Deciding what gets committed, to which branch, and refusing to let AI
+   merge or open pull requests on its own, even though it was technically
+   capable of it.
 
-10. **What if you had blindly followed AI?** With Greedy Best‑First, the
+10. **What if you had blindly followed AI?** With Greedy Best-First, the
     agent would lead people *through the fire* whenever the exit was
-    roughly beyond it — taking heavy damage, sometimes dying mid‑escort
-    and losing everyone — while reporting a "shorter" path. It would look
-    like bad game balance, not a wrong algorithm choice, and we'd have
-    debugged the wrong thing.
+    roughly beyond it — taking heavy damage, sometimes dying mid-escort and
+    losing everyone — while reporting a "shorter" path. It would look like
+    bad game balance, not a wrong algorithm choice, and we'd have debugged
+    the wrong thing. If we'd let it merge or open PRs freely, it could have
+    collided with a teammate's parallel work on `master` without anyone
+    agreeing to it first.
 
 11. **What did you learn about using AI responsibly?** AI is fast at
-    *breadth* (options, critiques, explanations) but you have to supply
-    the *objective* it's optimising against and then verify against it.
-    A suggestion that is technically true ("fewer expansions") can still
-    be wrong for your problem. Checking output against a concrete spec you
-    wrote yourself is what catches this.
+    *breadth* (options, critiques, explanations, and fast implementation)
+    but you have to supply the *objective* it's optimising against and
+    then verify against it. A suggestion that's technically true ("fewer
+    expansions") can still be wrong for your problem. A git commit or a
+    confident summary is not proof of anything — check the actual evidence
+    yourself. And keeping AI on a short leash for anything hard to undo or
+    team-facing (merges, pull requests), while letting it move fast on
+    reversible, reviewable work (UI code that's tested and shown to you
+    before it's committed), is the balance that actually worked for us.
 
 ---
 
