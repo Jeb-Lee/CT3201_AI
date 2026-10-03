@@ -6,13 +6,9 @@ and the AI‑assisted work in `docs/ai_critique.md` and
 
 | File | Covers | Deliverable |
 |---|---|---|
-| `CT3201_Slides.pptx` | 10‑slide starter deck (title + 9 sections) | **deliverable 1** — add names, screenshots, the flowchart image, refine |
-| `CT3201_Report_IEEE.docx` | the report in **IEEE A4 two‑column conference format** (matches `~/Downloads/IEEE 2 col conference-template-a4.docx`) | **report deliverable** — submit this one; add authors, fill `[TEAM]` markers, replace the Fig. 1 ASCII sketch with the real flowchart |
-| `CT3201_Report_IEEE_rev2.docx` | **revision 2** of the IEEE report: everything in revision 1 plus a new Section VII on how the learned model (v5) was developed (RL, then imitation v1-v5), its architecture, alternatives, references, and A\* vs every model version | built from `REPORT_rev2.md` |
-| `CT3201_Report_IEEE_rev5.docx` | **revision 5 (latest)**: revision 4 as edited in Word for the team's final wording, including the reflection (Section IX) and conclusion (Section X) written in the team's own words | edited by hand in Word from revision 4; no generator, so `REPORT_rev4.md` is the last Markdown source |
-| `CT3201_Report_IEEE_rev4.docx` | **revision 4**: revision 3 with the team's details — SpectralIntelligence and members in the title block, the user, the "think first" note, the first plan, the deployment position, fire described as the health-draining hazard it was designed as, and the 150-situation Greedy test in Section VI | built from `REPORT_rev4.md` (`build_rev4.py`, `tools/md_to_ieee_docx.py --rev4`) |
-| `CT3201_Report_IEEE_rev3.docx` | **revision 3**: revision 2 laid out for two columns — Word heading styles (Navigation pane / table of contents work), captioned tables that are column-width or float across the top of a page, a drawn flowchart in Section V, the Responsible-AI table as paragraphs | built from `REPORT_rev3.md` |
-| `CT3201_Report.docx` | same content, plain single‑column Word doc | working draft only |
+| `CT3201_Slides_rev02.pptx` | **slides, revision 02 (latest)**: the 11-slide deck for the presentation | **deliverable 1** |
+| `CT3201_Report_IEEE_rev6.docx` | **revision 6 (latest, final)**: revision 5 with the final edits made by hand in Word: the full course and college names, "the drone" changed to "the AI" throughout, consistent capitalisation in the tables, and live cross-references between sections | edited by hand in Word from revision 5; the last Markdown source is `REPORT_rev4.md` |
+| Earlier Word files (`CT3201_Slides.pptx`, `CT3201_Report.docx`, `CT3201_Report_IEEE.docx` and revisions 2 to 5) | removed from the working tree once revisions 6 and 02 superseded them | still in the Git history; the Markdown sources and `build_rev*.py` scripts that produced revisions 2 to 4 remain here |
 | `CT3201_AI_Interaction_Log.docx` | the interaction log as a Word table | **deliverable 2** |
 | `../../tools/greedy_vs_astar_scan.py` | the 150-situation test behind "Greedy took a costlier route in 98 of 150" (10 stages × 3 layouts × 5 fire times); run it to reproduce | evidence for Sections VI and VII |
 | `VIDEO_OUTLINE.md` | 7–10 min video script + clips to record | **deliverable 3** (script) |

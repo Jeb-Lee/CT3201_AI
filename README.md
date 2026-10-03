@@ -312,7 +312,7 @@ tools/
 ## Report, interaction log and video
 
 The written deliverables live in [`docs/report/`](docs/report/README.md): the IEEE two-column report
-(`CT3201_Report_IEEE_rev5.docx` is the latest; earlier revisions are kept), and the AI interaction log
+(`CT3201_Report_IEEE_rev6.docx` is the final one; the slides are `CT3201_Slides_rev02.pptx`; earlier files are in the Git history), and the AI interaction log
 (`CT3201_AI_Interaction_Log.docx`). The report's numbers can be reproduced from this repository:
 `tools/greedy_vs_astar_scan.py` (Greedy vs A*, 150 situations), `tools/evaluate_agents.py` (every agent, fresh
 episodes) and the logs in `pyro_pete_game/ml/ML_Findings/`. The documentary footage and the video's generated
